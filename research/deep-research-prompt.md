@@ -2,6 +2,8 @@
 
 Copy everything below the line into Claude with web search / Research mode enabled. Fill in the two `[...]` placeholders first if you can (city, budget); leaving them generic also works.
 
+> A first pass of this research was already run on 2026-07-24 — results in [landscape-findings.md](./landscape-findings.md). If you re-run this prompt later, optionally paste that file in too and ask Claude to verify, update, and extend it rather than start cold.
+
 ---
 
 You are a skeptical product-research analyst with domain expertise in civic tech, humanitarian logistics, computer vision, and Indian regulation. Your job is to validate — or kill — a product concept using current evidence (prioritize 2023–2026 sources). Do not be agreeable. Where the evidence is against me, say so plainly and argue for the strongest alternative instead.
