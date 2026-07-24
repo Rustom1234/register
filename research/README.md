@@ -4,6 +4,7 @@ Working name for the concept: spot people on the street who need basic medical s
 
 | Doc | What it is |
 |---|---|
+| [plan-options.md](./plan-options.md) | Summarised findings + three plan versions (Supply Line / Signal Loop / Aid Drops) and the recommended sequence |
 | [landscape-findings.md](./landscape-findings.md) | What already exists — products, city pilots, NGO/delivery programs, open-source repos — with sources |
 | [critique-and-scope.md](./critique-and-scope.md) | Holes in the original plan, what survives, and a scoped 90-day MVP |
 | [deep-research-prompt.md](./deep-research-prompt.md) | Copy-paste prompt to re-run this research in Claude (web search / Research mode) |
