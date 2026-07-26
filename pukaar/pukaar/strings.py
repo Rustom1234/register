@@ -92,5 +92,70 @@ KIT_SKUS = {
 }
 
 
-def fmt(string_id: str, **kw: object) -> str:
-    return SAFETY[string_id].format(**kw)
+# Devanagari mirrors of every witness-facing string. The toggle changes the
+# script of what we SEND; incoming Hinglish is understood either way. IDs are
+# identical so audits reference one canonical table.
+SAFETY_DEVA = {
+    "S-112": (
+        "⚠️ यह इमरजेंसी लगती है। अभी 112 पर कॉल करें। रात में शेल्टर/रेस्क्यू के लिए: "
+        "14461 (DUSIB, दिल्ली)। पुकार इमरजेंसी सेवा नहीं है।"
+    ),
+    "S-NOTICE": (
+        "नमस्ते 🙏 यह पुकार है — आप किसी ज़रूरतमंद व्यक्ति की सूचना दे सकते हैं। "
+        "हम सिर्फ़ आपका नंबर (hash), पिन और भेजी गई जानकारी रखते हैं; फोटो केस बंद "
+        "होने पर delete हो जाती है। रुकना हो तो STOP लिखें।"
+    ),
+    "S-ASK-LOCATION": "व्यक्ति कहाँ है? 📍 लोकेशन पिन भेजें (या कोई landmark लिखें)।",
+    "S-ASK-CATEGORY": "क्या ज़रूरत दिख रही है? एक चुनें:",
+    "S-ASK-EXTRA": (
+        "शुक्रिया। हो सके तो आस-पास की फोटो भेजें (चेहरा ज़रूरी नहीं) और बताएं — "
+        "कितनी देर पहले देखा?"
+    ),
+    "S-EXPECT": (
+        "✅ रिपोर्ट दर्ज हो गई (ID {case_id})। एक भरोसेमंद कार्यकर्ता आज ही पहुँचने "
+        "की कोशिश करेगा। धन्यवाद रुकने के लिए।"
+    ),
+    "S-EXPECT-NIGHT": (
+        "✅ रिपोर्ट दर्ज हो गई (ID {case_id})। रात में डिस्पैच बंद है — आपकी रिपोर्ट "
+        "सुबह की पहली राउंड में जाएगी। तुरंत ज़रूरत हो तो: 112 (इमरजेंसी) या 14461 "
+        "(DUSIB शेल्टर रेस्क्यू, दिल्ली)। धन्यवाद।"
+    ),
+    "S-CLOSURE-SERVED": "🟢 आपकी रिपोर्ट {case_id}: कार्यकर्ता व्यक्ति तक पहुँचा और मदद दे दी गई। शुक्रिया!",
+    "S-CLOSURE-ESCALATED": "🟢 आपकी रिपोर्ट {case_id}: मदद दे दी गई, और मेडिकल टीम को भी बुलाया गया है। शुक्रिया!",
+    "S-CLOSURE-NOTFOUND": "🟡 आपकी रिपोर्ट {case_id}: कार्यकर्ता पहुँचा पर व्यक्ति नहीं मिला। रिपोर्ट रिकॉर्ड में है।",
+    "S-CLOSURE-DECLINED": "🟡 आपकी रिपोर्ट {case_id}: व्यक्ति ने मदद लेने से मना किया। उनकी मर्ज़ी का सम्मान किया गया।",
+    "S-STOP": "ठीक है — आपका नंबर हटा दिया गया है। कभी भी वापस लिख सकते हैं।",
+    "S-UNKNOWN": "समझ नहीं पाया। लोकेशन पिन 📍, फोटो, या छोटा सा संदेश भेजें।",
+}
+
+CATEGORY_BUTTONS_DEVA = [
+    {"id": "cat:medical", "label": "🩹 चोट"},
+    {"id": "cat:food", "label": "🍚 भूख"},
+    {"id": "cat:shelter", "label": "🌧️ ठंड-बारिश"},
+]
+
+FRESHNESS_BUTTONS_DEVA = [
+    {"id": "fresh:10", "label": "अभी देखा"},
+    {"id": "fresh:60", "label": "~1 घंटा पहले"},
+    {"id": "fresh:240", "label": "काफ़ी देर पहले"},
+]
+
+
+def text(string_id: str, script: str = "latin") -> str:
+    if script == "deva" and string_id in SAFETY_DEVA:
+        return SAFETY_DEVA[string_id]
+    return SAFETY[string_id]
+
+
+def fmt(string_id: str, script: str = "latin", **kw: object) -> str:
+    return text(string_id, script).format(**kw)
+
+
+def localized_buttons(buttons: list[dict], script: str) -> list[dict]:
+    if script != "deva" or not buttons:
+        return buttons
+    if buttons[0]["id"].startswith("cat:"):
+        return list(CATEGORY_BUTTONS_DEVA)
+    if buttons[0]["id"].startswith("fresh:"):
+        return list(FRESHNESS_BUTTONS_DEVA)
+    return buttons

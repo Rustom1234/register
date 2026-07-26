@@ -99,6 +99,7 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             c["digipin"] = svc.digipin_for(c["lat"], c["lng"])
         return {
             "backend": svc.backend.name,
+            "script": svc.script,
             "prov_ephemeral": svc.prov.ephemeral,
             "zone": {"lat": cfg.zone_lat, "lng": cfg.zone_lng, "radius_m": cfg.zone_radius_m},
             "sim": sim.snapshot(),
@@ -151,6 +152,16 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         if act.action == "assign" and act.order_id and act.responder_id:
             return {"ok": svc.dispatch.manual_assign(act.order_id, act.responder_id)}
         raise HTTPException(400, "bad action")
+
+    class ScriptCtl(BaseModel):
+        script: str            # latin | deva
+
+    @app.post("/api/script")
+    def script_ctl(ctl: ScriptCtl):
+        if ctl.script not in ("latin", "deva"):
+            raise HTTPException(400, "script must be latin or deva")
+        svc.script = ctl.script
+        return {"script": svc.script}
 
     @app.post("/api/manual")
     def manual_ctl(ctl: ManualCtl):

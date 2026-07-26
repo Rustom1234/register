@@ -383,7 +383,8 @@ function renderPhone() {
   const atBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 60;
   msgs.innerHTML = log.map((m) => {
     const who = m.from === "bot" ? "bot" : "witness";
-    return `<div class="bubble ${who}">${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Pukaar" : "you"}</span></div>`;
+    const voice = m.kind === "voice" ? ` voice" data-len="${3 + (m.text || "").length % 7}` : "";
+    return `<div class="bubble ${who}${voice}">${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Pukaar" : "you"}</span></div>`;
   }).join("");
   if (atBottom) msgs.scrollTop = msgs.scrollHeight;
 
@@ -406,6 +407,8 @@ async function sendInbound(kind, extra = {}) {
   const body = { phone: activeConv, kind, ...extra };
   if (kind === "text" || kind === "button") {
     localEcho(extra.text, kind);
+  } else if (kind === "voice") {
+    localEcho("🎤 " + extra.text, "voice");
   }
   const res = await fetch("/api/wa/inbound", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -436,6 +439,21 @@ function wire() {
   });
   document.getElementById("btn-photo").addEventListener("click", () =>
     sendInbound("photo", { photo_hint: "street photo: person with a bandaged foot, blood visible, sitting on pavement" }));
+  const VOICE_SAMPLES = [
+    "station ke bahar ek amma leti hain, uth nahi paa rahi hain",
+    "flyover ke neeche aadmi ke pair se khoon aa raha hai, patti gandi ho gayi hai",
+    "teen bacche baarish mein bheeg rahe hain mandir ke peeche",
+  ];
+  let voiceIdx = 0;
+  document.getElementById("btn-voice").addEventListener("click", () => {
+    const t = VOICE_SAMPLES[voiceIdx++ % VOICE_SAMPLES.length];
+    sendInbound("voice", { text: t });
+  });
+  document.getElementById("btn-script").addEventListener("click", async () => {
+    const next = state && state.script === "deva" ? "latin" : "deva";
+    await fetch("/api/script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ script: next }) });
+    refresh();
+  });
   document.getElementById("conv-select").addEventListener("change", (e) => {
     activeConv = e.target.value; renderPhone();
   });
@@ -502,6 +520,7 @@ async function refresh() {
   document.getElementById("btn-pause").textContent = state.sim.running ? "⏸" : "▶";
   const speedSel = document.getElementById("speed");
   if ([...speedSel.options].some((o) => +o.value === state.sim.speed)) speedSel.value = String(state.sim.speed);
+  document.getElementById("btn-script").textContent = state.script === "deva" ? "A" : "अ";
   const badge = document.getElementById("backend-badge");
   badge.textContent = state.backend === "claude" ? "CLAUDE LIVE" : "MOCK AGENT";
   badge.classList.toggle("live", state.backend === "claude");

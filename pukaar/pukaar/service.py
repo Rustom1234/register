@@ -30,6 +30,7 @@ class PukaarService:
         self.backend = make_backend(cfg)
         self.prov = Provenance(cfg.hmac_key or None)
         self.intake = Intake(self.backend)
+        self.script = "latin"              # witness-facing script: latin | deva
         self.conversations: dict[str, Conversation] = {}
         self.feed: deque[dict] = deque(maxlen=250)
         self.positions: dict[str, tuple[float, float]] = {}
@@ -45,10 +46,22 @@ class PukaarService:
                    photo_hint: str | None = None) -> list[BotMsg]:
         phone_hash = hashlib.sha256(f"pukaar:{phone}".encode()).hexdigest()[:12]
         conv = self.conversations.setdefault(phone, Conversation(phone_hash=phone_hash))
-        shown = text if kind != "location" else "📍 location"
+        if kind == "location":
+            shown = "📍 location"
+        elif kind == "voice":
+            shown = f"🎤 {text}" if text else "🎤 (voice note)"
+        else:
+            shown = text
         conv.remember("witness", kind, shown or kind, ts=self.now())
 
-        replies = self.intake.handle(conv, kind, text=text, lat=lat, lng=lng, photo_hint=photo_hint)
+        # Voice notes carry a transcript (demo: canned; P1: Sarvam STT) and
+        # flow through intake exactly like text.
+        intake_kind = "text" if kind == "voice" else kind
+        replies = self.intake.handle(conv, intake_kind, text=text, lat=lat, lng=lng, photo_hint=photo_hint)
+        for r in replies:  # localize fixed strings to the active script
+            if r.string_id in strings.SAFETY and "{" not in strings.SAFETY[r.string_id]:
+                r.text = strings.text(r.string_id, self.script)
+                r.buttons = strings.localized_buttons(r.buttons, self.script)
 
         if conv.state["stage"] == "emergency_redirect":
             self.emit("emergency_redirect", {"phone_hash": phone_hash})
@@ -60,11 +73,11 @@ class PukaarService:
             conv.state["case_id"] = case["id"]
             self._record_report(conv, kind, shown, case_id=case["id"])
             if self.dispatch.in_dispatch_window():
-                replies.append(BotMsg(strings.fmt("S-EXPECT", case_id=case["id"][-4:].upper()),
+                replies.append(BotMsg(strings.fmt("S-EXPECT", self.script, case_id=case["id"][-4:].upper()),
                                       string_id="S-EXPECT"))
             else:
                 self.emit("night_hold", {"case_id": case["id"]})
-                replies.append(BotMsg(strings.fmt("S-EXPECT-NIGHT", case_id=case["id"][-4:].upper()),
+                replies.append(BotMsg(strings.fmt("S-EXPECT-NIGHT", self.script, case_id=case["id"][-4:].upper()),
                                       string_id="S-EXPECT-NIGHT"))
         else:
             self._record_report(conv, kind, shown, case_id=conv.state.get("case_id"))
@@ -129,7 +142,7 @@ class PukaarService:
                "not_found": "S-CLOSURE-NOTFOUND", "declined": "S-CLOSURE-DECLINED"}[outcome]
         for conv in self.conversations.values():
             if conv.state.get("case_id") == case_id and not conv.state["stopped"]:
-                msg = strings.fmt(sid, case_id=case_id[-4:].upper())
+                msg = strings.fmt(sid, self.script, case_id=case_id[-4:].upper())
                 conv.remember("bot", "text", msg, ts=self.now())
 
     # ------------------------------------------------------------ metrics --
