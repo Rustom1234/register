@@ -154,13 +154,14 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         raise HTTPException(400, "bad action")
 
     class ScriptCtl(BaseModel):
-        script: str            # latin | deva
+        script: str            # auto | en | hinglish | deva  (latin = hinglish alias)
 
     @app.post("/api/script")
     def script_ctl(ctl: ScriptCtl):
-        if ctl.script not in ("latin", "deva"):
-            raise HTTPException(400, "script must be latin or deva")
-        svc.script = ctl.script
+        value = "hinglish" if ctl.script == "latin" else ctl.script
+        if value not in ("auto", "en", "hinglish", "deva"):
+            raise HTTPException(400, "script must be auto|en|hinglish|deva")
+        svc.script = value
         return {"script": svc.script}
 
     @app.post("/api/manual")

@@ -141,21 +141,77 @@ FRESHNESS_BUTTONS_DEVA = [
 ]
 
 
-def text(string_id: str, script: str = "latin") -> str:
-    if script == "deva" and string_id in SAFETY_DEVA:
-        return SAFETY_DEVA[string_id]
-    return SAFETY[string_id]
+# Plain-English mirrors — the bot answers English witnesses in English.
+SAFETY_EN = {
+    "S-112": (
+        "⚠️ This looks like an emergency. Please call 112 right now. "
+        "For night shelter/rescue in Delhi: 14461 (DUSIB). "
+        "Pukaar is not an emergency service."
+    ),
+    "S-NOTICE": (
+        "Hello 🙏 This is Pukaar — you can report a person on the street who "
+        "needs help. We keep only your number (hashed), the pin, and what you "
+        "send; photos are deleted when the case closes. Reply STOP anytime."
+    ),
+    "S-ASK-LOCATION": "Where is the person? 📍 Share a location pin (or type a nearby landmark).",
+    "S-ASK-CATEGORY": "What does the person seem to need? Pick one:",
+    "S-ASK-EXTRA": (
+        "Thank you. If possible, send a photo of the surroundings (no face "
+        "needed) and tell us — how long ago did you see them?"
+    ),
+    "S-EXPECT": (
+        "✅ Your report is registered (ID {case_id}). A trusted outreach "
+        "worker will try to reach them today. Thank you for stopping."
+    ),
+    "S-EXPECT-NIGHT": (
+        "✅ Your report is registered (ID {case_id}). Dispatch is closed for "
+        "the night — your report goes out with the first morning round. "
+        "Urgent right now? 112 (emergency) or 14461 (DUSIB shelter rescue, Delhi)."
+    ),
+    "S-CLOSURE-SERVED": "🟢 Your report {case_id}: an outreach worker reached the person and help was given. Thank you!",
+    "S-CLOSURE-ESCALATED": "🟢 Your report {case_id}: help was given, and a medical team has been called in too. Thank you!",
+    "S-CLOSURE-NOTFOUND": "🟡 Your report {case_id}: the worker went but couldn't find the person. Your report stays on record.",
+    "S-CLOSURE-DECLINED": "🟡 Your report {case_id}: the person chose not to take help. Their choice was respected.",
+    "S-STOP": "Okay — your number has been removed. You're welcome back anytime.",
+    "S-UNKNOWN": "Sorry, I didn't catch that. Send a location pin 📍, a photo, or a short message.",
+}
+
+CATEGORY_BUTTONS_EN = [
+    {"id": "cat:medical", "label": "🩹 Injury"},
+    {"id": "cat:food", "label": "🍚 Hunger"},
+    {"id": "cat:shelter", "label": "🌧️ Rain-Cold / Shelter"},
+]
+
+FRESHNESS_BUTTONS_EN = [
+    {"id": "fresh:10", "label": "Just now"},
+    {"id": "fresh:60", "label": "~1 hour ago"},
+    {"id": "fresh:240", "label": "A while ago"},
+]
+
+_TABLES = {"en": SAFETY_EN, "deva": SAFETY_DEVA}
+_CAT_BTNS = {"en": CATEGORY_BUTTONS_EN, "deva": CATEGORY_BUTTONS_DEVA}
+_FRESH_BTNS = {"en": FRESHNESS_BUTTONS_EN, "deva": FRESHNESS_BUTTONS_DEVA}
 
 
-def fmt(string_id: str, script: str = "latin", **kw: object) -> str:
-    return text(string_id, script).format(**kw)
+def _norm(lang: str) -> str:
+    return "hinglish" if lang in ("latin", "hinglish") else lang
 
 
-def localized_buttons(buttons: list[dict], script: str) -> list[dict]:
-    if script != "deva" or not buttons:
+def text(string_id: str, lang: str = "hinglish") -> str:
+    table = _TABLES.get(_norm(lang), {})
+    return table.get(string_id, SAFETY[string_id])
+
+
+def fmt(string_id: str, lang: str = "hinglish", **kw: object) -> str:
+    return text(string_id, lang).format(**kw)
+
+
+def localized_buttons(buttons: list[dict], lang: str) -> list[dict]:
+    lang = _norm(lang)
+    if lang == "hinglish" or not buttons:
         return buttons
     if buttons[0]["id"].startswith("cat:"):
-        return list(CATEGORY_BUTTONS_DEVA)
+        return list(_CAT_BTNS.get(lang, CATEGORY_BUTTONS))
     if buttons[0]["id"].startswith("fresh:"):
-        return list(FRESHNESS_BUTTONS_DEVA)
+        return list(_FRESH_BTNS.get(lang, FRESHNESS_BUTTONS))
     return buttons

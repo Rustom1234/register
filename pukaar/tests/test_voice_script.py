@@ -35,7 +35,37 @@ def test_deva_script_toggle(svc):
     assert "रिपोर्ट दर्ज" in expect.text
 
 
-def test_latin_default_unchanged(svc):
-    r1 = svc.wa_inbound("+91-V4", "text", text="hello")
+def test_auto_mirrors_english(svc):
+    r1 = svc.wa_inbound("+91-V4", "text",
+                        text="An injured man is lying near the flyover with a dirty bandage")
+    notice = next(r for r in r1 if r.string_id == "S-NOTICE")
+    assert "Hello" in notice.text and "Namaste" not in notice.text
+    r2 = svc.wa_inbound("+91-V4", "location", lat=28.5933, lng=77.2507)
+    ask = next(r for r in r2 if r.string_id == "S-ASK-EXTRA")
+    assert "how long ago" in ask.text
+
+
+def test_auto_mirrors_hinglish(svc):
+    r1 = svc.wa_inbound("+91-V5", "text", text="bhaiya ek aadmi ghayal hai yahan")
     notice = next(r for r in r1 if r.string_id == "S-NOTICE")
     assert "Namaste" in notice.text
+
+
+def test_auto_mirrors_devanagari(svc):
+    r1 = svc.wa_inbound("+91-V6", "text", text="आदमी घायल है फ्लाईओवर के नीचे")
+    notice = next(r for r in r1 if r.string_id == "S-NOTICE")
+    assert "नमस्ते" in notice.text
+
+
+def test_forced_english_overrides_detection(svc):
+    svc.script = "en"
+    r1 = svc.wa_inbound("+91-V7", "text", text="aadmi ghayal hai")
+    notice = next(r for r in r1 if r.string_id == "S-NOTICE")
+    assert "Hello" in notice.text
+
+
+def test_english_category_buttons(svc):
+    svc.wa_inbound("+91-V8", "text", text="someone needs help here")
+    r = svc.wa_inbound("+91-V8", "location", lat=28.5933, lng=77.2507)
+    ask = next(x for x in r if x.string_id == "S-ASK-CATEGORY")
+    assert any("Injury" in b["label"] for b in ask.buttons)

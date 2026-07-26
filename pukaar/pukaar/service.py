@@ -8,8 +8,30 @@ event feed, metrics, and provenance signing.
 from __future__ import annotations
 
 import hashlib
+import re
 import statistics
 from collections import deque
+
+_DEVA_RX = re.compile(r"[ऀ-ॿ]")
+_HINGLISH_RX = re.compile(
+    r"\b(hai|hain|nahi|nahin|mein|bhaiya|aadmi|aurat|amma|raha|rahi|rahe|karo|karein|"
+    r"chahiye|paas|neeche|upar|wala|gaya|gayi|bhookh|bhooke|thand|khoon|patti|ghayal|"
+    r"madad|jaldi|abhi|dekha|bahut|zaroorat|baarish|bheeg|kambal|pada|leti|uth)\b", re.I)
+_ASCII_WORD_RX = re.compile(r"[a-zA-Z]{2,}")
+
+
+def detect_lang(text: str | None) -> str | None:
+    """Mirror the witness: Devanagari script -> deva; Hindi words in Latin
+    script -> hinglish; plain English -> en; unknown -> None (keep prior)."""
+    if not text:
+        return None
+    if _DEVA_RX.search(text):
+        return "deva"
+    if _HINGLISH_RX.search(text):
+        return "hinglish"
+    if _ASCII_WORD_RX.search(text):
+        return "en"
+    return None
 
 from . import geo, digipin, strings
 from .backends import make_backend
@@ -30,7 +52,9 @@ class PukaarService:
         self.backend = make_backend(cfg)
         self.prov = Provenance(cfg.hmac_key or None)
         self.intake = Intake(self.backend)
-        self.script = "latin"              # witness-facing script: latin | deva
+        # Witness-facing language: "auto" mirrors each witness's own language
+        # (en / hinglish / deva); a fixed value overrides for all replies.
+        self.script = "auto"
         self.conversations: dict[str, Conversation] = {}
         self.feed: deque[dict] = deque(maxlen=250)
         self.positions: dict[str, tuple[float, float]] = {}
@@ -39,6 +63,11 @@ class PukaarService:
     # ------------------------------------------------------------- feed --
     def emit(self, kind: str, data: dict) -> None:
         self.feed.append({"ts": self.now(), "kind": kind, **data})
+
+    def lang_for(self, conv: Conversation) -> str:
+        if self.script != "auto":
+            return self.script
+        return conv.state.get("lang", "hinglish")
 
     # ---------------------------------------------------------- inbound --
     def wa_inbound(self, phone: str, kind: str, text: str | None = None,
@@ -53,15 +82,20 @@ class PukaarService:
         else:
             shown = text
         conv.remember("witness", kind, shown or kind, ts=self.now())
+        if kind in ("text", "voice"):
+            detected = detect_lang(text)
+            if detected:
+                conv.state["lang"] = detected
+        lang = self.lang_for(conv)
 
         # Voice notes carry a transcript (demo: canned; P1: Sarvam STT) and
         # flow through intake exactly like text.
         intake_kind = "text" if kind == "voice" else kind
         replies = self.intake.handle(conv, intake_kind, text=text, lat=lat, lng=lng, photo_hint=photo_hint)
-        for r in replies:  # localize fixed strings to the active script
+        for r in replies:  # localize fixed strings to the witness's language
             if r.string_id in strings.SAFETY and "{" not in strings.SAFETY[r.string_id]:
-                r.text = strings.text(r.string_id, self.script)
-                r.buttons = strings.localized_buttons(r.buttons, self.script)
+                r.text = strings.text(r.string_id, lang)
+                r.buttons = strings.localized_buttons(r.buttons, lang)
 
         if conv.state["stage"] == "emergency_redirect":
             self.emit("emergency_redirect", {"phone_hash": phone_hash})
@@ -73,11 +107,11 @@ class PukaarService:
             conv.state["case_id"] = case["id"]
             self._record_report(conv, kind, shown, case_id=case["id"])
             if self.dispatch.in_dispatch_window():
-                replies.append(BotMsg(strings.fmt("S-EXPECT", self.script, case_id=case["id"][-4:].upper()),
+                replies.append(BotMsg(strings.fmt("S-EXPECT", lang, case_id=case["id"][-4:].upper()),
                                       string_id="S-EXPECT"))
             else:
                 self.emit("night_hold", {"case_id": case["id"]})
-                replies.append(BotMsg(strings.fmt("S-EXPECT-NIGHT", self.script, case_id=case["id"][-4:].upper()),
+                replies.append(BotMsg(strings.fmt("S-EXPECT-NIGHT", lang, case_id=case["id"][-4:].upper()),
                                       string_id="S-EXPECT-NIGHT"))
         else:
             self._record_report(conv, kind, shown, case_id=conv.state.get("case_id"))
@@ -142,7 +176,7 @@ class PukaarService:
                "not_found": "S-CLOSURE-NOTFOUND", "declined": "S-CLOSURE-DECLINED"}[outcome]
         for conv in self.conversations.values():
             if conv.state.get("case_id") == case_id and not conv.state["stopped"]:
-                msg = strings.fmt(sid, self.script, case_id=case_id[-4:].upper())
+                msg = strings.fmt(sid, self.lang_for(conv), case_id=case_id[-4:].upper())
                 conv.remember("bot", "text", msg, ts=self.now())
 
     # ------------------------------------------------------------ metrics --

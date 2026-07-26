@@ -39,6 +39,15 @@ reports get the honest S-NIGHT string and queue for the morning round),
 table evaluated live), **🔔 event sounds**, and **⬇ session export**
 (full JSON of cases/orders/outcomes/audit for analysis or the video).
 
+**Trilingual by default:** the bot mirrors each witness's language —
+English in, English out; Hinglish in, Hinglish out; Devanagari in,
+Devanagari out (🌐 auto, overridable to EN / Hi / अ from the phone
+header; every string keeps one canonical ID for audits). **🎤 voice
+notes** carry transcripts through the same pipeline (demo transcripts
+now, Sarvam STT at P1 — the emergency gate applies to speech too), and
+**/static/replay.html** animates any exported session on a map + feed
+with a scrubber, for recording clean takes.
+
 The **WhatsApp Cloud API transport is wired** (`/webhook` GET verify +
 POST intake, reply-button/location-request/media senders in
 `whatsapp.py`, parser fully tested) and dormant until `WA_TOKEN` +

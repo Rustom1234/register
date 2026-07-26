@@ -450,7 +450,9 @@ function wire() {
     sendInbound("voice", { text: t });
   });
   document.getElementById("btn-script").addEventListener("click", async () => {
-    const next = state && state.script === "deva" ? "latin" : "deva";
+    const cycle = ["auto", "en", "hinglish", "deva"];
+    const cur = state ? state.script : "auto";
+    const next = cycle[(cycle.indexOf(cur) + 1) % cycle.length];
     await fetch("/api/script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ script: next }) });
     refresh();
   });
@@ -520,7 +522,10 @@ async function refresh() {
   document.getElementById("btn-pause").textContent = state.sim.running ? "⏸" : "▶";
   const speedSel = document.getElementById("speed");
   if ([...speedSel.options].some((o) => +o.value === state.sim.speed)) speedSel.value = String(state.sim.speed);
-  document.getElementById("btn-script").textContent = state.script === "deva" ? "A" : "अ";
+  document.getElementById("btn-script").textContent =
+    { auto: "🌐", en: "EN", hinglish: "Hi", deva: "अ" }[state.script] || "🌐";
+  document.getElementById("btn-script").title =
+    `bot language: ${state.script}` + (state.script === "auto" ? " (mirrors the witness)" : "") + " — click to cycle";
   const badge = document.getElementById("backend-badge");
   badge.textContent = state.backend === "claude" ? "CLAUDE LIVE" : "MOCK AGENT";
   badge.classList.toggle("live", state.backend === "claude");
