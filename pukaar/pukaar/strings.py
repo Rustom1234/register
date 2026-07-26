@@ -5,8 +5,9 @@ emergency guidance, medical wording, promises, or notices. Models structure
 information; humans and fixed strings speak. IDs are stable so audits can
 reference exactly what was sent.
 
-Hindi is transliterated (Hinglish) for the demo; a native-script pass is a
-launch task, not a code change.
+Three parallel tables share one canonical set of IDs: SAFETY (Hinglish),
+SAFETY_DEVA (Devanagari), SAFETY_EN (English). The service picks per
+conversation (auto language mirroring) or per the global override.
 """
 
 from __future__ import annotations
@@ -47,11 +48,6 @@ SAFETY = {
     "S-CLOSURE-NOTFOUND": "🟡 Aapki report {case_id}: karyakarta pahuncha par vyakti nahi mila. Report record mein hai.",
     "S-CLOSURE-DECLINED": "🟡 Aapki report {case_id}: vyakti ne madad lene se mana kiya. Unki marzi ka samman kiya gaya.",
     "S-STOP": "Theek hai — aapka number hata diya gaya hai. Kabhi bhi wapas likh sakte hain.",
-    "S-NIGHT": (
-        "Raat ke samay dispatch band hai. Emergency: 112. Shelter rescue (Delhi): "
-        "14461 / DUSIB WhatsApp 9871013284. Aapki report subah ki round mein sabse pehle jayegi."
-    ),
-    "S-UNKNOWN": "Samajh nahi paya. Location pin 📍, photo, ya chhota sa message bhejein.",
 }
 
 CATEGORY_LABELS = {
@@ -125,7 +121,6 @@ SAFETY_DEVA = {
     "S-CLOSURE-NOTFOUND": "🟡 आपकी रिपोर्ट {case_id}: कार्यकर्ता पहुँचा पर व्यक्ति नहीं मिला। रिपोर्ट रिकॉर्ड में है।",
     "S-CLOSURE-DECLINED": "🟡 आपकी रिपोर्ट {case_id}: व्यक्ति ने मदद लेने से मना किया। उनकी मर्ज़ी का सम्मान किया गया।",
     "S-STOP": "ठीक है — आपका नंबर हटा दिया गया है। कभी भी वापस लिख सकते हैं।",
-    "S-UNKNOWN": "समझ नहीं पाया। लोकेशन पिन 📍, फोटो, या छोटा सा संदेश भेजें।",
 }
 
 CATEGORY_BUTTONS_DEVA = [
@@ -173,7 +168,6 @@ SAFETY_EN = {
     "S-CLOSURE-NOTFOUND": "🟡 Your report {case_id}: the worker went but couldn't find the person. Your report stays on record.",
     "S-CLOSURE-DECLINED": "🟡 Your report {case_id}: the person chose not to take help. Their choice was respected.",
     "S-STOP": "Okay — your number has been removed. You're welcome back anytime.",
-    "S-UNKNOWN": "Sorry, I didn't catch that. Send a location pin 📍, a photo, or a short message.",
 }
 
 CATEGORY_BUTTONS_EN = [

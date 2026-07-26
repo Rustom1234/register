@@ -34,7 +34,7 @@ playing this responder"*, and accept/decline/close orders yourself while
 the sim plays everyone else), a **coordinator queue** for orders whose
 waves exhausted (manual assignment — the human terminal rung, exercised),
 **night mode** (dispatch honors the 07:00–21:00 partner window; night
-reports get the honest S-NIGHT string and queue for the morning round),
+reports get the honest S-EXPECT-NIGHT string and queue for the morning round),
 **📊 metrics** (per-day stacked charts + the pre-registered kill-criteria
 table evaluated live), **🔔 event sounds**, and **⬇ session export**
 (full JSON of cases/orders/outcomes/audit for analysis or the video).
@@ -132,4 +132,5 @@ demo:    sim.py (responders, scenarios) · api.py (FastAPI) · static/ (control 
 | `PUKAAR_MODEL_INTAKE` | `claude-haiku-4-5` | extraction model |
 | `PUKAAR_MODEL_REASONING` | `claude-sonnet-4-6` | routing/assessment/photo model |
 | `PUKAAR_HMAC_KEY` | (ephemeral) | provenance key — set for persistence |
+| `PUKAAR_DB` | (in-memory) | set a file path to persist the demo DB across restarts |
 | `PUKAAR_PORT` | `8877` | demo port |

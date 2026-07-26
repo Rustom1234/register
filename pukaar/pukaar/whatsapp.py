@@ -98,7 +98,11 @@ class CloudApi:
         })
 
     def reply(self, to: str, bot_msg) -> dict:
-        """Route a BotMsg through the right message shape."""
+        """Route a BotMsg through the right message shape.
+
+        P1 note: closure notifications sent after the 24h service window
+        closes need a pre-approved Utility template (build plan §3.11);
+        send_text covers the in-window case, which is the common path."""
         if bot_msg.string_id == "S-ASK-LOCATION":
             return self.send_location_request(to, bot_msg.text)
         if bot_msg.buttons:

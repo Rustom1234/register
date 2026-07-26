@@ -137,4 +137,4 @@ The pilot's numbers unlock the scale path: India's platforms already run the exa
 
 ---
 
-*Appendix (project repository): landscape research with ~70 sources · critique & scoping · plan deep-dives · solo-buildability analysis · this proposal.*
+*Appendix (project repository): landscape research with ~70 sources · critique & scoping · plan deep-dives · solo-buildability analysis · this proposal · **and a working demo**: the `pukaar/` directory contains a running implementation of the full loop — trilingual intake agent (auto language mirroring), 112 gate with a 100%-recall blocking test, parallel-wave dispatch, provenance, retention purge, live control room with map dispatch view — 69 automated tests, CI, and a recordable demo (`make demo`).*

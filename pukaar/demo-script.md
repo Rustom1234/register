@@ -56,6 +56,6 @@ with structured outputs by setting one API key. The WhatsApp transport is
 wired and waiting for a number. This is Pukaar."*
 
 Extra beats if you have time: night mode (set a late sim hour — reports
-queue with the honest 🌙 string), the coordinator queue (exhausted waves
+queue with the honest 🌙 S-EXPECT-NIGHT string), the coordinator queue (exhausted waves
 get manually assigned), and `/static/replay.html` scrubbing a whole day
 in seconds.

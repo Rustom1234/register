@@ -56,7 +56,8 @@ class ManualCtl(BaseModel):
 
 def build_app(cfg: Config | None = None) -> FastAPI:
     cfg = cfg or Config()
-    store = Store(":memory:")  # demo runs in-memory; point at a file for persistence
+    # In-memory by default; PUKAAR_DB=<path> persists the demo across restarts.
+    store = Store(cfg.db_path) if os.environ.get("PUKAAR_DB") else Store(":memory:")
     holder: dict = {}
     svc = PukaarService(cfg, store, now_fn=lambda: holder["sim"].sim_now if "sim" in holder else 0.0)
     sim = Sim(svc, cfg)
