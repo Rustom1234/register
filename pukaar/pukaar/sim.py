@@ -65,6 +65,8 @@ class Sim:
         self._pending_restocks: dict[str, float] = {}   # sku -> delivery due (sim ts)
         self._phone_counter = 0
         self._resp: dict[str, dict] = {}
+        self._decides: dict[str, float] = {}   # assignment_id -> decision due (per-offer, not per-responder)
+        self._coord_next = 0.0                 # the sim plays the coordinator too
         self._pending_escalations: dict[str, float] = {}
         self._random_report_at = self.sim_now + self.rng.uniform(60, 240)
         self._seed_world()
@@ -87,7 +89,7 @@ class Sim:
                 "speed": self.rng.uniform(3.5, 5.5),          # m per sim-second (~cycle)
                 "accept_p": self.rng.uniform(0.55, 0.85),      # GoodSAM band, generous end
                 "state": "idle", "order_id": None, "target": None,
-                "decide_at": None, "dwell_until": None,
+                "dwell_until": None,
             }
             self.svc.positions[rid] = (lat, lng)
 
@@ -170,9 +172,39 @@ class Sim:
         self.svc.dispatch.tick()
         self._sync_states()
         self._responders_decide()
+        self._coordinator_plays()
         self._responders_move(dt)
         self._complete_escalations()
         self._process_restocks()
+
+    def _coordinator_plays(self) -> None:
+        """The human terminal rung, simulated: every ~90 sim-s the
+        coordinator works the stuck backlog, assigning the oldest
+        wave-exhausted orders to whoever is idle and nearest — exactly what
+        the coordinator panel does by hand. (Without this, a load burst
+        parks everything at needs_coordinator forever — found by the
+        300-case test.)"""
+        if self.sim_now < self._coord_next:
+            return
+        self._coord_next = self.sim_now + 90
+        stuck = self.svc.store.query(
+            "SELECT * FROM orders WHERE status='needs_coordinator' ORDER BY created_at LIMIT 4")
+        if not stuck:
+            return
+        used: set[str] = set()
+        for order in stuck:
+            case = self.svc.store.one("SELECT * FROM cases WHERE id=?", (order["case_id"],))
+            if not case or case["lat"] is None:
+                continue
+            idle = [(geo.haversine_m(case["lat"], case["lng"], r["lat"], r["lng"]), r["id"])
+                    for r in self._resp.values()
+                    if r["state"] == "idle" and r["id"] not in used and r["id"] not in self.manual]
+            if not idle:
+                return
+            idle.sort()
+            rid = idle[0][1]
+            if self.svc.dispatch.manual_assign(order["id"], rid):
+                used.add(rid)
 
     def _sync_states(self) -> None:
         """Reconcile kinetic state with order records — covers manual accepts,
@@ -193,6 +225,10 @@ class Sim:
         pending = self.svc.store.query(
             "SELECT a.*, o.priority FROM assignments a JOIN orders o ON o.id = a.order_id "
             "WHERE a.responded_at IS NULL")
+        # One decision timer PER OFFER. (A per-responder slot livelocks under
+        # load: concurrent offers to the same responder keep resetting each
+        # other's timer and nobody ever decides — found by the 300-case test.)
+        live_ids = set()
         for a in pending:
             r = self._resp.get(a["responder_id"])
             if not r or a["responder_id"] in self.manual:
@@ -201,13 +237,13 @@ class Sim:
             if golden_resp and a["responder_id"] != golden_resp:
                 self.svc.dispatch.respond(a["id"], False)   # scripted: others step back
                 continue
-            key = a["id"]
-            if r["decide_at"] is None or r.get("decide_key") != key:
+            live_ids.add(a["id"])
+            due = self._decides.get(a["id"])
+            if due is None:
                 delay = self.rng.uniform(15, 35) if golden_resp else self.rng.uniform(15, 90)
-                r["decide_at"] = self.sim_now + delay
-                r["decide_key"] = key
+                self._decides[a["id"]] = self.sim_now + delay
                 continue
-            if self.sim_now >= r["decide_at"]:
+            if self.sim_now >= due:
                 if golden_resp:
                     accepted = True                          # loaded dice, real pipeline
                 else:
@@ -216,7 +252,9 @@ class Sim:
                     accepted = (not busy) and self.rng.random() < min(0.95, p)
                 if self.svc.dispatch.respond(a["id"], accepted) and accepted:
                     self._on_accept(r, a["order_id"])
-                r["decide_at"], r["decide_key"] = None, None
+                self._decides.pop(a["id"], None)
+        # prune timers for offers that were answered/released elsewhere
+        self._decides = {k: v for k, v in self._decides.items() if k in live_ids}
 
     def _on_accept(self, r: dict, order_id: str) -> None:
         case = self.svc.store.one(
