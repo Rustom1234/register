@@ -18,7 +18,7 @@ a live **demo control room** you can record.
 ```bash
 cd pukaar
 uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
-.venv/bin/python -m pytest -q          # 39 tests
+.venv/bin/python -m pytest -q          # 51 tests
 .venv/bin/python -m pukaar             # http://127.0.0.1:8877
 ```
 
