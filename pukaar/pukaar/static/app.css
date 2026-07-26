@@ -168,8 +168,11 @@ button.golden { border-color: rgba(250,178,25,0.55); color: #fab219; }
 .resp-dot { background: #e8e6df; } .p1-dot { background: var(--critical); }
 
 /* map markers */
-.case-pin { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,0.9);
+.case-pin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,0.9);
   box-shadow: 0 0 0 2px rgba(0,0,0,0.45); }
+.pin-emoji { position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+  font-size: 11px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.8)); pointer-events: none; }
+#btn-follow.on { border-color: rgba(250,178,25,0.7); color: var(--warn); }
 .case-pin.closedc { opacity: 0.35; }
 .case-pin.pulse::after {
   content: ""; position: absolute; inset: -7px; border-radius: 50%;

@@ -324,6 +324,7 @@ class Sim:
             "speed": self.speed,
             "running": self.running,
             "is_night": not self.svc.dispatch.in_dispatch_window(self.sim_now),
+            "golden": list(self.golden.keys()),
             "responders": [
                 {"id": r["id"], "name": r["name"], "medical": r["medical"],
                  "lat": r["lat"], "lng": r["lng"], "state": r["state"], "order_id": r["order_id"],

@@ -11,10 +11,11 @@ import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from .report import render_report
 from .whatsapp import CloudApi, parse_webhook
 
 from . import strings
@@ -178,6 +179,10 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     @app.get("/api/metrics/daily")
     def metrics_daily():
         return svc.daily_metrics()
+
+    @app.get("/report", response_class=HTMLResponse)
+    def session_report():
+        return render_report(svc, sim)
 
     @app.get("/api/export")
     def export():

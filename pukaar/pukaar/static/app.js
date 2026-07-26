@@ -10,6 +10,8 @@ const OUTCOME_TXT = {
 
 let state = null, map, zoneCircle, witnessPin = null, selectedCase = null, wired = false;
 const caseMarkers = new Map(), respMarkers = new Map(), routeLines = new Map();
+const respTrails = new Map(), trailLines = new Map();   // responder movement trails
+let followGolden = false;                                // 🎥 camera follows the golden run
 let activeConv = "+91-DEMO";
 let selectedResp = "resp_1";
 let soundOn = false, audioCtx = null, lastFeedTs = -1;
@@ -21,6 +23,11 @@ function haversineM(a, b, c, d) {
   const x = Math.sin((c - a) * r / 2) ** 2 +
     Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+function updateFollowBtn() {
+  const b = document.getElementById("btn-follow");
+  if (b) { b.classList.toggle("on", followGolden); b.textContent = followGolden ? "🎥 following" : "🎥"; }
 }
 
 // ---------------------------------------------------------------- sound --
@@ -66,6 +73,7 @@ function initMap(zone) {
     fill: false, opacity: 0.7,
   }).addTo(map);
   map.on("click", (e) => placeWitnessPin(e.latlng.lat, e.latlng.lng));
+  map.on("dragstart", () => { followGolden = false; updateFollowBtn(); });
 }
 
 function placeWitnessPin(lat, lng) {
@@ -82,10 +90,12 @@ function caseIcon(c) {
   const pulse = open && (c.urgency === "high") ? " pulse" : "";
   const cls = open ? "" : " closedc";
   const color = CAT[c.category] || "#898781";
+  const emoji = CAT_ICON[c.category] || "";
   return L.divIcon({
     className: "",
-    html: `<div class="case-pin${pulse}${cls}" style="background:${color};position:relative"></div>`,
-    iconSize: [16, 16], iconAnchor: [8, 8],
+    html: `<div class="case-pin${pulse}${cls}" style="background:${color};position:relative">` +
+          `<span class="pin-emoji">${emoji}</span></div>`,
+    iconSize: [18, 18], iconAnchor: [9, 9],
   });
 }
 
@@ -125,6 +135,34 @@ function syncMap() {
       const m = respMarkers.get(r.id);
       m.setLatLng([r.lat, r.lng]);
       m.setIcon(respIcon(r));
+    }
+    // movement trail: keep the last ~24 points while working, fade otherwise
+    const trail = respTrails.get(r.id) || [];
+    const last = trail[trail.length - 1];
+    if (!last || last[0] !== r.lat || last[1] !== r.lng) trail.push([r.lat, r.lng]);
+    while (trail.length > 24) trail.shift();
+    if (r.state === "idle" && trail.length > 2) trail.splice(0, 2);   // idle: trail evaporates
+    respTrails.set(r.id, trail);
+    if (trail.length > 1) {
+      if (!trailLines.has(r.id)) {
+        trailLines.set(r.id, L.polyline(trail, {
+          color: "#e8e6df", weight: 2, opacity: 0.22, interactive: false }).addTo(map));
+      } else trailLines.get(r.id).setLatLngs(trail);
+    } else if (trailLines.has(r.id)) {
+      trailLines.get(r.id).remove(); trailLines.delete(r.id);
+    }
+  }
+
+  // 🎥 follow the golden run's responder while its order is live
+  if (followGolden && (state.sim.golden || []).length) {
+    const gid = state.sim.golden[state.sim.golden.length - 1];
+    const order = state.orders.find((o) => o.id === gid);
+    if (order && ["accepted", "onsite"].includes(order.status) && order.responder_id) {
+      const r = state.sim.responders.find((x) => x.id === order.responder_id);
+      if (r) map.panTo([r.lat, r.lng], { animate: true, duration: 0.8 });
+    } else if (order && ["closed", "escalated"].includes(order.status)) {
+      followGolden = false;   // arc over — release the camera
+      updateFollowBtn();
     }
   }
 
@@ -477,7 +515,15 @@ function wire() {
     activeConv = e.target.value; renderPhone();
   });
   document.querySelectorAll(".scenarios button").forEach((b) =>
-    b.addEventListener("click", async () => { await fetch(`/api/scenario/${b.dataset.sc}`, { method: "POST" }); refresh(); }));
+    b.addEventListener("click", async () => {
+      await fetch(`/api/scenario/${b.dataset.sc}`, { method: "POST" });
+      if (b.dataset.sc === "golden_run") { followGolden = true; updateFollowBtn(); }
+      refresh();
+    }));
+  document.getElementById("btn-follow").addEventListener("click", () => {
+    followGolden = !followGolden;
+    updateFollowBtn();
+  });
   document.getElementById("btn-pause").addEventListener("click", async () => {
     const action = state.sim.running ? "pause" : "resume";
     await fetch("/api/sim", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
