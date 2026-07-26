@@ -132,3 +132,6 @@ dist
 # Custom
 .DS_Store
 *.js
+
+# pukaar app ships its JS (root ignore has *.js for the domains registry)
+!pukaar/**/*.js
