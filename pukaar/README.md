@@ -29,7 +29,32 @@ deterministic offline backend is driving; set `ANTHROPIC_API_KEY` (or
 `PUKAAR_BACKEND=claude`) to switch extraction/routing/assessment to Claude
 with structured outputs — same pipeline, same fixed strings.
 
+Also in the control room: a **responder phone** (pick Meena, tick *"I'm
+playing this responder"*, and accept/decline/close orders yourself while
+the sim plays everyone else), a **coordinator queue** for orders whose
+waves exhausted (manual assignment — the human terminal rung, exercised),
+**night mode** (dispatch honors the 07:00–21:00 partner window; night
+reports get the honest S-NIGHT string and queue for the morning round),
+**📊 metrics** (per-day stacked charts + the pre-registered kill-criteria
+table evaluated live), **🔔 event sounds**, and **⬇ session export**
+(full JSON of cases/orders/outcomes/audit for analysis or the video).
+
+The **WhatsApp Cloud API transport is wired** (`/webhook` GET verify +
+POST intake, reply-button/location-request/media senders in
+`whatsapp.py`, parser fully tested) and dormant until `WA_TOKEN` +
+`WA_PHONE_ID` + `WA_VERIFY_TOKEN` exist — P1 onboarding is configuration,
+not code.
+
 A shot-by-shot recording guide is in [`demo-script.md`](./demo-script.md).
+
+
+## Screenshots
+
+| Control room (live) | Metrics & kill criteria |
+|---|---|
+| ![control room](docs/screenshots/control-room-v2.png) | ![metrics](docs/screenshots/metrics.png) |
+| **The 112 gate firing** | **Case detail: DIGIPIN + provenance** |
+| ![emergency gate](docs/screenshots/emergency-gate.png) | ![case detail](docs/screenshots/case-detail.png) |
 
 ## What's real vs simulated
 

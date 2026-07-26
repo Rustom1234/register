@@ -47,10 +47,15 @@ class DispatchEngine:
         return row
 
     # --------------------------------------------------------------- tick
+    def in_dispatch_window(self, now: float | None = None) -> bool:
+        hour = int(((now if now is not None else self.now()) % 86400) // 3600)
+        return self.cfg.dispatch_open_h <= hour < self.cfg.dispatch_close_h
+
     def tick(self) -> None:
         now = self.now()
-        for order in self.store.query("SELECT * FROM orders WHERE status='queued'"):
-            self._start_wave(order, wave=1)
+        if self.in_dispatch_window(now):
+            for order in self.store.query("SELECT * FROM orders WHERE status='queued'"):
+                self._start_wave(order, wave=1)
         for order in self.store.query("SELECT * FROM orders WHERE status='offered'"):
             self._check_wave(order, now)
 
@@ -112,6 +117,27 @@ class DispatchEngine:
         self.store.update("orders", order["id"], {"status": "needs_coordinator"})
         self.store.audit("dispatch", "coordinator_escalation", order["id"], "system", "", reason, ts=self.now())
         self.emit("coordinator_alert", {"order_id": order["id"], "reason": reason})
+
+    def manual_assign(self, order_id: str, responder_id: str) -> bool:
+        """Coordinator override: hand a stuck order to a chosen responder.
+        Recorded as an assignment like any other, provenance actor = human."""
+        order = self.store.one("SELECT * FROM orders WHERE id=?", (order_id,))
+        resp = self.store.one("SELECT * FROM responders WHERE id=? AND active=1", (responder_id,))
+        if not order or not resp or order["status"] not in ("needs_coordinator", "queued", "offered"):
+            return False
+        now = self.now()
+        for other in self.store.query(
+                "SELECT * FROM assignments WHERE order_id=? AND responded_at IS NULL", (order_id,)):
+            self.store.update("assignments", other["id"], {"responded_at": now, "response": "released"})
+        self.store.insert("assignments", {
+            "id": new_id("asg"), "order_id": order_id, "responder_id": responder_id,
+            "offered_at": now, "responded_at": now, "response": "accepted",
+        })
+        self.store.update("orders", order_id,
+                          {"status": "accepted", "responder_id": responder_id, "accepted_at": now})
+        self.store.audit("coordinator", "manual_assign", order_id, "system", "", responder_id, ts=now)
+        self.emit("manual_assign", {"order_id": order_id, "responder_id": responder_id})
+        return True
 
     # ------------------------------------------------- responder actions --
     def respond(self, assignment_id: str, accepted: bool) -> bool:

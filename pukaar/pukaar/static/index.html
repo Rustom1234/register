@@ -30,7 +30,10 @@
   </div>
   <div class="top-right">
     <span id="backend-badge" class="badge">…</span>
-    <button id="btn-purge" class="ghost" title="run retention purge now">🧹 purge</button>
+    <a class="ghost btnlike" href="/static/metrics.html" target="_blank" title="metrics & kill criteria">📊</a>
+    <button id="btn-sound" class="ghost" title="event sounds">🔕</button>
+    <button id="btn-export" class="ghost" title="download session log (JSON)">⬇</button>
+    <button id="btn-purge" class="ghost" title="run retention purge now">🧹</button>
   </div>
 </header>
 
@@ -64,6 +67,14 @@
       <button data-sc="duplicate_burst">👥 3 witnesses, same spot</button>
       <button data-sc="emergency_112" class="danger">🚨 Emergency text (112 gate)</button>
     </div>
+
+    <div class="panel" id="resp-panel">
+      <div class="panel-title">Responder phone
+        <select id="resp-select"></select>
+      </div>
+      <label class="takeover"><input type="checkbox" id="resp-manual"> I'm playing this responder</label>
+      <div id="resp-cards"></div>
+    </div>
   </section>
 
   <section id="center">
@@ -79,6 +90,10 @@
   </section>
 
   <section id="right">
+    <div class="panel" id="coord-panel" hidden>
+      <div class="panel-title">⚠️ Coordinator queue</div>
+      <div id="coord-body"></div>
+    </div>
     <div class="panel" id="detail-panel" hidden>
       <div class="panel-title">Case <span id="detail-id"></span>
         <button id="detail-close" class="ghost">✕</button></div>

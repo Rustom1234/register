@@ -57,6 +57,7 @@ class Sim:
         self.sim_now = 8 * 3600.0          # 08:00 sim time, day 0
         self.running = True
         self.speed = cfg.sim_speed
+        self.manual: set[str] = set()      # responders a human is playing via the UI
         self._phone_counter = 0
         self._resp: dict[str, dict] = {}
         self._pending_escalations: dict[str, float] = {}
@@ -136,9 +137,24 @@ class Sim:
             self._random_report_at = self.sim_now + self.rng.uniform(300, 900)
 
         self.svc.dispatch.tick()
+        self._sync_states()
         self._responders_decide()
         self._responders_move(dt)
         self._complete_escalations()
+
+    def _sync_states(self) -> None:
+        """Reconcile kinetic state with order records — covers manual accepts,
+        coordinator manual assigns, and manual outcome closes from the UI."""
+        for r in self._resp.values():
+            if r["order_id"]:
+                order = self.svc.store.one("SELECT * FROM orders WHERE id=?", (r["order_id"],))
+                if not order or order["status"] in ("closed", "escalated"):
+                    r["state"], r["order_id"], r["target"] = "idle", None, None
+            else:
+                order = self.svc.store.one(
+                    "SELECT * FROM orders WHERE responder_id=? AND status='accepted'", (r["id"],))
+                if order:
+                    self._on_accept(r, order["id"])
 
     # ------------------------------------------------- responder behavior --
     def _responders_decide(self) -> None:
@@ -147,8 +163,8 @@ class Sim:
             "WHERE a.responded_at IS NULL")
         for a in pending:
             r = self._resp.get(a["responder_id"])
-            if not r:
-                continue
+            if not r or a["responder_id"] in self.manual:
+                continue  # a human is playing this responder from the UI
             key = a["id"]
             if r["decide_at"] is None or r.get("decide_key") != key:
                 r["decide_at"] = self.sim_now + self.rng.uniform(15, 90)
@@ -178,7 +194,7 @@ class Sim:
                     r["state"] = "onsite"
                     r["dwell_until"] = self.sim_now + self.rng.uniform(120, 300)
             elif r["state"] == "onsite":
-                if self.sim_now >= (r["dwell_until"] or 0):
+                if r["id"] not in self.manual and self.sim_now >= (r["dwell_until"] or 0):
                     self._close_order(r)
             else:  # idle drift
                 if r["target"] is None or self.rng.random() < 0.005:
@@ -224,9 +240,11 @@ class Sim:
             "clock": self._clock_str(),
             "speed": self.speed,
             "running": self.running,
+            "is_night": not self.svc.dispatch.in_dispatch_window(self.sim_now),
             "responders": [
                 {"id": r["id"], "name": r["name"], "medical": r["medical"],
-                 "lat": r["lat"], "lng": r["lng"], "state": r["state"], "order_id": r["order_id"]}
+                 "lat": r["lat"], "lng": r["lng"], "state": r["state"], "order_id": r["order_id"],
+                 "manual": r["id"] in self.manual}
                 for r in self._resp.values()
             ],
         }

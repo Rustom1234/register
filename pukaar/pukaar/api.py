@@ -9,11 +9,14 @@ import pathlib
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from .whatsapp import CloudApi, parse_webhook
+
+from . import strings
 from .config import Config
 from .db import Store
 from .service import PukaarService
@@ -37,10 +40,16 @@ class SimCtl(BaseModel):
 
 
 class RespAction(BaseModel):
-    action: str            # accept | decline | outcome
+    action: str            # accept | decline | outcome | assign
     assignment_id: str | None = None
     order_id: str | None = None
     outcome: str | None = None
+    responder_id: str | None = None
+
+
+class ManualCtl(BaseModel):
+    responder_id: str
+    manual: bool
 
 
 def build_app(cfg: Config | None = None) -> FastAPI:
@@ -99,6 +108,8 @@ def build_app(cfg: Config | None = None) -> FastAPI:
                 "SELECT * FROM assignments ORDER BY offered_at DESC LIMIT 40"),
             "feed": list(svc.feed)[-45:][::-1],
             "metrics": svc.metrics(),
+            "instructions": strings.INSTRUCTIONS,
+            "kit_skus": strings.KIT_SKUS,
             "conversations": {
                 phone: conv.log[-30:] for phone, conv in list(svc.conversations.items())[-6:]
             },
@@ -134,8 +145,70 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             closed = svc.dispatch.close(act.order_id, act.outcome)
             if closed:
                 svc.notify_outcome(closed["case_id"], act.outcome)
+                if act.outcome == "escalated":
+                    sim._pending_escalations[act.order_id] = sim.sim_now + 900
             return {"ok": bool(closed)}
+        if act.action == "assign" and act.order_id and act.responder_id:
+            return {"ok": svc.dispatch.manual_assign(act.order_id, act.responder_id)}
         raise HTTPException(400, "bad action")
+
+    @app.post("/api/manual")
+    def manual_ctl(ctl: ManualCtl):
+        if ctl.manual:
+            sim.manual.add(ctl.responder_id)
+        else:
+            sim.manual.discard(ctl.responder_id)
+        return {"manual": sorted(sim.manual)}
+
+    @app.get("/api/metrics/daily")
+    def metrics_daily():
+        return svc.daily_metrics()
+
+    @app.get("/api/export")
+    def export():
+        return {
+            "exported_at_sim": sim.sim_now,
+            "cases": svc.store.query("SELECT * FROM cases"),
+            "orders": svc.store.query("SELECT * FROM orders"),
+            "assignments": svc.store.query("SELECT * FROM assignments"),
+            "outcomes": svc.store.query("SELECT * FROM outcomes"),
+            "audit_log": svc.store.query("SELECT * FROM audit_log ORDER BY ts"),
+            "feed": list(svc.feed),
+            "metrics": svc.metrics(),
+            "daily": svc.daily_metrics(),
+        }
+
+    # ----------------------------------------------- WhatsApp Cloud API ---
+    # Dormant until WA_TOKEN/WA_PHONE_ID exist; the webhook shape is live
+    # and tested so P1 onboarding is config, not code.
+    cloud = CloudApi()
+
+    @app.get("/webhook")
+    def wa_verify(request: Request):
+        params = request.query_params
+        if (params.get("hub.mode") == "subscribe"
+                and params.get("hub.verify_token") == cloud.verify_token):
+            return PlainTextResponse(params.get("hub.challenge", ""))
+        raise HTTPException(403, "verification failed")
+
+    @app.post("/webhook")
+    async def wa_webhook(request: Request):
+        payload = await request.json()
+        handled = 0
+        for m in parse_webhook(payload):
+            if m["kind"] == "voice":
+                # Voice notes: media download + STT is a P1 task (Sarvam
+                # bake-off); acknowledge without pretending to understand.
+                replies = svc.wa_inbound(m["phone"], "text", text="(voice note)")
+            else:
+                replies = svc.wa_inbound(m["phone"], m["kind"], text=m.get("text"),
+                                         lat=m.get("lat"), lng=m.get("lng"),
+                                         photo_hint=m.get("photo_hint"))
+            handled += 1
+            if cloud.configured:
+                for r in replies:
+                    cloud.reply(m["phone"], r)
+        return {"handled": handled, "sending": cloud.configured}
 
     # -------------------------------------------------------------- static --
     @app.get("/")

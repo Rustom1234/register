@@ -35,6 +35,13 @@ SAFETY = {
         "✅ Report darj ho gayi (ID {case_id}). Ek bharosemand karyakarta aaj "
         "hi pahunchne ki koshish karega. Dhanyavaad rukne ke liye."
     ),
+    # Night version makes no same-day promise — honesty over comfort
+    # (build plan §3.12: never promise a response we can't staff).
+    "S-EXPECT-NIGHT": (
+        "✅ Report darj ho gayi (ID {case_id}). Raat mein dispatch band hai — "
+        "aapki report subah ki pehli round mein jayegi. Turant zaroorat ho to: "
+        "112 (emergency) ya 14461 (DUSIB shelter rescue, Delhi). Dhanyavaad."
+    ),
     "S-CLOSURE-SERVED": "🟢 Aapki report {case_id}: karyakarta vyakti tak pahuncha aur madad de di gayi. Shukriya!",
     "S-CLOSURE-ESCALATED": "🟢 Aapki report {case_id}: madad de di gayi, aur medical team ko bhi bulaya gaya hai. Shukriya!",
     "S-CLOSURE-NOTFOUND": "🟡 Aapki report {case_id}: karyakarta pahuncha par vyakti nahi mila. Report record mein hai.",

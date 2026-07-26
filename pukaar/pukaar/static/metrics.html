@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pukaar — Metrics & kill criteria</title>
+<link rel="stylesheet" href="/static/app.css">
+<style>
+  #mwrap { max-width: 1080px; margin: 0 auto; padding: 18px 16px 40px; overflow-y: auto; }
+  .mhead { display: flex; align-items: baseline; gap: 14px; margin-bottom: 14px; }
+  .mhead h1 { font-size: 17px; letter-spacing: 0.14em; margin: 0; }
+  .mhead a { color: var(--muted); text-decoration: none; font-size: 13px; }
+  .mtiles { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .mtiles .tile { position: static; min-width: 150px; }
+  table.kill { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px; }
+  table.kill th { text-align: left; color: var(--muted); font-weight: 500; font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  table.kill td { padding: 8px; border-bottom: 1px solid var(--line); color: var(--ink-2); }
+  table.kill td.v { font-variant-numeric: tabular-nums; color: var(--ink); }
+  .ok { color: var(--good); } .bad { color: var(--critical); } .pend { color: var(--muted); }
+  .chart { background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px 14px 8px; margin-bottom: 16px; }
+  .chart h2 { font-size: 11px; letter-spacing: 0.13em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+  .lg { display: flex; gap: 14px; font-size: 11.5px; color: var(--ink-2); margin-bottom: 8px; flex-wrap: wrap; }
+  .lg i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+  svg text { font-family: system-ui, sans-serif; }
+  details { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
+  details table { border-collapse: collapse; margin-top: 8px; }
+  details td, details th { border: 1px solid var(--line); padding: 4px 8px; color: var(--ink-2); font-size: 12px; }
+</style>
+</head>
+<body>
+<div id="mwrap">
+  <div class="mhead">
+    <a href="/">← control room</a>
+    <h1>PUKAAR · METRICS & KILL CRITERIA</h1>
+    <span id="mclock" class="clock" style="margin-left:auto">—</span>
+  </div>
+
+  <div class="mtiles" id="mtiles"></div>
+
+  <table class="kill">
+    <thead><tr><th>Kill criterion (pre-registered)</th><th>Now</th><th>Target</th><th>Status</th></tr></thead>
+    <tbody id="kill-body"></tbody>
+  </table>
+
+  <div class="chart">
+    <h2>Cases per day, by category</h2>
+    <div class="lg">
+      <span><i style="background:#3987e5"></i>Medical</span>
+      <span><i style="background:#d95926"></i>Food</span>
+      <span><i style="background:#199e70"></i>Shelter</span>
+    </div>
+    <svg id="chart-cases" width="100%" height="40"></svg>
+  </div>
+
+  <div class="chart">
+    <h2>Outcomes per day</h2>
+    <div class="lg">
+      <span><i style="background:#0ca30c"></i>🟢 Served</span>
+      <span><i style="background:#ec835a"></i>🩺 Served + escalated</span>
+      <span><i style="background:#fab219"></i>🟡 Not found</span>
+      <span><i style="background:#898781"></i>🤝 Declined (their right)</span>
+    </div>
+    <svg id="chart-outcomes" width="100%" height="40"></svg>
+  </div>
+
+  <details><summary>table view (accessibility)</summary><div id="mtable"></div></details>
+</div>
+<script src="/static/metrics.js"></script>
+</body>
+</html>

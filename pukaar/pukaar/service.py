@@ -59,8 +59,13 @@ class PukaarService:
             case = self._create_or_merge_case(case_payload, conv)
             conv.state["case_id"] = case["id"]
             self._record_report(conv, kind, shown, case_id=case["id"])
-            replies.append(BotMsg(strings.fmt("S-EXPECT", case_id=case["id"][-4:].upper()),
-                                  string_id="S-EXPECT"))
+            if self.dispatch.in_dispatch_window():
+                replies.append(BotMsg(strings.fmt("S-EXPECT", case_id=case["id"][-4:].upper()),
+                                      string_id="S-EXPECT"))
+            else:
+                self.emit("night_hold", {"case_id": case["id"]})
+                replies.append(BotMsg(strings.fmt("S-EXPECT-NIGHT", case_id=case["id"][-4:].upper()),
+                                      string_id="S-EXPECT-NIGHT"))
         else:
             self._record_report(conv, kind, shown, case_id=conv.state.get("case_id"))
 
@@ -150,6 +155,65 @@ class PukaarService:
                              if accept_times else None),
             "kits": kits,
         }
+
+    def daily_metrics(self) -> dict:
+        """Per-sim-day aggregates + kill-criteria evaluation (build plan §7).
+        Cost model: kit ₹300 + ₹120 per dispatch run (research cost basis)."""
+        q = self.store.query
+        days: dict[int, dict] = {}
+
+        def day_of(ts: float) -> int:
+            return int(ts // 86400)
+
+        def bucket(d: int) -> dict:
+            return days.setdefault(d, {
+                "day": d, "cases": 0, "by_category": {"medical": 0, "food": 0, "shelter": 0},
+                "served": 0, "escalated": 0, "not_found": 0, "declined": 0,
+                "offers": 0, "accepts": 0, "arrivals": 0,
+            })
+
+        for c in q("SELECT created_at, category FROM cases"):
+            b = bucket(day_of(c["created_at"]))
+            b["cases"] += 1
+            if c["category"] in b["by_category"]:
+                b["by_category"][c["category"]] += 1
+        for o in q("SELECT * FROM outcomes"):
+            b = bucket(day_of(o["created_at"]))
+            if o["escalated"]:
+                b["escalated"] += 1
+            elif o["served"]:
+                b["served"] += 1
+            elif not o["found"]:
+                b["not_found"] += 1
+            else:
+                b["declined"] += 1
+        for o in q("SELECT created_at, accepted_at, arrived_at FROM orders"):
+            if o["accepted_at"] is not None:
+                bucket(day_of(o["accepted_at"]))["accepts"] += 1
+            if o["arrived_at"] is not None:
+                bucket(day_of(o["arrived_at"]))["arrivals"] += 1
+        for r in q("SELECT MIN(offered_at) t FROM assignments GROUP BY order_id"):
+            bucket(day_of(r["t"]))["offers"] += 1
+
+        m = self.metrics()
+        outs = q("SELECT * FROM outcomes")
+        found = sum(1 for o in outs if o["found"])
+        served_total = sum(1 for o in outs if o["served"])
+        arrivals_total = q("SELECT COUNT(*) n FROM orders WHERE arrived_at IS NOT NULL")[0]["n"]
+        cost_total = served_total * 420 + max(0, arrivals_total - served_total) * 120
+        cost_per_served = round(cost_total / served_total) if served_total else None
+        kill = [
+            {"name": "Verified-need rate (found/closed)", "value": round(100 * found / len(outs)) if outs else None,
+             "target": ">= 40%", "ok": (found / len(outs) >= 0.4) if outs else None},
+            {"name": "Offer acceptance", "value": m["acceptance_pct"],
+             "target": ">= 50%", "ok": (m["acceptance_pct"] >= 50) if m["acceptance_pct"] is not None else None},
+            {"name": "Cost per person served", "value": cost_per_served,
+             "target": "<= ₹900 (3× kit)", "ok": (cost_per_served <= 900) if cost_per_served else None},
+            {"name": "Open backlog", "value": m["open_cases"],
+             "target": "<= 12 (capacity)", "ok": m["open_cases"] <= 12},
+        ]
+        return {"days": [days[d] for d in sorted(days)], "kill": kill,
+                "totals": {"served": served_total, "cost_total": cost_total}}
 
     # -------------------------------------------------------------- misc --
     def run_purge(self) -> dict:

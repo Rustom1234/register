@@ -11,7 +11,46 @@ const OUTCOME_TXT = {
 let state = null, map, zoneCircle, witnessPin = null, selectedCase = null, wired = false;
 const caseMarkers = new Map(), respMarkers = new Map(), routeLines = new Map();
 let activeConv = "+91-DEMO";
-const seenFeed = new Set();
+let selectedResp = "resp_1";
+let soundOn = false, audioCtx = null, lastFeedTs = -1;
+
+const J = (v, fb) => { try { const x = typeof v === "string" ? JSON.parse(v) : v; return x ?? fb; } catch { return fb; } };
+
+function haversineM(a, b, c, d) {
+  const R = 6371000, r = Math.PI / 180;
+  const x = Math.sin((c - a) * r / 2) ** 2 +
+    Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+// ---------------------------------------------------------------- sound --
+function beep(freq, dur = 0.09, delay = 0, vol = 0.045, type = "sine") {
+  if (!soundOn || !audioCtx) return;
+  const t = audioCtx.currentTime + delay;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(audioCtx.destination);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+
+function soundFor(e) {
+  switch (e.kind) {
+    case "order_accepted": beep(660); beep(880, 0.1, 0.1); break;
+    case "outcome": if (e.outcome === "served" || e.outcome === "escalated") beep(523, 0.16, 0, 0.05); break;
+    case "order_created": if (e.priority === "P1") { beep(220, 0.13, 0, 0.06, "square"); beep(220, 0.13, 0.18, 0.06, "square"); } break;
+    case "coordinator_alert": beep(392, 0.2, 0, 0.05, "triangle"); break;
+  }
+}
+
+function playNewFeedSounds() {
+  if (!state) return;
+  for (const e of [...state.feed].reverse()) {
+    if (e.ts > lastFeedTs) soundFor(e);
+  }
+  if (state.feed.length) lastFeedTs = Math.max(lastFeedTs, ...state.feed.map((e) => e.ts));
+}
 
 // ------------------------------------------------------------------ map --
 function initMap(zone) {
@@ -169,6 +208,10 @@ function feedLine(e) {
       html = `⚠️ flag: ${e.reason}`; cls = "warn"; break;
     case "purge":
       html = `🧹 retention purge — media ${e.media}, lat/lng ${e.latlng}, rows ${e.cases}`; break;
+    case "night_hold":
+      html = `🌙 <b>${short(e.case_id)}</b> held for the morning round (night mode)`; cls = "warn"; break;
+    case "manual_assign":
+      html = `🧑‍✈️ coordinator assigned ${short(e.order_id)} → <b>${respName(e.responder_id)}</b>`; cls = "good"; break;
     default:
       html = e.kind;
   }
@@ -245,6 +288,83 @@ function renderDetail() {
   const tl = `<div class="timeline">` + steps.map((s) =>
     `<div class="tl ${s.done ? "done" : ""}"><div class="tl-t">${tfmt(s.t)}</div>${s.txt}</div>`).join("") + `</div>`;
   document.getElementById("detail-body").innerHTML = kv + tl;
+}
+
+// ------------------------------------------------------- responder phone --
+function renderRespPanel() {
+  const sel = document.getElementById("resp-select");
+  sel.innerHTML = state.sim.responders.map((r) =>
+    `<option value="${r.id}" ${r.id === selectedResp ? "selected" : ""}>${r.name}${r.medical ? " 🩺" : ""}</option>`).join("");
+  const me = state.sim.responders.find((r) => r.id === selectedResp);
+  document.getElementById("resp-manual").checked = !!(me && me.manual);
+
+  const cards = [];
+  const pending = state.assignments.filter((a) =>
+    a.responder_id === selectedResp && a.responded_at == null);
+  for (const a of pending) {
+    const order = state.orders.find((o) => o.id === a.order_id && o.status === "offered");
+    if (!order) continue;
+    const c = state.cases.find((x) => x.id === order.case_id) || {};
+    const dist = (me && c.lat != null) ? `${Math.round(haversineM(me.lat, me.lng, c.lat, c.lng))}m` : "—";
+    const instr = J(order.instruction_ids, []).map((i) => `<li>${state.instructions[i] || i}</li>`).join("");
+    cards.push(`<div class="rcard">
+      <div class="r-head"><b>${CAT_ICON[c.category] || "📦"} ${order.sku} · ${order.priority}</b><span>${dist}</span></div>
+      ${order.clinical_flag ? "🩺 clinical flag · " : ""}${(c.detail || c.landmark_text || "").slice(0, 60)}
+      <ul class="r-instr">${instr}</ul>
+      <div class="btns">
+        <button class="accept" data-act="accept" data-asg="${a.id}">✅ Accept</button>
+        <button class="decline" data-act="decline" data-asg="${a.id}">Decline</button>
+      </div></div>`);
+  }
+  const active = state.orders.find((o) =>
+    o.responder_id === selectedResp && ["accepted", "onsite", "escalated"].includes(o.status));
+  if (active) {
+    const c = state.cases.find((x) => x.id === active.case_id) || {};
+    const statusTxt = { accepted: "🛵 en route…", onsite: "📍 on site", escalated: "🩺 clinical follow-up pending" }[active.status];
+    const outcomeBtns = active.status === "onsite" && me && me.manual ? `
+      <div class="btns">
+        <button class="accept" data-act="outcome" data-order="${active.id}" data-out="served">🟢 Diya</button>
+        <button data-act="outcome" data-order="${active.id}" data-out="not_found">Nahi mila</button>
+        <button data-act="outcome" data-order="${active.id}" data-out="declined">Mana kiya</button>
+        <button data-act="outcome" data-order="${active.id}" data-out="escalated">🩺 Doctor bulao</button>
+      </div>` : (active.status === "onsite" ? `<div class="r-instr">sim will close this — tick "I'm playing" to decide yourself</div>` : "");
+    cards.push(`<div class="rcard"><div class="r-head"><b>${active.sku} · ${c.digipin || ""}</b><span>${statusTxt}</span></div>${outcomeBtns}</div>`);
+  }
+  document.getElementById("resp-cards").innerHTML =
+    cards.join("") || '<div class="rcard idle">no offers right now — on patrol</div>';
+  document.querySelectorAll("#resp-cards [data-act]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      const body = b.dataset.act === "outcome"
+        ? { action: "outcome", order_id: b.dataset.order, outcome: b.dataset.out }
+        : { action: b.dataset.act, assignment_id: b.dataset.asg };
+      await fetch("/api/responder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      refresh();
+    }));
+}
+
+// ------------------------------------------------------- coordinator ----
+function renderCoord() {
+  const stuck = state.orders.filter((o) => o.status === "needs_coordinator");
+  const panel = document.getElementById("coord-panel");
+  panel.hidden = stuck.length === 0;
+  if (!stuck.length) return;
+  const respOpts = state.sim.responders.map((r) => `<option value="${r.id}">${r.name}</option>`).join("");
+  document.getElementById("coord-body").innerHTML = stuck.map((o) => {
+    const c = state.cases.find((x) => x.id === o.case_id) || {};
+    return `<div class="fi warn"><span class="t">${o.sku}</span>
+      <span><b>${o.id.slice(-4).toUpperCase()}</b> ${(c.detail || "").slice(0, 34)}</span>
+      <span class="act"><select data-order="${o.id}">${respOpts}</select>
+      <button data-assign="${o.id}">assign</button></span></div>`;
+  }).join("");
+  document.querySelectorAll("#coord-body [data-assign]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      const sel = document.querySelector(`#coord-body select[data-order="${b.dataset.assign}"]`);
+      await fetch("/api/responder", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "assign", order_id: b.dataset.assign, responder_id: sel.value }),
+      });
+      refresh();
+    }));
 }
 
 // ---------------------------------------------------------------- phone --
@@ -331,6 +451,27 @@ function wire() {
   });
   document.getElementById("btn-purge").addEventListener("click", async () => { await fetch("/api/purge", { method: "POST" }); refresh(); });
   document.getElementById("detail-close").addEventListener("click", () => { selectedCase = null; renderDetail(); });
+  document.getElementById("resp-select").addEventListener("change", (e) => { selectedResp = e.target.value; renderRespPanel(); });
+  document.getElementById("resp-manual").addEventListener("change", async (e) => {
+    await fetch("/api/manual", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ responder_id: selectedResp, manual: e.target.checked }) });
+    refresh();
+  });
+  document.getElementById("btn-sound").addEventListener("click", () => {
+    soundOn = !soundOn;
+    if (soundOn && !audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (soundOn) { beep(660, 0.07); beep(880, 0.07, 0.09); }
+    document.getElementById("btn-sound").textContent = soundOn ? "🔔" : "🔕";
+  });
+  document.getElementById("btn-export").addEventListener("click", async () => {
+    const res = await fetch("/api/export");
+    const blob = new Blob([JSON.stringify(await res.json(), null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "pukaar-session.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
 }
 
 function sendText() {
@@ -356,7 +497,8 @@ async function refresh() {
       map = "failed";
     }
   }
-  document.getElementById("clock").textContent = `${state.sim.clock} · ${state.sim.speed}×`;
+  document.getElementById("clock").textContent =
+    `${state.sim.is_night ? "🌙 " : ""}${state.sim.clock} · ${state.sim.speed}×`;
   document.getElementById("btn-pause").textContent = state.sim.running ? "⏸" : "▶";
   const speedSel = document.getElementById("speed");
   if ([...speedSel.options].some((o) => +o.value === state.sim.speed)) speedSel.value = String(state.sim.speed);
@@ -367,6 +509,7 @@ async function refresh() {
   document.getElementById("prov-note").textContent =
     state.prov_ephemeral ? "demo HMAC key (ephemeral) — set PUKAAR_HMAC_KEY for persistent provenance" : "persistent HMAC provenance key";
   syncMap(); renderTiles(); renderFeed(); renderCases(); renderPhone(); renderDetail();
+  renderRespPanel(); renderCoord(); playNewFeedSounds();
 }
 
 refresh();

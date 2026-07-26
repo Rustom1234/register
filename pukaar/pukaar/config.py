@@ -33,6 +33,11 @@ class Config:
     responder_open_cap: int = 3     # max open orders per responder
     arrive_radius_m: float = 35.0
 
+    # Night mode (build plan §3.12): dispatch honors partner shift windows;
+    # intake stays 24/7 with honest fixed strings.
+    dispatch_open_h: int = 7
+    dispatch_close_h: int = 21
+
     # Dedup (build plan §3.6): ~150m grid + 12h window
     dedup_cell_m: float = 150.0
     dedup_window_s: int = 12 * 3600

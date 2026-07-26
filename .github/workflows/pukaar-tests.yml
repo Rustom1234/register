@@ -1,0 +1,24 @@
+name: pukaar-tests
+
+on:
+  push:
+    paths:
+      - "pukaar/**"
+      - ".github/workflows/pukaar-tests.yml"
+  pull_request:
+    paths:
+      - "pukaar/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pukaar
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: python -m pytest -q

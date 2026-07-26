@@ -11,7 +11,9 @@ from pukaar.service import PukaarService
 
 
 class Clock:
-    def __init__(self, t: float = 1000.0):
+    # Default to 10:00 sim time — inside the dispatch window; night-mode
+    # tests set their own hour explicitly.
+    def __init__(self, t: float = 10 * 3600.0):
         self.t = t
 
     def __call__(self) -> float:
