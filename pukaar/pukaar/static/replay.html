@@ -15,7 +15,11 @@
   #scrub { flex: 1; accent-color: #3987e5; }
   #rclock { font-variant-numeric: tabular-nums; color: var(--ink-2); min-width: 118px; text-align: right; }
   #rmain { display: grid; grid-template-columns: 1fr 400px; min-height: 0; }
-  #rmap { position: relative; }
+  #rmap { position: relative;
+    background:
+      repeating-linear-gradient(0deg, transparent 0 79px, rgba(255,255,255,0.028) 79px 80px),
+      repeating-linear-gradient(90deg, transparent 0 79px, rgba(255,255,255,0.028) 79px 80px),
+      radial-gradient(1100px 750px at 50% 42%, #121722 0%, #0a0c10 75%); }
   #rfeed { border-left: 1px solid var(--line); padding: 10px; overflow-y: auto;
     display: flex; flex-direction: column-reverse; gap: 4px; background: var(--surface); }
   .rtiles { position: absolute; top: 10px; left: 10px; z-index: 800; display: flex; gap: 8px; }

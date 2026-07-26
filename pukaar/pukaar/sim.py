@@ -297,6 +297,25 @@ class Sim:
             self.svc.dispatch.escalation_complete(oid)
             del self._pending_escalations[oid]
 
+    # ---------------------------------------------------------- demo seed --
+    def seed_demo(self) -> None:
+        """Pre-stage a photogenic session (PUKAAR_SEED_DEMO=1 / `make demo`):
+        one case already served in history, one mid-flight, and a golden run
+        just accepted — recordable within seconds of boot."""
+        self.speed = 12.0
+        self.run_scenario("hungry_elder")
+        self._fast_forward(900)
+        self.run_scenario("family_rain")
+        self._fast_forward(240)
+        self.run_scenario("golden_run")
+        self._fast_forward(200)
+
+    def _fast_forward(self, sim_seconds: float, step: float = 5.0) -> None:
+        t = 0.0
+        while t < sim_seconds:
+            self.tick(step / self.speed)
+            t += step
+
     # ------------------------------------------------------------ snapshot --
     def snapshot(self) -> dict:
         return {

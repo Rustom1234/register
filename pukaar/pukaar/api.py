@@ -5,6 +5,7 @@ engine, and a periodic retention purge. The UI polls /api/state.
 """
 
 import asyncio
+import os
 import pathlib
 import time
 from contextlib import asynccontextmanager
@@ -59,6 +60,8 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     svc = PukaarService(cfg, store, now_fn=lambda: holder["sim"].sim_now if "sim" in holder else 0.0)
     sim = Sim(svc, cfg)
     holder["sim"] = sim
+    if os.environ.get("PUKAAR_SEED_DEMO"):
+        sim.seed_demo()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
