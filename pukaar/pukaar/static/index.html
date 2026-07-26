@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pukaar — Street Aid Control Room</title>
+<link rel="stylesheet" href="/static/vendor/leaflet.css">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header id="topbar">
+  <div class="brand">
+    <span class="brand-mark">●</span>
+    <div>
+      <div class="brand-name">PUKAAR</div>
+      <div class="brand-sub">Street Aid Control Room · Nizamuddin, Delhi</div>
+    </div>
+  </div>
+  <div class="top-mid">
+    <span id="clock" class="clock">—</span>
+    <div class="sim-ctl">
+      <button id="btn-pause" class="ghost" title="pause / resume">⏸</button>
+      <select id="speed">
+        <option value="3">3×</option>
+        <option value="6" selected>6×</option>
+        <option value="12">12×</option>
+        <option value="30">30×</option>
+      </select>
+    </div>
+  </div>
+  <div class="top-right">
+    <span id="backend-badge" class="badge">…</span>
+    <button id="btn-purge" class="ghost" title="run retention purge now">🧹 purge</button>
+  </div>
+</header>
+
+<main id="layout">
+  <section id="left">
+    <div class="phone" id="phone">
+      <div class="phone-head">
+        <div class="avatar">🙏</div>
+        <div>
+          <div class="ph-name">Pukaar</div>
+          <div class="ph-sub">aid line · <span id="conv-phone">+91-DEMO</span></div>
+        </div>
+        <select id="conv-select" title="switch conversation"></select>
+      </div>
+      <div class="phone-msgs" id="msgs"></div>
+      <div class="quick" id="quick"></div>
+      <div class="phone-input">
+        <button id="btn-loc" title="share the map pin as location">📍</button>
+        <button id="btn-photo" title="send a photo (described)">📷</button>
+        <input id="msg-in" placeholder="Message…" autocomplete="off">
+        <button id="btn-send" class="send">➤</button>
+      </div>
+      <div class="phone-hint">tap the map to place the 📍 pin · try: “aadmi ghayal hai, khoon…”</div>
+    </div>
+
+    <div class="panel scenarios">
+      <div class="panel-title">Scenarios</div>
+      <button data-sc="injured_flyover">🦶 Injured man at flyover</button>
+      <button data-sc="family_rain">🌧️ Family in the rain</button>
+      <button data-sc="hungry_elder">🍚 Hungry elder at station</button>
+      <button data-sc="duplicate_burst">👥 3 witnesses, same spot</button>
+      <button data-sc="emergency_112" class="danger">🚨 Emergency text (112 gate)</button>
+    </div>
+  </section>
+
+  <section id="center">
+    <div id="map"></div>
+    <div id="tiles" class="tiles"></div>
+    <div class="legend">
+      <span><i class="dot cat-medical"></i>Medical</span>
+      <span><i class="dot cat-food"></i>Food</span>
+      <span><i class="dot cat-shelter"></i>Shelter</span>
+      <span><i class="dot resp-dot"></i>Responder</span>
+      <span><i class="dot p1-dot"></i>P1 urgent</span>
+    </div>
+  </section>
+
+  <section id="right">
+    <div class="panel" id="detail-panel" hidden>
+      <div class="panel-title">Case <span id="detail-id"></span>
+        <button id="detail-close" class="ghost">✕</button></div>
+      <div id="detail-body"></div>
+    </div>
+    <div class="panel grow">
+      <div class="panel-title">Live ops feed</div>
+      <div id="feed" class="feed"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Open cases</div>
+      <div id="cases" class="cases"></div>
+    </div>
+  </section>
+</main>
+
+<footer id="foot">
+  <span id="prov-note"></span>
+  <span>backend: <b id="foot-backend">…</b> · every case record is HMAC provenance-tagged (witness / agent_inferred / responder_observed)</span>
+</footer>
+
+<script src="/static/vendor/leaflet.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

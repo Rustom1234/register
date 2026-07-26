@@ -133,8 +133,10 @@ class PukaarService:
         open_cases = q("SELECT COUNT(*) n FROM cases WHERE status NOT IN ('closed')")[0]["n"]
         served = q("SELECT COUNT(*) n FROM outcomes WHERE served=1")[0]["n"]
         escalated = q("SELECT COUNT(*) n FROM outcomes WHERE escalated=1")[0]["n"]
-        offers = q("SELECT COUNT(*) n FROM assignments")[0]["n"]
-        accepts = q("SELECT COUNT(*) n FROM assignments WHERE response='accepted'")[0]["n"]
+        # Order-level acceptance (GoodSAM's "% of alerts accepted"): an order
+        # counts once no matter how many parallel offers its waves fanned out.
+        offers = q("SELECT COUNT(DISTINCT order_id) n FROM assignments")[0]["n"]
+        accepts = q("SELECT COUNT(*) n FROM orders WHERE accepted_at IS NOT NULL")[0]["n"]
         accept_times = [r["accepted_at"] - r["created_at"] for r in
                         q("SELECT created_at, accepted_at FROM orders WHERE accepted_at IS NOT NULL")]
         kits = {r["sku"]: r["count"] for r in q("SELECT sku, count FROM inventory WHERE partner_id='partner_1'")}

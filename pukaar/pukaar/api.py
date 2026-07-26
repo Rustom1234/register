@@ -4,8 +4,6 @@ Single process: a 1s background loop advances the sim clock, the dispatch
 engine, and a periodic retention purge. The UI polls /api/state.
 """
 
-from __future__ import annotations
-
 import asyncio
 import pathlib
 import time
@@ -22,6 +20,27 @@ from .service import PukaarService
 from .sim import SCENARIOS, Sim
 
 STATIC = pathlib.Path(__file__).parent / "static"
+
+
+class Inbound(BaseModel):
+    phone: str
+    kind: str  # text | button | location | photo
+    text: str | None = None
+    lat: float | None = None
+    lng: float | None = None
+    photo_hint: str | None = None
+
+
+class SimCtl(BaseModel):
+    action: str            # pause | resume | speed
+    value: float | None = None
+
+
+class RespAction(BaseModel):
+    action: str            # accept | decline | outcome
+    assignment_id: str | None = None
+    order_id: str | None = None
+    outcome: str | None = None
 
 
 def build_app(cfg: Config | None = None) -> FastAPI:
@@ -54,14 +73,6 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     app.state.svc, app.state.sim = svc, sim
 
     # ------------------------------------------------------------ inbound --
-    class Inbound(BaseModel):
-        phone: str
-        kind: str  # text | button | location | photo
-        text: str | None = None
-        lat: float | None = None
-        lng: float | None = None
-        photo_hint: str | None = None
-
     @app.post("/api/wa/inbound")
     def wa_inbound(msg: Inbound):
         replies = svc.wa_inbound(msg.phone, msg.kind, text=msg.text, lat=msg.lat,
@@ -100,10 +111,6 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             raise HTTPException(404, f"unknown scenario: {name}")
         return {"result": sim.run_scenario(name)}
 
-    class SimCtl(BaseModel):
-        action: str            # pause | resume | speed
-        value: float | None = None
-
     @app.post("/api/sim")
     def sim_ctl(ctl: SimCtl):
         if ctl.action == "pause":
@@ -117,12 +124,6 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     @app.post("/api/purge")
     def run_purge():
         return svc.run_purge()
-
-    class RespAction(BaseModel):
-        action: str            # accept | decline | outcome
-        assignment_id: str | None = None
-        order_id: str | None = None
-        outcome: str | None = None
 
     @app.post("/api/responder")
     def responder_action(act: RespAction):
