@@ -16,9 +16,9 @@ a live **demo control room** you can record.
 ## Quickstart (demo, no keys needed)
 
 ```bash
-cd pukaar
+cd pukaar          # or just: make install && make demo
 uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
-.venv/bin/python -m pytest -q          # 51 tests
+.venv/bin/python -m pytest -q          # 66 tests
 .venv/bin/python -m pukaar             # http://127.0.0.1:8877
 ```
 
@@ -59,11 +59,13 @@ A shot-by-shot recording guide is in [`demo-script.md`](./demo-script.md).
 
 ## Screenshots
 
-| Control room (live) | Metrics & kill criteria |
+| The golden run (P1 arc, live) | Metrics & kill criteria |
 |---|---|
-| ![control room](docs/screenshots/control-room-v2.png) | ![metrics](docs/screenshots/metrics.png) |
+| ![golden run](docs/screenshots/golden-run.png) | ![metrics](docs/screenshots/metrics.png) |
 | **The 112 gate firing** | **Case detail: DIGIPIN + provenance** |
 | ![emergency gate](docs/screenshots/emergency-gate.png) | ![case detail](docs/screenshots/case-detail.png) |
+| **Boot with `make demo` — pre-staged session** | **Devanagari intake + session replay** |
+| ![seeded boot](docs/screenshots/boot-seeded.png) | ![replay](docs/screenshots/replay.png) |
 
 ## What's real vs simulated
 
@@ -114,7 +116,7 @@ demo:    sim.py (responders, scenarios) · api.py (FastAPI) · static/ (control 
 - The Claude backend's photo path takes a *described* photo in the demo;
   the production swap is an image content block on the same call — the
   assist-only semantics (category/urgency hint, never diagnosis) do not change.
-- Voice notes are not wired (Sarvam/Whisper bake-off is a P1 task).
+- Voice notes flow as transcripts end to end; real STT (Sarvam/Whisper bake-off) is the P1 task.
 - The WhatsApp transport is simulated; Cloud API onboarding is P1 week 3.
 - DIGIPIN encode/decode round-trips to <10 m and produces the correct
   `39J…` prefix for Delhi, but cross-checking against India Post's official
