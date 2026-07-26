@@ -191,7 +191,9 @@ class PukaarService:
         accepts = q("SELECT COUNT(*) n FROM orders WHERE accepted_at IS NOT NULL")[0]["n"]
         accept_times = [r["accepted_at"] - r["created_at"] for r in
                         q("SELECT created_at, accepted_at FROM orders WHERE accepted_at IS NOT NULL")]
-        kits = {r["sku"]: r["count"] for r in q("SELECT sku, count FROM inventory WHERE partner_id='partner_1'")}
+        inv = q("SELECT sku, count, restock_threshold FROM inventory WHERE partner_id='partner_1'")
+        kits = {r["sku"]: r["count"] for r in inv}
+        kits_low = [r["sku"] for r in inv if r["count"] <= (r["restock_threshold"] or 0)]
         return {
             "open_cases": open_cases,
             "served": served,
@@ -201,6 +203,7 @@ class PukaarService:
             "p90_accept_s": (round(sorted(accept_times)[max(0, int(len(accept_times) * 0.9) - 1)])
                              if accept_times else None),
             "kits": kits,
+            "kits_low": kits_low,
         }
 
     def daily_metrics(self) -> dict:

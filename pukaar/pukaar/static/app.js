@@ -154,16 +154,19 @@ function fmtDur(s) {
 
 function renderTiles() {
   const m = state.metrics;
-  const kits = Object.entries(m.kits || {}).map(([k, v]) => `${k.split("-")[0]} ${v}`).join(" · ");
+  const low = m.kits_low || [];
+  const kits = Object.entries(m.kits || {}).map(([k, v]) =>
+    `${k.split("-")[0]} ${v}${low.includes(k) ? "⚠" : ""}`).join(" · ");
   const tiles = [
-    ["open cases", m.open_cases, ""],
-    ["served", m.served, m.escalated ? `${m.escalated} escalated 🩺` : ""],
-    ["acceptance", m.acceptance_pct == null ? "—" : m.acceptance_pct + "%", "of offers"],
-    ["accept time", fmtDur(m.median_accept_s), m.p90_accept_s ? `p90 ${fmtDur(m.p90_accept_s)}` : "sim-time"],
-    ["kits left", kits || "—", "partner_1"],
+    ["open cases", m.open_cases, "", ""],
+    ["served", m.served, m.escalated ? `${m.escalated} escalated 🩺` : "", ""],
+    ["acceptance", m.acceptance_pct == null ? "—" : m.acceptance_pct + "%", "of offers", ""],
+    ["accept time", fmtDur(m.median_accept_s), m.p90_accept_s ? `p90 ${fmtDur(m.p90_accept_s)}` : "sim-time", ""],
+    ["kits left", kits || "—", low.length ? `⚠ low: ${low.join(", ")} — restock en route` : "partner_1",
+     low.length ? " low" : ""],
   ];
-  document.getElementById("tiles").innerHTML = tiles.map(([l, v, s]) =>
-    `<div class="tile"><div class="t-label">${l}</div><div class="t-value">${v}</div>` +
+  document.getElementById("tiles").innerHTML = tiles.map(([l, v, s, cls]) =>
+    `<div class="tile${cls}"><div class="t-label">${l}</div><div class="t-value">${v}</div>` +
     `<div class="t-sub">${s || "&nbsp;"}</div></div>`).join("");
 }
 
@@ -212,6 +215,10 @@ function feedLine(e) {
       html = `🌙 <b>${short(e.case_id)}</b> held for the morning round (night mode)`; cls = "warn"; break;
     case "manual_assign":
       html = `🧑‍✈️ coordinator assigned ${short(e.order_id)} → <b>${respName(e.responder_id)}</b>`; cls = "good"; break;
+    case "restock_needed":
+      html = `📦 ${e.sku} low (${e.count} left) — courier restock requested`; cls = "warn"; break;
+    case "restock_delivered":
+      html = `📦 courier delivered +${e.qty} × ${e.sku} to partner_1`; cls = "good"; break;
     default:
       html = e.kind;
   }
@@ -381,11 +388,18 @@ function renderPhone() {
   const log = (state.conversations[activeConv] || localLog);
   const msgs = document.getElementById("msgs");
   const atBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 60;
+  const bubbleTime = (ts) => {
+    if (!ts) return "";
+    const h = String(Math.floor((ts % 86400) / 3600)).padStart(2, "0");
+    const mm = String(Math.floor((ts % 3600) / 60)).padStart(2, "0");
+    return ` · ${h}:${mm}`;
+  };
   msgs.innerHTML = log.map((m) => {
     const who = m.from === "bot" ? "bot" : "witness";
     const voice = m.kind === "voice" ? ` voice" data-len="${3 + (m.text || "").length % 7}` : "";
-    return `<div class="bubble ${who}${voice}">${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Pukaar" : "you"}</span></div>`;
-  }).join("");
+    return `<div class="bubble ${who}${voice}">${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Pukaar" : "you"}${bubbleTime(m.ts)}</span></div>`;
+  }).join("") + (typingUntil > Date.now()
+    ? '<div class="bubble bot typing"><span></span><span></span><span></span></div>' : "");
   if (atBottom) msgs.scrollTop = msgs.scrollHeight;
 
   const last = log.length ? log[log.length - 1] : null;
@@ -399,6 +413,7 @@ function renderPhone() {
 }
 
 const localLog = []; // demo conversation before the server knows it
+let typingUntil = 0; // WhatsApp-style typing dots after the witness sends
 function escapeHtml(s) {
   return (s || "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 }
@@ -410,11 +425,13 @@ async function sendInbound(kind, extra = {}) {
   } else if (kind === "voice") {
     localEcho("🎤 " + extra.text, "voice");
   }
+  typingUntil = Date.now() + 900;          // brief typing dots feel human
+  renderPhone();
   const res = await fetch("/api/wa/inbound", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
   await res.json();
-  await refresh(); // pull the authoritative conversation immediately
+  setTimeout(() => { typingUntil = 0; refresh(); }, 700);
 }
 
 function localEcho(text, kind) {

@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS responders (
   medical INTEGER DEFAULT 0, vetting TEXT DEFAULT 'verified', active INTEGER DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS inventory (
-  partner_id TEXT, sku TEXT, count INTEGER, PRIMARY KEY (partner_id, sku)
+  partner_id TEXT, sku TEXT, count INTEGER, restock_threshold INTEGER DEFAULT 6,
+  PRIMARY KEY (partner_id, sku)
 );
 CREATE TABLE IF NOT EXISTS audit_log (
   id TEXT PRIMARY KEY, ts REAL, actor TEXT, action TEXT,

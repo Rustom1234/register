@@ -63,6 +63,17 @@ class Intake:
             s["stopped"] = True
             return [BotMsg(strings.SAFETY["S-STOP"], string_id="S-STOP")]
 
+        # After a report is filed: stray button taps are absorbed silently;
+        # fresh text/location/photo starts a NEW report on the same number.
+        if s["stage"] == "done":
+            if kind == "button":
+                return []
+            for slot in ("lat", "lng", "geo_conf", "landmark_text", "category",
+                         "freshness_min", "detail", "photo_hint"):
+                s[slot] = None
+            s["category_conf"], s["location_asked"], s["turns"] = 0.0, False, 1
+            s["stage"] = "need_location"
+
         # Deterministic emergency gate — before any model logic, always.
         if kind == "text" and gate.is_emergency(text):
             s["stage"] = "emergency_redirect"

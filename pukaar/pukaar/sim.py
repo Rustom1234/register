@@ -46,6 +46,7 @@ SCENARIOS = {
         ("text", "Ek aadmi behosh pada hai sadak par!!"),
     ],
     "duplicate_burst": None,  # handled specially: three witnesses, same spot
+    "golden_run": None,       # handled specially: guaranteed clean P1 arc
 }
 
 
@@ -58,6 +59,9 @@ class Sim:
         self.running = True
         self.speed = cfg.sim_speed
         self.manual: set[str] = set()      # responders a human is playing via the UI
+        self.golden: dict[str, str] = {}   # order_id -> chosen responder (scripted clean arc)
+        self._restock_flagged: set[str] = set()
+        self._pending_restocks: dict[str, float] = {}   # sku -> delivery due (sim ts)
         self._phone_counter = 0
         self._resp: dict[str, dict] = {}
         self._pending_escalations: dict[str, float] = {}
@@ -66,9 +70,10 @@ class Sim:
 
     # -------------------------------------------------------------- setup --
     def _seed_world(self) -> None:
-        self.svc.store.insert("inventory", {"partner_id": "partner_1", "sku": "MED-1", "count": 18})
-        self.svc.store.insert("inventory", {"partner_id": "partner_1", "sku": "FOOD-1", "count": 24})
-        self.svc.store.insert("inventory", {"partner_id": "partner_1", "sku": "SEAS-M", "count": 15})
+        for sku, count in (("MED-1", 18), ("FOOD-1", 24), ("SEAS-M", 15)):
+            self.svc.store.execute(
+                "INSERT OR REPLACE INTO inventory (partner_id, sku, count, restock_threshold) "
+                "VALUES ('partner_1', ?, ?, 6)", (sku, count))
         for i, (name, medical) in enumerate(RESPONDER_SEED):
             rid = f"resp_{i+1}"
             self.svc.store.insert("responders", {
@@ -94,6 +99,8 @@ class Sim:
 
     # ---------------------------------------------------------- scenarios --
     def run_scenario(self, name: str) -> str:
+        if name == "golden_run":
+            return self._golden_run()
         if name == "duplicate_burst":
             lat, lng = self._random_point(0.6)
             for _ in range(3):
@@ -108,6 +115,31 @@ class Sim:
         steps = SCENARIOS[name]
         self._play(self._next_phone(), steps)
         return f"scenario {name} played"
+
+    def _golden_run(self) -> str:
+        """The video climax: a P1 medical case staged ~500m from a medical
+        responder, who accepts wave 1, arrives, escalates to the clinical
+        team, and the escalation completes — a guaranteed clean arc through
+        the REAL pipeline (only the responder's dice are loaded)."""
+        med = next((r for r in self._resp.values() if r["medical"]), None)
+        if med is None:
+            return "no medical responder available"
+        import math
+        ang = self.rng.uniform(0, 6.28318)
+        lat, lng = geo.offset_m(med["lat"], med["lng"],
+                                500 * math.cos(ang), 500 * math.sin(ang))
+        phone = self._next_phone()
+        self._play(phone, [
+            ("text", "Flyover ke neeche aadmi ke pair mein gehri chot hai, purani patti lagi hai"),
+            ("location_at", (lat, lng)),
+            ("photo", "serious infected wound on foot, old dirty bandage, pus visible"),
+            ("button", "fresh:10"),
+        ])
+        case = self.svc.store.one("SELECT * FROM cases ORDER BY created_at DESC")
+        order = self.svc.store.one("SELECT * FROM orders WHERE case_id=?", (case["id"],)) if case else None
+        if order:
+            self.golden[order["id"]] = med["id"]
+        return f"golden run staged for {med['name']}"
 
     def _next_phone(self) -> str:
         self._phone_counter += 1
@@ -141,6 +173,7 @@ class Sim:
         self._responders_decide()
         self._responders_move(dt)
         self._complete_escalations()
+        self._process_restocks()
 
     def _sync_states(self) -> None:
         """Reconcile kinetic state with order records — covers manual accepts,
@@ -165,15 +198,23 @@ class Sim:
             r = self._resp.get(a["responder_id"])
             if not r or a["responder_id"] in self.manual:
                 continue  # a human is playing this responder from the UI
+            golden_resp = self.golden.get(a["order_id"])
+            if golden_resp and a["responder_id"] != golden_resp:
+                self.svc.dispatch.respond(a["id"], False)   # scripted: others step back
+                continue
             key = a["id"]
             if r["decide_at"] is None or r.get("decide_key") != key:
-                r["decide_at"] = self.sim_now + self.rng.uniform(15, 90)
+                delay = self.rng.uniform(15, 35) if golden_resp else self.rng.uniform(15, 90)
+                r["decide_at"] = self.sim_now + delay
                 r["decide_key"] = key
                 continue
             if self.sim_now >= r["decide_at"]:
-                p = r["accept_p"] * (1.25 if a["priority"] == "P1" else 1.0)
-                busy = r["state"] != "idle"
-                accepted = (not busy) and self.rng.random() < min(0.95, p)
+                if golden_resp:
+                    accepted = True                          # loaded dice, real pipeline
+                else:
+                    p = r["accept_p"] * (1.25 if a["priority"] == "P1" else 1.0)
+                    busy = r["state"] != "idle"
+                    accepted = (not busy) and self.rng.random() < min(0.95, p)
                 if self.svc.dispatch.respond(a["id"], accepted) and accepted:
                     self._on_accept(r, a["order_id"])
                 r["decide_at"], r["decide_key"] = None, None
@@ -207,25 +248,48 @@ class Sim:
         if not order:
             r["state"], r["order_id"], r["target"] = "idle", None, None
             return
-        roll, acc = self.rng.random(), 0.0
-        outcome = "served"
-        for name, w in OUTCOME_WEIGHTS:
-            acc += w
-            if roll <= acc:
-                outcome = name
-                break
-        if order["clinical_flag"] and outcome == "served" and self.rng.random() < 0.35:
-            outcome = "escalated"
+        if order["id"] in self.golden:
+            outcome = "escalated"                # the arc the video needs, every time
+        else:
+            roll, acc = self.rng.random(), 0.0
+            outcome = "served"
+            for name, w in OUTCOME_WEIGHTS:
+                acc += w
+                if roll <= acc:
+                    outcome = name
+                    break
+            if order["clinical_flag"] and outcome == "served" and self.rng.random() < 0.35:
+                outcome = "escalated"
         closed = self.svc.dispatch.close(r["order_id"], outcome)
         if closed:
             if outcome in ("served", "escalated"):
-                self.svc.store.execute(
-                    "UPDATE inventory SET count = MAX(count - 1, 0) WHERE partner_id='partner_1' AND sku=?",
-                    (order["sku"],))
+                self._consume_kit(order["sku"])
             self.svc.notify_outcome(order["case_id"], outcome)
             if outcome == "escalated":
-                self._pending_escalations[r["order_id"]] = self.sim_now + self.rng.uniform(600, 1500)
+                due = 600 if order["id"] in self.golden else self.rng.uniform(600, 1500)
+                self._pending_escalations[r["order_id"]] = self.sim_now + due
         r["state"], r["order_id"], r["target"] = "idle", None, None
+
+    # ------------------------------------------------- inventory & restock --
+    def _consume_kit(self, sku: str) -> None:
+        self.svc.store.execute(
+            "UPDATE inventory SET count = MAX(count - 1, 0) WHERE partner_id='partner_1' AND sku=?",
+            (sku,))
+        row = self.svc.store.one(
+            "SELECT * FROM inventory WHERE partner_id='partner_1' AND sku=?", (sku,))
+        if row and row["count"] <= (row["restock_threshold"] or 0) and sku not in self._restock_flagged:
+            self._restock_flagged.add(sku)
+            self._pending_restocks[sku] = self.sim_now + 600   # courier rail: ~10 sim-min
+            self.svc.emit("restock_needed", {"sku": sku, "count": row["count"]})
+
+    def _process_restocks(self) -> None:
+        done = [sku for sku, due in self._pending_restocks.items() if self.sim_now >= due]
+        for sku in done:
+            self.svc.store.execute(
+                "UPDATE inventory SET count = count + 12 WHERE partner_id='partner_1' AND sku=?", (sku,))
+            del self._pending_restocks[sku]
+            self._restock_flagged.discard(sku)
+            self.svc.emit("restock_delivered", {"sku": sku, "qty": 12})
 
     def _complete_escalations(self) -> None:
         done = [oid for oid, t in self._pending_escalations.items() if self.sim_now >= t]

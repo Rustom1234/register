@@ -1,54 +1,61 @@
-# Pukaar demo — recording script (~2½ minutes)
+# Pukaar demo — recording script (~3 minutes)
 
-Setup: `python -m pukaar`, open http://127.0.0.1:8877 full-screen,
-speed at 6×. On a normal connection the map shows dark CARTO tiles of
-Nizamuddin; screen-record at 1512×920 or larger.
+Setup: `python -m pukaar`, open http://127.0.0.1:8877 full-screen, speed
+6×, sound 🔔 on. On a normal connection the map shows dark CARTO tiles of
+Nizamuddin. Record at 1512×920+. (Tip: rehearse once, ⬇ export the good
+session, and re-record from `/static/replay.html` if you want a flawless
+take.)
 
-**0:00 — Cold open on the control room.** Cursor idle. Say: *"This is
-Pukaar — a witness-powered street-aid network. One WhatsApp number, an AI
-triage layer, and the nearest trusted NGO responder."* Point at the zone
-circle and the responder initials drifting on patrol.
+**0:00 — Cold open.** Responders drifting on patrol inside the zone ring.
+Say: *"This is Pukaar — one WhatsApp number that turns anyone who stops on
+the street into the start of a real response."*
 
-**0:15 — Be the witness.** In the phone, type
-`Bhaiya flyover ke neeche aadmi ghayal hai, patti se khoon aa raha hai`
-and send. The bot replies with the privacy notice and asks for location.
-Click the map to drop the 📍 pin, press the phone's 📍 button. Press 📷
-(sends the wrapped-foot photo). Tap "Abhi / just now". Say: *"Four steps,
-under ninety seconds — the funnel research says anything longer loses the
-witness."*
+**0:12 — Be the witness, in English.** Type: `An injured man is sitting
+under the flyover, his bandage is soaked`. The bot answers **in English**.
+Say: *"It mirrors your language."* Send the next line in Hinglish —
+`bhaiya jaldi, aadmi ko madad chahiye` — or tap 🌐→अ to force Devanagari
+and show the whole flow switch scripts. Drop the 📍 pin, tap 📷, tap a
+freshness chip. *"Four steps, under ninety seconds."*
 
-**0:45 — Follow the case.** The feed shows: new case (medical), order
-MED-1 · P2 · 🩺 clinical flag. Say: *"The agent extracted the category, but
-the clinical flag is enforced in code — a low-confidence model can raise
-concern, never lower it."* Watch wave 1 fan out to the two nearest
-responders — *"GoodSAM's pattern: parallel offers, first accept wins."* A
-responder turns blue-ringed and moves along the dashed line.
+**0:45 — Try a voice note.** Tap 🎤 — a Hinglish transcript flows through
+the same pipeline. *"Voice notes work too — a third of our witnesses won't
+want to type."*
 
-**1:15 — Click the case** in Open Cases. Show the card: DIGIPIN
-(*"India Post's new 4-metre geocode — no address needed"*), witnesses,
-kit, provenance line (*"every record is HMAC-tagged: witness, agent, or
-responder — the agent's guess can never impersonate a human"*), and the
-timeline filling in.
+**1:00 — The golden run.** Press **🎬 Golden run**. Narrate the arc as it
+happens: new case (medical, **P1**, 🩺 clinical flag — *"enforced in code,
+not by the model's mood"*) → wave 1 fans out (*"GoodSAM's pattern —
+parallel offers, first accept wins"*) → a medical responder accepts,
+route line animates, accept chime plays → *reached the spot* → **served +
+clinical escalation** → minutes later, *"clinical follow-up completed."*
+Click the case: DIGIPIN, witnesses, kit, provenance, full timeline.
+*"India Post's 4-metre geocode instead of an address, and every record is
+HMAC-tagged — the agent's guess can never impersonate a human."*
 
-**1:35 — Dedup.** Press "👥 3 witnesses, same spot". Feed shows
-`witness #2 / #3 merged (dedup)`. *"Three good Samaritans, one case, one
-kit — not three."*
+**1:50 — Dedup + the safety line.** Press **👥 3 witnesses, same spot** —
+*"three good Samaritans, one case, one kit."* Then **🚨 Emergency text** —
+instant fixed 112 reply, red feed line *"no agent involved"*. *"Emergencies
+never touch a model, and the test suite fails the build if this gate ever
+misses."*
 
-**1:50 — The safety line.** Press "🚨 Emergency text (112 gate)" or type
-`aadmi behosh pada hai!!`. The reply is instant and fixed; the feed logs
-*emergency → fixed 112 reply, no agent involved* in red. Say: *"Emergencies
-never touch a model. That string is hard-coded, and the test suite fails
-the build if this gate ever misses."*
+**2:15 — Play the responder.** In the responder phone, pick Meena, tick
+*"I'm playing this responder"*, accept an offer, watch yourself ride, then
+close the case with the outcome buttons. *"Same buttons a real outreach
+worker gets on WhatsApp — zero app installs."*
 
-**2:10 — Close on the numbers.** Zoom on the tiles: served count rising,
-acceptance %, median accept time, kits depleting. Press 🧹 purge and show
-the retention line. Say: *"Outcome metrics because feel-good deliveries
-aren't the goal — and a retention job because the safest database is the
-one that doesn't exist. This demo runs offline on a mock agent; with an
-API key the same pipeline runs on Claude with structured outputs."*
+**2:35 — Ops reality.** Point at the tiles: kits depleting; when a SKU
+runs low the tile turns amber and the feed shows the **courier restock**
+arriving — *"the same delivery rail that will run on Porter or a
+quick-commerce fleet."* Open **📊 metrics**: *"pre-registered kill
+criteria, evaluated live — if this project stops earning its numbers, the
+dashboard says kill it."* Press 🧹 purge: *"and the safest database is the
+one that doesn't exist."*
 
-Fade out on the map with responders moving.
+**2:55 — Close.** Back to the map, responders still moving. *"Runs
+offline on a deterministic mock today; the same pipeline runs on Claude
+with structured outputs by setting one API key. The WhatsApp transport is
+wired and waiting for a number. This is Pukaar."*
 
-Tips: 12× speed compresses waits between beats (the header select);
-pause ⏸ while you talk over a still frame; the conversation dropdown lets
-you show a scenario witness's phone too.
+Extra beats if you have time: night mode (set a late sim hour — reports
+queue with the honest 🌙 string), the coordinator queue (exhausted waves
+get manually assigned), and `/static/replay.html` scrubbing a whole day
+in seconds.
