@@ -18,7 +18,7 @@ a live **demo control room** you can record.
 ```bash
 cd pukaar          # or just: make install && make demo
 uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
-.venv/bin/python -m pytest -q          # 69 tests
+.venv/bin/python -m pytest -q          # 72 tests
 .venv/bin/python -m pukaar             # http://127.0.0.1:8877
 ```
 
@@ -54,7 +54,10 @@ POST intake, reply-button/location-request/media senders in
 `WA_PHONE_ID` + `WA_VERIFY_TOKEN` exist — P1 onboarding is configuration,
 not code.
 
-A shot-by-shot recording guide is in [`demo-script.md`](./demo-script.md).
+A shot-by-shot recording guide is in [`demo-script.md`](./demo-script.md) —
+or let `python scripts/record_demo.py` record a self-narrating video for you
+(captions + visible cursor) against a `make demo` server. For hosting:
+`make docker-demo` serves the seeded demo on 0.0.0.0:8877 in a container.
 
 
 ## Screenshots

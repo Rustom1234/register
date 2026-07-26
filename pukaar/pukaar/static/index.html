@@ -19,7 +19,7 @@
   <div class="top-mid">
     <span id="clock" class="clock">—</span>
     <div class="sim-ctl">
-      <button id="btn-pause" class="ghost" title="pause / resume">⏸</button>
+      <button id="btn-pause" class="ghost" title="pause / resume" aria-label="Pause or resume simulation">⏸</button>
       <select id="speed">
         <option value="3">3×</option>
         <option value="6" selected>6×</option>
@@ -30,13 +30,13 @@
   </div>
   <div class="top-right">
     <span id="backend-badge" class="badge">…</span>
-    <button id="btn-follow" class="ghost" title="camera follows the golden run">🎥</button>
-    <a class="ghost btnlike" href="/static/about.html" target="_blank" title="the Pukaar story (for judges)">ℹ️</a>
-    <a class="ghost btnlike" href="/report" target="_blank" title="printable session report">🖨</a>
-    <a class="ghost btnlike" href="/static/metrics.html" target="_blank" title="metrics & kill criteria">📊</a>
-    <button id="btn-sound" class="ghost" title="event sounds">🔕</button>
-    <button id="btn-export" class="ghost" title="download session log (JSON)">⬇</button>
-    <button id="btn-purge" class="ghost" title="run retention purge now">🧹</button>
+    <button id="btn-follow" class="ghost" title="camera follows the golden run" aria-label="Toggle follow camera">🎥</button>
+    <a class="ghost btnlike" href="/static/about.html" target="_blank" title="the Pukaar story (for judges)" aria-label="About Pukaar">ℹ️</a>
+    <a class="ghost btnlike" href="/report" target="_blank" title="printable session report" aria-label="Printable session report">🖨</a>
+    <a class="ghost btnlike" href="/static/metrics.html" target="_blank" title="metrics & kill criteria" aria-label="Metrics and kill criteria">📊</a>
+    <button id="btn-sound" class="ghost" title="event sounds" aria-label="Toggle event sounds">🔕</button>
+    <button id="btn-export" class="ghost" title="download session log (JSON)" aria-label="Download session log">⬇</button>
+    <button id="btn-purge" class="ghost" title="run retention purge now" aria-label="Run retention purge">🧹</button>
   </div>
 </header>
 
@@ -49,17 +49,17 @@
           <div class="ph-name">Pukaar</div>
           <div class="ph-sub">aid line · <span id="conv-phone">+91-DEMO</span></div>
         </div>
-        <button id="btn-script" class="ghost script-btn" title="switch bot script: Devanagari ⇄ Hinglish">अ</button>
+        <button id="btn-script" class="ghost script-btn" title="bot language: auto / EN / Hinglish / Devanagari" aria-label="Cycle bot language">अ</button>
         <select id="conv-select" title="switch conversation"></select>
       </div>
       <div class="phone-msgs" id="msgs"></div>
       <div class="quick" id="quick"></div>
       <div class="phone-input">
-        <button id="btn-loc" title="share the map pin as location">📍</button>
-        <button id="btn-photo" title="send a photo (described)">📷</button>
-        <button id="btn-voice" title="send a voice note (transcript demo)">🎤</button>
+        <button id="btn-loc" title="share the map pin as location" aria-label="Share location pin">📍</button>
+        <button id="btn-photo" title="send a photo (described)" aria-label="Send photo">📷</button>
+        <button id="btn-voice" title="send a voice note (transcript demo)" aria-label="Send voice note">🎤</button>
         <input id="msg-in" placeholder="Message…" autocomplete="off">
-        <button id="btn-send" class="send">➤</button>
+        <button id="btn-send" class="send" aria-label="Send message">➤</button>
       </div>
       <div class="phone-hint">tap the map to place the 📍 pin · try: “aadmi ghayal hai, khoon…”</div>
     </div>
@@ -102,7 +102,7 @@
     </div>
     <div class="panel" id="detail-panel" hidden>
       <div class="panel-title">Case <span id="detail-id"></span>
-        <button id="detail-close" class="ghost">✕</button></div>
+        <button id="detail-close" class="ghost" aria-label="Close case detail">✕</button></div>
       <div id="detail-body"></div>
     </div>
     <div class="panel grow">

@@ -264,3 +264,12 @@ button.golden { border-color: rgba(250,178,25,0.55); color: #fab219; }
   padding: 5px 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px;
   background: var(--surface); }
 #foot b { color: var(--ink-2); font-weight: 600; }
+
+/* -------------------------------------------------------- accessibility -- */
+button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible {
+  outline: 2px solid #6da7ec; outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .case-pin.pulse::after, .route-line, .bubble.typing span { animation: none; }
+  .leaflet-fade-anim .leaflet-tile { transition: none; }
+}
