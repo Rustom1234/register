@@ -71,3 +71,14 @@ def test_webhook_post_feeds_pipeline():
         assert r.json() == {"handled": 1, "sending": False}
         state = client.get("/api/state").json()
         assert any("919876" in p for p in state["conversations"])
+
+
+def test_webhook_voice_flows_as_voice_kind():
+    with _client() as client:
+        r = client.post("/webhook", json=_wrap(
+            {"from": "919812345678", "type": "audio", "audio": {"id": "m9", "voice": True}}))
+        assert r.status_code == 200 and r.json()["handled"] == 1
+        state = client.get("/api/state").json()
+        conv = next(v for k, v in state["conversations"].items() if "919812" in k)
+        assert conv[0]["kind"] == "voice"
+        assert conv[0]["text"].startswith("🎤")

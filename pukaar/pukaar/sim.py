@@ -9,6 +9,7 @@ intake pipeline — nothing in the demo bypasses the production code path.
 
 from __future__ import annotations
 
+import math
 import random
 
 from . import geo
@@ -93,7 +94,6 @@ class Sim:
     def _random_point(self, radius_frac: float = 1.0) -> tuple[float, float]:
         r = self.cfg.zone_radius_m * radius_frac * (self.rng.random() ** 0.5)
         ang = self.rng.uniform(0, 6.28318)
-        import math
         return geo.offset_m(self.cfg.zone_lat, self.cfg.zone_lng,
                             r * math.cos(ang), r * math.sin(ang))
 
@@ -124,7 +124,6 @@ class Sim:
         med = next((r for r in self._resp.values() if r["medical"]), None)
         if med is None:
             return "no medical responder available"
-        import math
         ang = self.rng.uniform(0, 6.28318)
         lat, lng = geo.offset_m(med["lat"], med["lng"],
                                 500 * math.cos(ang), 500 * math.sin(ang))

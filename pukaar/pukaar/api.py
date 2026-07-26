@@ -218,9 +218,11 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         handled = 0
         for m in parse_webhook(payload):
             if m["kind"] == "voice":
-                # Voice notes: media download + STT is a P1 task (Sarvam
-                # bake-off); acknowledge without pretending to understand.
-                replies = svc.wa_inbound(m["phone"], "text", text="(voice note)")
+                # Voice notes over the real transport: STT (Sarvam bake-off)
+                # is the P1 task — until then the note flows as an empty
+                # transcript, keeps the mic bubble semantics, and the intake
+                # asks for the missing pieces instead of pretending to hear.
+                replies = svc.wa_inbound(m["phone"], "voice", text=None)
             else:
                 replies = svc.wa_inbound(m["phone"], m["kind"], text=m.get("text"),
                                          lat=m.get("lat"), lng=m.get("lng"),
