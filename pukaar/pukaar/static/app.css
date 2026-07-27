@@ -273,3 +273,7 @@ button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible
   .case-pin.pulse::after, .route-line, .bubble.typing span { animation: none; }
   .leaflet-fade-anim .leaflet-tile { transition: none; }
 }
+
+#conn-banner { position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(208,59,59,0.95); color: #fff; padding: 8px 18px; border-radius: 999px;
+  font-weight: 600; font-size: 13px; z-index: 99999; }

@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS cases (
   id TEXT PRIMARY KEY, status TEXT, category TEXT, category_conf REAL,
   urgency TEXT, cell TEXT, lat REAL, lng REAL, geo_conf TEXT,
   landmark_text TEXT, freshness_min INTEGER, detail TEXT,
-  merged_witnesses INTEGER DEFAULT 1,
+  merged_witnesses INTEGER DEFAULT 1, recheck_sent INTEGER DEFAULT 0,
   created_at REAL, closed_at REAL, expires_at REAL
 );
 CREATE TABLE IF NOT EXISTS orders (

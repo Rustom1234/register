@@ -43,6 +43,9 @@ SAFETY = {
         "aapki report subah ki pehli round mein jayegi. Turant zaroorat ho to: "
         "112 (emergency) ya 14461 (DUSIB shelter rescue, Delhi). Dhanyavaad."
     ),
+    "S-STILLTHERE": "🤔 Aapki report {case_id} tak abhi koi pahunch nahi paya. Kya vyakti abhi bhi wahin hai?",
+    "S-STILLTHERE-YES": "Shukriya! Team ko bata diya — report taaza kar di gayi hai.",
+    "S-STILLTHERE-NO": "Theek hai — report band kar di gayi hai. Rukne ke liye dhanyavaad.",
     "S-PROGRESS-ACCEPTED": "🛵 Ek karyakarta ({name}) aapki report {case_id} ke liye nikal chuka hai.",
     "S-PROGRESS-ARRIVED": "📍 Karyakarta vyakti ke paas pahunch gaya hai (report {case_id}).",
     "S-CLOSURE-SERVED": "🟢 Aapki report {case_id}: karyakarta vyakti tak pahuncha aur madad de di gayi. Shukriya!",
@@ -62,6 +65,11 @@ CATEGORY_BUTTONS = [
     {"id": "cat:medical", "label": CATEGORY_LABELS["medical"]},
     {"id": "cat:food", "label": CATEGORY_LABELS["food"]},
     {"id": "cat:shelter", "label": CATEGORY_LABELS["shelter"]},
+]
+
+STILL_BUTTONS = [
+    {"id": "still:yes", "label": "Haan, wahin hai"},
+    {"id": "still:no", "label": "Nahi / pata nahi"},
 ]
 
 FRESHNESS_BUTTONS = [
@@ -118,6 +126,9 @@ SAFETY_DEVA = {
         "सुबह की पहली राउंड में जाएगी। तुरंत ज़रूरत हो तो: 112 (इमरजेंसी) या 14461 "
         "(DUSIB शेल्टर रेस्क्यू, दिल्ली)। धन्यवाद।"
     ),
+    "S-STILLTHERE": "🤔 आपकी रिपोर्ट {case_id} तक अभी कोई पहुँच नहीं पाया। क्या व्यक्ति अभी भी वहीं है?",
+    "S-STILLTHERE-YES": "शुक्रिया! टीम को बता दिया — रिपोर्ट ताज़ा कर दी गई है।",
+    "S-STILLTHERE-NO": "ठीक है — रिपोर्ट बंद कर दी गई है। रुकने के लिए धन्यवाद।",
     "S-PROGRESS-ACCEPTED": "🛵 एक कार्यकर्ता ({name}) आपकी रिपोर्ट {case_id} के लिए निकल चुका है।",
     "S-PROGRESS-ARRIVED": "📍 कार्यकर्ता व्यक्ति के पास पहुँच गया है (रिपोर्ट {case_id})।",
     "S-CLOSURE-SERVED": "🟢 आपकी रिपोर्ट {case_id}: कार्यकर्ता व्यक्ति तक पहुँचा और मदद दे दी गई। शुक्रिया!",
@@ -131,6 +142,11 @@ CATEGORY_BUTTONS_DEVA = [
     {"id": "cat:medical", "label": "🩹 चोट"},
     {"id": "cat:food", "label": "🍚 भूख"},
     {"id": "cat:shelter", "label": "🌧️ ठंड-बारिश"},
+]
+
+STILL_BUTTONS_DEVA = [
+    {"id": "still:yes", "label": "हाँ, वहीं है"},
+    {"id": "still:no", "label": "नहीं / पता नहीं"},
 ]
 
 FRESHNESS_BUTTONS_DEVA = [
@@ -167,6 +183,9 @@ SAFETY_EN = {
         "the night — your report goes out with the first morning round. "
         "Urgent right now? 112 (emergency) or 14461 (DUSIB shelter rescue, Delhi)."
     ),
+    "S-STILLTHERE": "🤔 No one has been able to reach your report {case_id} yet. Is the person still there?",
+    "S-STILLTHERE-YES": "Thank you! The team has been told — your report is refreshed.",
+    "S-STILLTHERE-NO": "Okay — the report has been closed. Thank you for stopping.",
     "S-PROGRESS-ACCEPTED": "🛵 An outreach worker ({name}) is on the way for your report {case_id}.",
     "S-PROGRESS-ARRIVED": "📍 The worker has reached the person (report {case_id}).",
     "S-CLOSURE-SERVED": "🟢 Your report {case_id}: an outreach worker reached the person and help was given. Thank you!",
@@ -182,6 +201,11 @@ CATEGORY_BUTTONS_EN = [
     {"id": "cat:shelter", "label": "🌧️ Rain-Cold / Shelter"},
 ]
 
+STILL_BUTTONS_EN = [
+    {"id": "still:yes", "label": "Yes, still there"},
+    {"id": "still:no", "label": "No / not sure"},
+]
+
 FRESHNESS_BUTTONS_EN = [
     {"id": "fresh:10", "label": "Just now"},
     {"id": "fresh:60", "label": "~1 hour ago"},
@@ -191,6 +215,7 @@ FRESHNESS_BUTTONS_EN = [
 _TABLES = {"en": SAFETY_EN, "deva": SAFETY_DEVA}
 _CAT_BTNS = {"en": CATEGORY_BUTTONS_EN, "deva": CATEGORY_BUTTONS_DEVA}
 _FRESH_BTNS = {"en": FRESHNESS_BUTTONS_EN, "deva": FRESHNESS_BUTTONS_DEVA}
+_STILL_BTNS = {"en": STILL_BUTTONS_EN, "deva": STILL_BUTTONS_DEVA}
 
 
 def _norm(lang: str) -> str:
@@ -214,4 +239,6 @@ def localized_buttons(buttons: list[dict], lang: str) -> list[dict]:
         return list(_CAT_BTNS.get(lang, CATEGORY_BUTTONS))
     if buttons[0]["id"].startswith("fresh:"):
         return list(_FRESH_BTNS.get(lang, FRESHNESS_BUTTONS))
+    if buttons[0]["id"].startswith("still:"):
+        return list(_STILL_BTNS.get(lang, STILL_BUTTONS))
     return buttons

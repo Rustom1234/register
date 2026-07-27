@@ -257,6 +257,12 @@ function feedLine(e) {
       html = `📦 ${e.sku} low (${e.count} left) — courier restock requested`; cls = "warn"; break;
     case "restock_delivered":
       html = `📦 courier delivered +${e.qty} × ${e.sku} to partner_1`; cls = "good"; break;
+    case "recheck_sent":
+      html = `🤔 asked the witness of <b>${short(e.case_id)}</b>: still there?`; break;
+    case "recheck_confirmed":
+      html = `✅ witness confirms <b>${short(e.case_id)}</b> — report refreshed`; cls = "good"; break;
+    case "case_withdrawn":
+      html = `🚪 <b>${short(e.case_id)}</b> closed — witness says the person moved on`; cls = "warn"; break;
     default:
       html = e.kind;
   }
@@ -566,11 +572,28 @@ function sendText() {
 }
 
 // ----------------------------------------------------------------- loop --
+let pollFails = 0;
+function connBanner(show) {
+  let b = document.getElementById("conn-banner");
+  if (!b && show) {
+    b = document.createElement("div");
+    b.id = "conn-banner";
+    b.textContent = "⚠ connection lost — retrying…";
+    document.body.appendChild(b);
+  }
+  if (b) b.hidden = !show;
+}
+
 async function refresh() {
   try {
     const res = await fetch("/api/state");
     state = await res.json();
-  } catch { return; }
+    pollFails = 0;
+    connBanner(false);
+  } catch {
+    if (++pollFails >= 2) connBanner(true);
+    return;
+  }
   if (!wired) { wire(); wired = true; }
   if (!map) {
     try { initMap(state.zone); } catch (err) {

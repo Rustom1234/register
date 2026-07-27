@@ -192,6 +192,28 @@ class DispatchEngine:
         self.emit("outcome", {"order_id": order_id, "case_id": order["case_id"], "outcome": outcome})
         return order
 
+    def cancel(self, order_id: str, reason: str) -> bool:
+        """Close an order without a visit (e.g., the witness says the person
+        has moved on). Pending offers are released; the outcome records
+        found=0 so the verified-need metric stays honest."""
+        order = self.store.one("SELECT * FROM orders WHERE id=?", (order_id,))
+        if not order or order["status"] in ("closed", "escalated"):
+            return False
+        now = self.now()
+        for a in self.store.query(
+                "SELECT * FROM assignments WHERE order_id=? AND responded_at IS NULL", (order_id,)):
+            self.store.update("assignments", a["id"], {"responded_at": now, "response": "released"})
+        self.store.update("orders", order_id, {"status": "closed", "closed_at": now})
+        self.store.insert("outcomes", {
+            "id": new_id("out"), "case_id": order["case_id"], "found": 0, "served": 0,
+            "person_accepted": 0, "escalated": 0, "escalation_completed_at": None,
+            "closed_by": "witness", "created_at": now,
+        })
+        self.store.update("cases", order["case_id"], {"status": "closed", "closed_at": now})
+        self.store.audit("witness", "case_withdrawn", order["case_id"], "witness", "", reason, ts=now)
+        self.emit("case_withdrawn", {"order_id": order_id, "case_id": order["case_id"], "reason": reason})
+        return True
+
     def escalation_complete(self, order_id: str) -> None:
         order = self.store.one("SELECT * FROM orders WHERE id=?", (order_id,))
         if not order or order["status"] != "escalated":

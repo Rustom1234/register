@@ -181,6 +181,11 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     def metrics_daily():
         return svc.daily_metrics()
 
+    @app.get("/health")
+    def health():
+        return {"ok": True, "backend": svc.backend.name, "sim_now": sim.sim_now,
+                "cases": len(svc.store.query("SELECT id FROM cases"))}
+
     @app.get("/report", response_class=HTMLResponse)
     def session_report():
         return render_report(svc, sim)

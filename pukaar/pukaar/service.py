@@ -120,6 +120,9 @@ class PukaarService:
                 r.text = strings.text(r.string_id, lang)
                 r.buttons = strings.localized_buttons(r.buttons, lang)
 
+        reply = conv.state.pop("_recheck_reply", None)
+        if reply is not None:
+            self._handle_recheck_reply(conv, reply)
         if conv.state["stage"] == "emergency_redirect":
             self.emit("emergency_redirect", {"phone_hash": phone_hash})
             self._record_report(conv, kind, shown, case_id=None)
@@ -192,6 +195,44 @@ class PukaarService:
         self.dispatch.create_order(case, order, mac)
         self.store.update("cases", case["id"], {"status": "routed"})
         return case
+
+    # ---------------------------------------------------------- re-check --
+    def tick_recheck(self) -> None:
+        """Stale-pin defense (StreetLink's 36% never-located): a case still
+        unserved past the threshold asks its witness — once — whether the
+        person is still there. Yes refreshes; no closes honestly."""
+        now = self.now()
+        stale = self.store.query(
+            "SELECT c.* FROM cases c JOIN orders o ON o.case_id = c.id "
+            "WHERE c.recheck_sent=0 AND c.status NOT IN ('closed','escalated') "
+            "AND o.status IN ('queued','offered','needs_coordinator') AND c.created_at < ?",
+            (now - self.cfg.recheck_after_s,))
+        for case in stale:
+            conv = next((c for c in self.conversations.values()
+                         if c.state.get("case_id") == case["id"] and not c.state["stopped"]), None)
+            self.store.update("cases", case["id"], {"recheck_sent": 1})
+            if not conv:
+                continue
+            lang = self.lang_for(conv)
+            msg = strings.fmt("S-STILLTHERE", lang, case_id=case["id"][-4:].upper())
+            buttons = strings.localized_buttons(list(strings.STILL_BUTTONS), lang)
+            conv.remember("bot", "text", msg, buttons, ts=now)
+            self.emit("recheck_sent", {"case_id": case["id"]})
+
+    def _handle_recheck_reply(self, conv, answer: str) -> None:
+        case_id = conv.state.get("case_id")
+        if not case_id:
+            return
+        case = self.store.one("SELECT * FROM cases WHERE id=?", (case_id,))
+        if not case or case["status"] in ("closed", "escalated"):
+            return
+        if answer == "yes":
+            self.store.update("cases", case_id, {"freshness_min": 0})
+            self.emit("recheck_confirmed", {"case_id": case_id})
+        else:
+            order = self.store.one("SELECT * FROM orders WHERE case_id=?", (case_id,))
+            if order:
+                self.dispatch.cancel(order["id"], "witness says person moved on")
 
     # ------------------------------------------------------------ closure --
     def notify_outcome(self, case_id: str, outcome: str) -> None:

@@ -170,6 +170,7 @@ class Sim:
             self._random_report_at = self.sim_now + self.rng.uniform(300, 900)
 
         self.svc.dispatch.tick()
+        self.svc.tick_recheck()
         self._sync_states()
         self._responders_decide()
         self._coordinator_plays()

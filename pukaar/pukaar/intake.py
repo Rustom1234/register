@@ -63,6 +63,12 @@ class Intake:
             s["stopped"] = True
             return [BotMsg(strings.SAFETY["S-STOP"], string_id="S-STOP")]
 
+        # "Still there?" replies work even after the report is filed.
+        if kind == "button" and text and text.startswith("still:"):
+            s["_recheck_reply"] = text.split(":", 1)[1]
+            sid = "S-STILLTHERE-YES" if s["_recheck_reply"] == "yes" else "S-STILLTHERE-NO"
+            return [BotMsg(strings.SAFETY[sid], string_id=sid)]
+
         # After a report is filed: stray button taps are absorbed silently;
         # fresh text/location/photo starts a NEW report on the same number.
         if s["stage"] == "done":

@@ -38,6 +38,9 @@ class Config:
     dispatch_open_h: int = 7
     dispatch_close_h: int = 21
 
+    # Witness re-ping: unserved past this age -> "still there?" check-in
+    recheck_after_s: int = 45 * 60
+
     # Dedup (build plan §3.6): ~150m grid + 12h window
     dedup_cell_m: float = 150.0
     dedup_window_s: int = 12 * 3600
