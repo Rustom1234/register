@@ -516,8 +516,22 @@ function wire() {
     }
     sendInbound("location", { lat, lng });
   });
-  document.getElementById("btn-photo").addEventListener("click", () =>
-    sendInbound("photo", { photo_hint: "street photo: person with a bandaged foot, blood visible, sitting on pavement" }));
+  const photoMenu = document.getElementById("photo-menu");
+  document.getElementById("btn-photo").addEventListener("click", () => {
+    photoMenu.hidden = !photoMenu.hidden;
+  });
+  photoMenu.querySelectorAll("button[data-hint]").forEach((b) =>
+    b.addEventListener("click", () => {
+      photoMenu.hidden = true;
+      sendInbound("photo", { photo_hint: b.dataset.hint });
+    }));
+  const cellsBtn = document.getElementById("cells-toggle");
+  cellsBtn.addEventListener("click", () => {
+    cellsOn = !cellsOn;
+    cellsBtn.classList.toggle("on", cellsOn);
+    cellsBtn.setAttribute("aria-pressed", String(cellsOn));
+    drawCells();
+  });
   const VOICE_SAMPLES = [
     "station ke bahar ek amma leti hain, uth nahi paa rahi hain",
     "flyover ke neeche aadmi ke pair se khoon aa raha hai, patti gandi ho gayi hai",
@@ -637,7 +651,36 @@ async function refresh() {
   document.getElementById("prov-note").textContent =
     state.prov_ephemeral ? "demo HMAC key (ephemeral) — set PUKAAR_HMAC_KEY for persistent provenance" : "persistent HMAC provenance key";
   syncMap(); renderTiles(); renderFeed(); renderCases(); renderPhone(); renderDetail();
-  renderRespPanel(); renderCoord(); playNewFeedSounds();
+  renderRespPanel(); renderCoord(); drawCells(); playNewFeedSounds();
+}
+
+// ------------------------------------------------- 90-day cell heatmap --
+// The privacy story, visible: after the purge, coarse cell + count is ALL
+// the location data that still exists — so that's all this layer can show.
+let cellsOn = false, cellRects = [], lastCellsKey = "";
+function drawCells() {
+  if (!map || map === "failed") return;
+  if (!cellsOn) {
+    if (cellRects.length) { cellRects.forEach((r) => r.remove()); cellRects = []; }
+    lastCellsKey = "";
+    return;
+  }
+  const cells = state.cells || [];
+  const key = cells.map((c) => `${c.cell}/${c.category}/${c.n}`).join("|");
+  if (key === lastCellsKey) return;
+  lastCellsKey = key;
+  cellRects.forEach((r) => r.remove());
+  cellRects = [];
+  const maxN = Math.max(1, ...cells.map((c) => c.n));
+  for (const c of cells) {
+    const color = CAT[c.category] || "#898781";
+    const r = L.rectangle([[c.south, c.west], [c.north, c.east]], {
+      color, weight: 1, opacity: 0.35, fillColor: color,
+      fillOpacity: 0.12 + 0.38 * (c.n / maxN), interactive: true,
+    }).addTo(map);
+    r.bindTooltip(`${c.category} · ${c.n} case${c.n === 1 ? "" : "s"} — 90-day aggregate (all that survives the purge)`);
+    cellRects.push(r);
+  }
 }
 
 refresh();

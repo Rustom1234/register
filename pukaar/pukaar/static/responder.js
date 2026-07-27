@@ -18,6 +18,14 @@ function haversineM(la1, lo1, la2, lo2) {
 
 let state = null;
 let myId = localStorage.getItem("pukaar_resp") || "";
+// Deep link: /responder?id=resp_3 picks the identity AND goes on duty —
+// hand a phone a URL and it's a responder, no taps needed.
+const urlId = new URLSearchParams(location.search).get("id");
+if (urlId) {
+  myId = urlId;
+  localStorage.setItem("pukaar_resp", myId);
+}
+let autoDuty = !!urlId;
 let pickFilled = false;
 const seenOffers = new Set();
 const startDist = new Map();   // order_id -> distance at accept (progress bar)
@@ -250,6 +258,14 @@ async function poll() {
   try {
     state = await (await fetch("/api/state")).json();
     $("f-status").textContent = "live";
+    if (autoDuty) {
+      autoDuty = false;
+      const m = me();
+      if (m && !m.manual) {
+        await api("/api/manual", { responder_id: myId, manual: true });
+        state = await (await fetch("/api/state")).json();
+      }
+    }
     render();
   } catch {
     $("f-status").textContent = "reconnecting…";

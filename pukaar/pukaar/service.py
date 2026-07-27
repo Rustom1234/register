@@ -100,6 +100,8 @@ class PukaarService:
         conv = self.conversations.setdefault(phone, Conversation(phone_hash=phone_hash))
         if kind == "location":
             shown = "📍 location"
+        elif kind == "photo":
+            shown = "📷 photo"
         elif kind == "voice":
             shown = f"🎤 {text}" if text else "🎤 (voice note)"
         elif kind == "button":

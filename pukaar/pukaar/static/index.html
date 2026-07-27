@@ -54,9 +54,16 @@
       </div>
       <div class="phone-msgs" id="msgs"></div>
       <div class="quick" id="quick"></div>
+      <div id="photo-menu" class="photo-menu" hidden>
+        <div class="pm-title">Send a photo (described — no faces needed)</div>
+        <button data-hint="street photo: person with a bandaged foot, blood visible, serious infected wound">🩹 Wound + soaked bandage</button>
+        <button data-hint="street photo: family with small children sitting in rain under a plastic sheet, everything wet">🌧️ Family in the rain</button>
+        <button data-hint="street photo: elderly person lying on the pavement next to an empty food plate">🍚 Elder + empty plate</button>
+        <button data-hint="street photo: person sitting by the road, situation unclear">📷 Unclear scene</button>
+      </div>
       <div class="phone-input">
         <button id="btn-loc" title="share the map pin as location" aria-label="Share location pin">📍</button>
-        <button id="btn-photo" title="send a photo (described)" aria-label="Send photo">📷</button>
+        <button id="btn-photo" title="choose a photo to send (described)" aria-label="Send photo" aria-haspopup="true">📷</button>
         <button id="btn-voice" title="send a voice note (transcript demo)" aria-label="Send voice note">🎤</button>
         <input id="msg-in" placeholder="Message…" autocomplete="off">
         <button id="btn-send" class="send" aria-label="Send message">➤</button>
@@ -94,6 +101,8 @@
       <span><i class="dot cat-shelter"></i>Shelter</span>
       <span><i class="dot resp-dot"></i>Responder</span>
       <span><i class="dot p1-dot"></i>P1 urgent</span>
+      <button id="cells-toggle" title="Show the 90-day aggregate cells — the only location data that survives the retention purge"
+              aria-pressed="false">▦ 90-day cells</button>
     </div>
   </section>
 

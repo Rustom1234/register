@@ -347,8 +347,18 @@ class Sim:
     def seed_demo(self) -> None:
         """Pre-stage a photogenic session (PUKAAR_SEED_DEMO=1 / `make demo`):
         one case already served in history, one mid-flight, and a golden run
-        just accepted — recordable within seconds of boot."""
+        just accepted — recordable within seconds of boot. Also seeds the
+        90-day aggregate cells so the privacy heatmap has history to show:
+        coarse cell + count is ALL that survives the purge, which is the point."""
         self.speed = 12.0
+        hotspots = [self._random_point(0.9) for _ in range(9)]
+        for _ in range(26):
+            lat, lng = self.rng.choice(hotspots)
+            self.svc.store.execute(
+                "INSERT INTO analytics_cells (cell, category, n) VALUES (?, ?, 1) "
+                "ON CONFLICT(cell, category) DO UPDATE SET n = n + 1",
+                (geo.cell_key(lat, lng),
+                 self.rng.choice(["medical", "food", "food", "shelter"])))
         self.run_scenario("hungry_elder")
         self._fast_forward(900)
         self.run_scenario("family_rain")

@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from .report import render_report
 from .whatsapp import CloudApi, parse_webhook
 
-from . import strings
+from . import geo, strings
 from .config import Config
 from .db import Store
 from .service import PukaarService
@@ -106,6 +106,14 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             "SELECT * FROM orders ORDER BY created_at DESC LIMIT 60")
         for c in cases:
             c["digipin"] = svc.digipin_for(c["lat"], c["lng"])
+        # 90-day aggregate cells with map bounds — the only location data
+        # that survives the purge, rendered as the privacy-story heatmap.
+        cells = []
+        for row in svc.store.query("SELECT * FROM analytics_cells"):
+            b = geo.cell_bounds(row["cell"])
+            if b:
+                cells.append({**row, "south": b[0], "west": b[1],
+                              "north": b[2], "east": b[3]})
         return {
             "backend": svc.backend.name,
             "script": svc.script,
@@ -121,6 +129,7 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             "instructions": strings.INSTRUCTIONS,
             "kit_skus": strings.KIT_SKUS,
             "config": {"offer_ttl_s": cfg.offer_ttl_s},
+            "cells": cells,
             # Last 6 conversations, with the interactive demo phone always
             # pinned (busy sessions must never push it out of the window).
             "conversations": {

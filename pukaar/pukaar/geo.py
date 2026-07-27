@@ -20,9 +20,18 @@ def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 
 
 def cell_key(lat: float, lng: float, cell_m: float = 150.0) -> str:
+    # The longitude step derives from the ROW's mid-latitude (not the
+    # point's), so every point in a row shares one column grid — which
+    # makes cell_bounds() an exact inverse for the heatmap.
     dlat = cell_m / 111_320.0
-    dlng = cell_m / (111_320.0 * max(0.2, math.cos(math.radians(lat))))
-    return f"{math.floor(lat / dlat)}:{math.floor(lng / dlng)}"
+    i = math.floor(lat / dlat)
+    dlng = _row_dlng(i, cell_m, dlat)
+    return f"{i}:{math.floor(lng / dlng)}"
+
+
+def _row_dlng(row: int, cell_m: float, dlat: float) -> float:
+    lat_mid = (row + 0.5) * dlat
+    return cell_m / (111_320.0 * max(0.2, math.cos(math.radians(lat_mid))))
 
 
 def neighbor_keys(lat: float, lng: float, cell_m: float = 150.0) -> set[str]:
@@ -33,6 +42,19 @@ def neighbor_keys(lat: float, lng: float, cell_m: float = 150.0) -> set[str]:
         for j in (-1, 0, 1):
             keys.add(cell_key(lat + i * dlat, lng + j * dlng, cell_m))
     return keys
+
+
+def cell_bounds(cell: str, cell_m: float = 150.0) -> tuple[float, float, float, float] | None:
+    """(south, west, north, east) for a cell_key() key — the exact inverse
+    of the row-quantized grid, used by the 90-day aggregate heatmap. None
+    for non-grid keys ('unknown')."""
+    try:
+        i, j = (int(x) for x in cell.split(":"))
+    except ValueError:
+        return None
+    dlat = cell_m / 111_320.0
+    dlng = _row_dlng(i, cell_m, dlat)
+    return (i * dlat, j * dlng, (i + 1) * dlat, (j + 1) * dlng)
 
 
 def offset_m(lat: float, lng: float, north_m: float, east_m: float) -> tuple[float, float]:

@@ -18,7 +18,7 @@ a live **demo control room** you can record.
 ```bash
 cd pukaar          # or just: make install && make demo
 uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
-.venv/bin/python -m pytest -q          # 99 tests
+.venv/bin/python -m pytest -q          # 103 tests
 .venv/bin/python -m pukaar             # http://127.0.0.1:8877
 ```
 
@@ -30,8 +30,9 @@ deterministic offline backend is driving; set `ANTHROPIC_API_KEY` (or
 with structured outputs — same pipeline, same fixed strings.
 
 The responder side is a real app, not just a panel: open
-**`/responder`** in a second window (or a phone on the same LAN) for the
-standalone **responder app** — go on duty as Meena, get the offer card
+**`/responder`** in a second window (or a phone on the same LAN — a
+`/responder?id=resp_3` deep link picks the identity and goes on duty in
+one tap) for the standalone **responder app** — go on duty as Meena, get the offer card
 (priority, kit, distance, DIGIPIN, accept-countdown), and after ACCEPT
 watch yourself drive across the control-room map while the app shows
 live metres-to-go, the kit checklist, and the on-arrival instructions;
@@ -41,6 +42,10 @@ panel (same takeover, inline), a **coordinator queue** for orders whose
 waves exhausted (manual assignment — the human terminal rung, exercised),
 **night mode** (dispatch honors the 07:00–21:00 partner window; night
 reports get the honest S-EXPECT-NIGHT string and queue for the morning round),
+a **▦ 90-day cells** map toggle (the privacy story made visible: after the
+purge, coarse cell + count is the only location data that still exists —
+so that is all the heatmap can show), a **📷 photo picker** in the witness
+phone (four described scenes exercising the assist-only photo path),
 **📊 metrics** (per-day stacked charts + the pre-registered kill-criteria
 table evaluated live), **🔔 event sounds**, and **⬇ session export**
 (full JSON of cases/orders/outcomes/audit for analysis or the video).
