@@ -43,6 +43,8 @@ SAFETY = {
         "aapki report subah ki pehli round mein jayegi. Turant zaroorat ho to: "
         "112 (emergency) ya 14461 (DUSIB shelter rescue, Delhi). Dhanyavaad."
     ),
+    "S-PROGRESS-ACCEPTED": "🛵 Ek karyakarta ({name}) aapki report {case_id} ke liye nikal chuka hai.",
+    "S-PROGRESS-ARRIVED": "📍 Karyakarta vyakti ke paas pahunch gaya hai (report {case_id}).",
     "S-CLOSURE-SERVED": "🟢 Aapki report {case_id}: karyakarta vyakti tak pahuncha aur madad de di gayi. Shukriya!",
     "S-CLOSURE-ESCALATED": "🟢 Aapki report {case_id}: madad de di gayi, aur medical team ko bhi bulaya gaya hai. Shukriya!",
     "S-CLOSURE-NOTFOUND": "🟡 Aapki report {case_id}: karyakarta pahuncha par vyakti nahi mila. Report record mein hai.",
@@ -116,6 +118,8 @@ SAFETY_DEVA = {
         "सुबह की पहली राउंड में जाएगी। तुरंत ज़रूरत हो तो: 112 (इमरजेंसी) या 14461 "
         "(DUSIB शेल्टर रेस्क्यू, दिल्ली)। धन्यवाद।"
     ),
+    "S-PROGRESS-ACCEPTED": "🛵 एक कार्यकर्ता ({name}) आपकी रिपोर्ट {case_id} के लिए निकल चुका है।",
+    "S-PROGRESS-ARRIVED": "📍 कार्यकर्ता व्यक्ति के पास पहुँच गया है (रिपोर्ट {case_id})।",
     "S-CLOSURE-SERVED": "🟢 आपकी रिपोर्ट {case_id}: कार्यकर्ता व्यक्ति तक पहुँचा और मदद दे दी गई। शुक्रिया!",
     "S-CLOSURE-ESCALATED": "🟢 आपकी रिपोर्ट {case_id}: मदद दे दी गई, और मेडिकल टीम को भी बुलाया गया है। शुक्रिया!",
     "S-CLOSURE-NOTFOUND": "🟡 आपकी रिपोर्ट {case_id}: कार्यकर्ता पहुँचा पर व्यक्ति नहीं मिला। रिपोर्ट रिकॉर्ड में है।",
@@ -163,6 +167,8 @@ SAFETY_EN = {
         "the night — your report goes out with the first morning round. "
         "Urgent right now? 112 (emergency) or 14461 (DUSIB shelter rescue, Delhi)."
     ),
+    "S-PROGRESS-ACCEPTED": "🛵 An outreach worker ({name}) is on the way for your report {case_id}.",
+    "S-PROGRESS-ARRIVED": "📍 The worker has reached the person (report {case_id}).",
     "S-CLOSURE-SERVED": "🟢 Your report {case_id}: an outreach worker reached the person and help was given. Thank you!",
     "S-CLOSURE-ESCALATED": "🟢 Your report {case_id}: help was given, and a medical team has been called in too. Thank you!",
     "S-CLOSURE-NOTFOUND": "🟡 Your report {case_id}: the worker went but couldn't find the person. Your report stays on record.",

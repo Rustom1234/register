@@ -63,6 +63,29 @@ class PukaarService:
     # ------------------------------------------------------------- feed --
     def emit(self, kind: str, data: dict) -> None:
         self.feed.append({"ts": self.now(), "kind": kind, **data})
+        # Witness progress updates ride the same dispatch events the feed
+        # shows — the witness loop closes tighter than closure-only.
+        if kind in ("order_accepted", "manual_assign"):
+            self._notify_progress(data.get("order_id"), "S-PROGRESS-ACCEPTED",
+                                  data.get("responder_id"))
+        elif kind == "responder_arrived":
+            self._notify_progress(data.get("order_id"), "S-PROGRESS-ARRIVED",
+                                  data.get("responder_id"))
+
+    def _notify_progress(self, order_id: str | None, sid: str, responder_id: str | None) -> None:
+        if not order_id:
+            return
+        order = self.store.one("SELECT * FROM orders WHERE id=?", (order_id,))
+        if not order:
+            return
+        resp = self.store.one("SELECT * FROM responders WHERE id=?", (responder_id,)) if responder_id else None
+        name = (resp or {}).get("display_name") or "karyakarta"
+        case_id = order["case_id"]
+        for conv in self.conversations.values():
+            if conv.state.get("case_id") == case_id and not conv.state["stopped"]:
+                msg = strings.fmt(sid, self.lang_for(conv),
+                                  case_id=case_id[-4:].upper(), name=name)
+                conv.remember("bot", "text", msg, ts=self.now())
 
     def lang_for(self, conv: Conversation) -> str:
         if self.script != "auto":

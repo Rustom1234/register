@@ -104,7 +104,8 @@ def main():
         page.wait_for_timeout(6500)
         cap("Parallel offers to the nearest trusted responders — first accept wins (GoodSAM pattern)", 6000)
         cap("Accepted. En route — dashed line, live trail, clinical flag on board.", 6000)
-        cap("On site: wound dressed, kit given, clinical team called in. The witness hears back.", 5500)
+        cap("On site: wound dressed, kit given, clinical team called in.", 5000)
+        cap("And the witness is never left wondering: worker en route → reached → served, live in their chat", 5000)
 
         # ---- case detail
         rows = page.locator(".case-row")
