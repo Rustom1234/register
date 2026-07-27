@@ -88,9 +88,11 @@ def main():
         glide_click("#btn-loc")
         page.wait_for_timeout(2400)
 
-        cap("A photo of the surroundings — no face needed")
+        cap("A photo of the surroundings — pick a scene, no face needed")
         glide_click("#btn-photo")
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(1200)
+        glide_click("#photo-menu button[data-hint]")   # wound + soaked bandage
+        page.wait_for_timeout(1600)
         try:
             glide_click("#quick button")
         except Exception:
@@ -114,6 +116,12 @@ def main():
             glide_click(".case-row")
             page.wait_for_timeout(4200)
             glide_click("#detail-close")
+
+        # ---- privacy heatmap
+        cap("And 90 days later? Only this survives the purge: coarse cells and counts — no pins, no photos, no people")
+        glide_click("#cells-toggle")
+        page.wait_for_timeout(5200)
+        glide_click("#cells-toggle")
 
         # ---- dedup
         cap("Three witnesses report the same man…")
@@ -140,9 +148,14 @@ def main():
             "document.body.appendChild(f); }")
         phone = page.frame_locator("#pk-phone")
         phone.locator("#duty-btn").wait_for(timeout=15000)
-        # duty on as an idle responder, then pin a fresh case ~500 m from them
+        # duty on as an idle responder, then pin a fresh case ~500 m from them.
+        # Every responder goes manual for this segment so a sim responder can't
+        # win the parallel-offer race before the on-camera ACCEPT.
         rid = page.evaluate(
             "async () => { const s = await (await fetch('/api/state')).json();"
+            "const post = (b) => fetch('/api/manual', {method: 'POST',"
+            "  headers: {'content-type': 'application/json'}, body: JSON.stringify(b)});"
+            "for (const r of s.sim.responders) await post({responder_id: r.id, manual: true});"
             "const idle = s.sim.responders.find(r => r.state === 'idle');"
             "return idle ? idle.id : 'resp_1'; }")
         phone.locator("#pick").select_option(rid)
@@ -165,12 +178,18 @@ def main():
         offer.wait_for(timeout=60000)
         page.wait_for_timeout(1400)
         offer.click()
+        phone.locator(".banner.enroute").wait_for(timeout=20000)
         cap("ACCEPT — and the same responder starts moving on the map behind", 3000)
         phone.locator(".banner.onsite").wait_for(timeout=90000)
         cap("At the pin: kit checklist done, outcome recorded — the witness gets the closure message", 1600)
         phone.locator('[data-out="served"]').click()
         page.wait_for_timeout(2600)
         page.evaluate("() => document.getElementById('pk-phone').remove()")
+        page.evaluate(   # hand everyone back to the sim
+            "async () => { const s = await (await fetch('/api/state')).json();"
+            "const post = (b) => fetch('/api/manual', {method: 'POST',"
+            "  headers: {'content-type': 'application/json'}, body: JSON.stringify(b)});"
+            "for (const r of s.sim.responders) await post({responder_id: r.id, manual: false}); }")
 
         # ---- metrics
         page.goto("http://localhost:8877/static/metrics.html", wait_until="domcontentloaded")
@@ -180,7 +199,7 @@ def main():
         # ---- close
         page.goto("http://localhost:8877/", wait_until="domcontentloaded")
         page.wait_for_timeout(2000)
-        cap("Witness → verify → deliver → care. 86 tests. No cameras. No database of the poor.", 5200)
+        cap("Witness → verify → deliver → care. 103 tests. No cameras. No database of the poor.", 5200)
         cap("PUKAAR · पुकार — the call", 3000)
 
         video = page.video

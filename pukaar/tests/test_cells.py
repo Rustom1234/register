@@ -41,6 +41,8 @@ def test_state_carries_cells_with_bounds():
         assert c["n"] == 3 and c["category"] == "food"
         assert c["south"] < cfg.zone_lat < c["north"]
         assert c["west"] < cfg.zone_lng < c["east"]
+        # the session export carries the same decoded cells for replay
+        assert client.get("/api/export").json()["cells"] == cells
 
 
 def test_seed_demo_seeds_aggregate_history():

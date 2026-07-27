@@ -4,7 +4,7 @@
 
 const CAT = { medical: "#3987e5", food: "#d95926", shelter: "#199e70" };
 let data = null, map = null, markers = new Map(), t0 = 0, t1 = 1, tNow = 0;
-let playing = false, timer = null;
+let playing = false, timer = null, cellRects = [];
 
 function fmtT(ts) {
   const d = Math.floor(ts / 86400), h = String(Math.floor((ts % 86400) / 3600)).padStart(2, "0");
@@ -45,6 +45,16 @@ function load(json) {
       first ? [first.lat, first.lng] : [28.5933, 77.2507], 15);
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
       { maxZoom: 19, attribution: "&copy; OSM &copy; CARTO" }).addTo(map);
+  }
+  // static underlay: the 90-day aggregate cells captured in the export
+  cellRects.forEach((r) => r.remove());
+  cellRects = [];
+  for (const c of data.cells || []) {
+    if (c.south == null) continue;
+    const color = CAT[c.category] || "#898781";
+    cellRects.push(L.rectangle([[c.south, c.west], [c.north, c.east]], {
+      color, weight: 1, opacity: 0.22, fillColor: color, fillOpacity: 0.09,
+    }).addTo(map).bindTooltip(`${c.category} · ${c.n} — 90-day aggregate`));
   }
   render();
 }
