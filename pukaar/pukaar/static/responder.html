@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pukaar · Responder</title>
+<style>
+/* Standalone responder app — same validated palette as the control room.
+   Phone-first: this page IS the responder's phone (open it in a narrow
+   window next to the control room, or on a real phone on the same LAN). */
+:root {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #12141a; --surface-2: #171a22;
+  --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+  --line: rgba(255, 255, 255, 0.10);
+  --medical: #3987e5; --food: #d95926; --shelter: #199e70;
+  --good: #0ca30c; --warn: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--page); color: var(--ink); font-size: 15px;
+       display: flex; justify-content: center; }
+#app { width: 100%; max-width: 420px; min-height: 100%; background: var(--surface);
+       display: flex; flex-direction: column; }
+
+header { display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+         border-bottom: 1px solid var(--line); }
+header .logo { font-weight: 800; letter-spacing: 0.14em; font-size: 13px; }
+header .sub { color: var(--muted); font-size: 11px; }
+header .spacer { flex: 1; }
+#clock { color: var(--ink-2); font-variant-numeric: tabular-nums; font-size: 12px; }
+#duty-pill { font-size: 11px; padding: 3px 10px; border-radius: 999px;
+             border: 1px solid var(--line); color: var(--muted); }
+#duty-pill.on { border-color: var(--good); color: var(--good); }
+
+main { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 14px;
+       overflow-y: auto; }
+
+.card { background: var(--surface-2); border: 1px solid var(--line);
+        border-radius: 14px; padding: 16px; }
+.card h2 { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.1em;
+           text-transform: uppercase; color: var(--muted); }
+.hint { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+
+select, button { font: inherit; }
+select { width: 100%; background: var(--surface); color: var(--ink);
+         border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin: 10px 0; }
+.big { width: 100%; padding: 15px; border: 0; border-radius: 12px; font-weight: 700;
+       font-size: 16px; cursor: pointer; color: #fff; background: var(--good); }
+.big.off { background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--medical); outline-offset: 2px; }
+
+/* offers */
+.offer { border-left: 4px solid var(--warn); }
+.offer.p1 { border-left-color: var(--critical); }
+.offer .row1 { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.pill { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+.pill.p1 { background: var(--critical); color: #fff; }
+.pill.p2 { background: var(--warn); color: #201500; }
+.offer .kit { font-size: 17px; font-weight: 700; }
+.meta { color: var(--ink-2); font-size: 13px; display: flex; gap: 14px; flex-wrap: wrap; }
+.ttl { height: 4px; border-radius: 2px; background: var(--line); margin: 12px 0; overflow: hidden; }
+.ttl i { display: block; height: 100%; background: var(--warn); transition: width 0.9s linear; }
+.btnrow { display: flex; gap: 10px; margin-top: 4px; }
+.btnrow .big { flex: 1.6; }
+.btnrow .big.decline { flex: 1; background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }
+
+/* active order */
+.banner { text-align: center; font-weight: 800; letter-spacing: 0.12em; font-size: 13px;
+          padding: 10px; border-radius: 10px; }
+.banner.enroute { background: rgba(57, 135, 229, 0.16); color: var(--medical); }
+.banner.onsite { background: rgba(12, 163, 12, 0.16); color: var(--good); }
+.digipin { font-size: 26px; font-weight: 800; letter-spacing: 0.06em;
+           font-variant-numeric: tabular-nums; margin: 2px 0 4px; }
+.dist { font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dist small { font-size: 14px; color: var(--muted); font-weight: 600; }
+.bar { height: 6px; border-radius: 3px; background: var(--line); margin: 10px 0 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--medical); transition: width 0.9s linear; }
+ul.check { list-style: none; margin: 8px 0 0; padding: 0; }
+ul.check li { padding: 7px 0 7px 26px; position: relative; border-top: 1px solid var(--line);
+              color: var(--ink-2); font-size: 14px; }
+ul.check li::before { content: "☐"; position: absolute; left: 4px; color: var(--muted); }
+ol.instr { margin: 8px 0 0; padding-left: 20px; color: var(--ink-2); font-size: 13.5px; }
+ol.instr li { margin: 6px 0; line-height: 1.45; }
+
+.outgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.outgrid .big { padding: 18px 10px; font-size: 15px; }
+.outgrid .served { background: var(--good); }
+.outgrid .escal { background: var(--medical); }
+.outgrid .plain { background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }
+
+#toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
+         background: var(--good); color: #fff; font-weight: 700; padding: 10px 18px;
+         border-radius: 999px; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+#toast.show { opacity: 1; }
+.kitchips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.kitchips span { font-size: 12px; padding: 4px 10px; border-radius: 999px;
+                 border: 1px solid var(--line); color: var(--ink-2); }
+.pulse { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) {
+  .pulse { animation: none; }
+  .ttl i, .bar i { transition: none; }
+}
+a { color: var(--medical); }
+footer { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--muted);
+         font-size: 11px; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <div class="logo">PUKAAR</div>
+      <div class="sub">responder app</div>
+    </div>
+    <div class="spacer"></div>
+    <span id="clock">—</span>
+    <span id="duty-pill">off duty</span>
+  </header>
+
+  <main>
+    <!-- off duty: identity + go on duty -->
+    <section id="scr-pick" class="card">
+      <h2>Who are you?</h2>
+      <p class="hint">Pick your responder identity. The sim keeps playing everyone
+      else — offers, movement and arrival stay real. <a href="/">Control room →</a></p>
+      <select id="pick" aria-label="Choose responder"></select>
+      <button id="duty-btn" class="big">Go on duty</button>
+    </section>
+
+    <!-- on duty, idle -->
+    <section id="scr-idle" class="card" hidden>
+      <h2>On duty</h2>
+      <p id="idle-line" class="hint pulse">🟢 Waiting for calls near you…</p>
+      <div class="kitchips" id="kits" aria-label="Kits in stock"></div>
+      <p class="hint" id="me-stats"></p>
+      <button id="duty-off" class="big off">Go off duty</button>
+    </section>
+
+    <!-- incoming offers -->
+    <section id="scr-offers" hidden></section>
+
+    <!-- active order -->
+    <section id="scr-active" hidden></section>
+  </main>
+
+  <footer>
+    <span id="f-status">connecting…</span>
+    <span>first accept wins · every case closes</span>
+  </footer>
+</div>
+<div id="toast" role="status">✓ recorded</div>
+<script src="/static/responder.js"></script>
+</body>
+</html>

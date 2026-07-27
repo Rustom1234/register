@@ -82,6 +82,11 @@ button.golden { border-color: rgba(250,178,25,0.55); color: #fab219; }
   font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
   margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
 }
+.mini-link {
+  font-size: 11px; letter-spacing: 0; text-transform: none; text-decoration: none;
+  color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px;
+}
+.mini-link:hover { color: var(--ink); border-color: var(--ink-2); }
 
 /* ----------------------------------------------------------------- phone */
 .phone {

@@ -116,6 +116,7 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             "metrics": svc.metrics(),
             "instructions": strings.INSTRUCTIONS,
             "kit_skus": strings.KIT_SKUS,
+            "config": {"offer_ttl_s": cfg.offer_ttl_s},
             # Last 6 conversations, with the interactive demo phone always
             # pinned (busy sessions must never push it out of the window).
             "conversations": {
@@ -248,6 +249,10 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     @app.get("/")
     def index():
         return FileResponse(STATIC / "index.html")
+
+    @app.get("/responder")
+    def responder_app():
+        return FileResponse(STATIC / "responder.html")
 
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
     return app

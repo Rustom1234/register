@@ -18,7 +18,7 @@ a live **demo control room** you can record.
 ```bash
 cd pukaar          # or just: make install && make demo
 uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
-.venv/bin/python -m pytest -q          # 83 tests
+.venv/bin/python -m pytest -q          # 86 tests
 .venv/bin/python -m pukaar             # http://127.0.0.1:8877
 ```
 
@@ -29,9 +29,15 @@ deterministic offline backend is driving; set `ANTHROPIC_API_KEY` (or
 `PUKAAR_BACKEND=claude`) to switch extraction/routing/assessment to Claude
 with structured outputs — same pipeline, same fixed strings.
 
-Also in the control room: a **responder phone** (pick Meena, tick *"I'm
-playing this responder"*, and accept/decline/close orders yourself while
-the sim plays everyone else), a **coordinator queue** for orders whose
+The responder side is a real app, not just a panel: open
+**`/responder`** in a second window (or a phone on the same LAN) for the
+standalone **responder app** — go on duty as Meena, get the offer card
+(priority, kit, distance, DIGIPIN, accept-countdown), and after ACCEPT
+watch yourself drive across the control-room map while the app shows
+live metres-to-go, the kit checklist, and the on-arrival instructions;
+at the pin it flips to the outcome screen and your tap closes the loop
+back to the witness. Also in the control room: a **responder phone**
+panel (same takeover, inline), a **coordinator queue** for orders whose
 waves exhausted (manual assignment — the human terminal rung, exercised),
 **night mode** (dispatch honors the 07:00–21:00 partner window; night
 reports get the honest S-EXPECT-NIGHT string and queue for the morning round),
@@ -74,6 +80,8 @@ or let `python scripts/record_demo.py` record a self-narrating video for you
 | ![emergency gate](docs/screenshots/emergency-gate.png) | ![case detail](docs/screenshots/case-detail.png) |
 | **Boot with `make demo` — pre-staged session** | **Devanagari intake + session replay** |
 | ![seeded boot](docs/screenshots/boot-seeded.png) | ![replay](docs/screenshots/replay.png) |
+| **Responder app: the offer ping** | **Responder app: at the pin** |
+| ![responder offer](docs/screenshots/responder-offer.png) | ![responder onsite](docs/screenshots/responder-onsite.png) |
 
 ## What's real vs simulated
 

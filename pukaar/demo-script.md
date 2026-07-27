@@ -37,10 +37,15 @@ instant fixed 112 reply, red feed line *"no agent involved"*. *"Emergencies
 never touch a model, and the test suite fails the build if this gate ever
 misses."*
 
-**2:15 — Play the responder.** In the responder phone, pick Meena, tick
-*"I'm playing this responder"*, accept an offer, watch yourself ride, then
-close the case with the outcome buttons. *"Same buttons a real outreach
-worker gets on WhatsApp — zero app installs."*
+**2:15 — Play the responder.** Click **📱 app** (or open `/responder` in
+a phone-width window beside the control room), go on duty as Meena, and
+let the offer ping land: priority pill, kit, distance, DIGIPIN, a
+countdown to accept. Tap **ACCEPT** — the app flips to EN ROUTE with live
+metres-to-go and the kit checklist while *the same Meena drives across
+the control-room map*. At the pin it becomes the outcome screen; tap
+**🟢 Help given**. *"Two sides of one marketplace — and the field side is
+this simple on purpose."* (The inline responder-phone panel does the same
+without leaving the control room.)
 
 **2:35 — Ops reality.** Point at the tiles: kits depleting; when a SKU
 runs low the tile turns amber and the feed shows the **courier restock**

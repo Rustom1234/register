@@ -21,6 +21,7 @@ the test count tells the story.
 | 13 · Witness loop | Live progress updates to the witness (accepted → named worker en route, arrived), trilingual, on auto + manual assign paths; demo film re-recorded with the progress arc on screen | **76** |
 | 14 · Stale-pin defense | "Still there?" re-ping (ask-once, yes refreshes / no withdraws honestly via dispatch.cancel with found=0); /health endpoint + UI reconnect banner; livelock + coordinator-backlog fixes carried by the 300-case load test | **82** |
 | 15 · Final polish | Responder card shows live en-route distance + "outcome recorded" toast; `/report` gained withdrawn-(witness) labels and a witness-language-mix section; `+91-DEMO` conversation pinned into `/api/state` (busy sims can no longer push the interactive phone out of the payload — found by the re-ping screenshot run); chat log shows human chip labels, never wire IDs (`still:yes` → "Haan, wahin hai", per-language) | **83** |
+| 16 · Responder app | Standalone `/responder` phone app — duty toggle, offer ping cards (priority, kit, distance, DIGIPIN, accept-countdown bar, offer sound), en-route screen with live metres-to-go + kit checklist + on-arrival instructions, at-the-pin outcome grid; drives the same `/api/manual` + `/api/responder` endpoints as the panel; browser-smoked end to end (offer → accept → auto-arrive → served) with screenshots in docs | **86** |
 
 Verification cadence: full pytest per batch + Playwright smoke sessions
 (seeded boot, golden run at 30×, case detail, manual responder takeover,
