@@ -85,6 +85,29 @@ def test_recheck_english_witness(svc, clock, cfg):
     assert ask and any(b["label"] == "Yes, still there" for b in ask[0]["buttons"])
 
 
+def test_button_taps_logged_as_labels(svc, clock, cfg):
+    """The chat log shows the human label for a tapped chip, never the wire ID."""
+    _file_report(svc, "+91-R6")
+    svc.dispatch.tick()
+    clock.advance(cfg.recheck_after_s + 60)
+    svc.tick_recheck()
+    svc.wa_inbound("+91-R6", "button", text="still:yes")
+    witness = [m for m in svc.conversations["+91-R6"].log if m["from"] == "witness"]
+    assert witness[-1]["text"] == "Haan, wahin hai"          # not "still:yes"
+    assert witness[-2]["text"] == "Abhi / just now"          # earlier fresh:10 tap
+
+    # English witnesses get the English label.
+    _file_report(svc, "+91-R7", lat=28.599, lng=77.258,
+                 text="An injured man is lying here near the gate")
+    witness7 = [m for m in svc.conversations["+91-R7"].log if m["from"] == "witness"]
+    assert witness7[-1]["text"] == "Just now"
+
+    # Unknown / free-form button IDs pass through untouched.
+    svc.wa_inbound("+91-R6", "button", text="done")
+    witness = [m for m in svc.conversations["+91-R6"].log if m["from"] == "witness"]
+    assert witness[-1]["text"] == "done"
+
+
 def test_health_endpoint():
     from fastapi.testclient import TestClient
 

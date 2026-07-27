@@ -102,6 +102,9 @@ class PukaarService:
             shown = "📍 location"
         elif kind == "voice":
             shown = f"🎤 {text}" if text else "🎤 (voice note)"
+        elif kind == "button":
+            # Log the human label, not the wire ID (still:yes → "Haan, wahin hai").
+            shown = strings.button_label(text or "", self.lang_for(conv)) or text
         else:
             shown = text
         conv.remember("witness", kind, shown or kind, ts=self.now())

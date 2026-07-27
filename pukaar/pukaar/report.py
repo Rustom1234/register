@@ -33,7 +33,7 @@ def render_report(svc, sim) -> str:
         if o["served"]:
             return "served"
         if not o["found"]:
-            return "not found"
+            return "withdrawn (witness)" if o["closed_by"] == "witness" else "not found"
         return "declined (respected)"
 
     rows = "".join(
@@ -55,6 +55,11 @@ def render_report(svc, sim) -> str:
         for k in daily["kill"])
 
     kits = " · ".join(f"{sku} {n}" for sku, n in m["kits"].items())
+    lang_counts: dict[str, int] = {}
+    for conv in svc.conversations.values():
+        lang = conv.state.get("lang", "hinglish")
+        lang_counts[lang] = lang_counts.get(lang, 0) + 1
+    lang_mix = " · ".join(f"{k} {v}" for k, v in sorted(lang_counts.items())) or "—"
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>Pukaar — session report</title>
 <style>
@@ -98,6 +103,9 @@ print this page for the handout</span></div>
 
 <h2>Kits remaining</h2>
 <p>{kits or '—'} (partner_1)</p>
+
+<h2>Witness languages (auto-mirrored)</h2>
+<p>{lang_mix}</p>
 
 <div class="foot">
 Every record is HMAC provenance-tagged (witness / agent_inferred / responder_observed).

@@ -18,6 +18,9 @@ the test count tells the story.
 | 10 · Demo film | Self-narrating recorded video (`docs/pukaar-demo.webm`, injected cursor + captions; reusable `scripts/record_demo.py`); webhook voice notes flow as `kind=voice`; metrics↔report↔about cross-links | **70** |
 | 11 · Hardening | Load test (300 cases) found + fixed a decision livelock (per-offer timers) and the parked needs_coordinator backlog (sim now plays the coordinator via `manual_assign`); dispatch invariant fuzz suite across 10 seeds; tick-time budgets; Dockerfile + `make docker-demo`; `PUKAAR_HOST` | **72** |
 | 12 · Consolidation | aria-labels on all icon controls, `:focus-visible` states, `prefers-reduced-motion` guards; recorder script repo-ized; docs synced | **72** |
+| 13 · Witness loop | Live progress updates to the witness (accepted → named worker en route, arrived), trilingual, on auto + manual assign paths; demo film re-recorded with the progress arc on screen | **76** |
+| 14 · Stale-pin defense | "Still there?" re-ping (ask-once, yes refreshes / no withdraws honestly via dispatch.cancel with found=0); /health endpoint + UI reconnect banner; livelock + coordinator-backlog fixes carried by the 300-case load test | **82** |
+| 15 · Final polish | Responder card shows live en-route distance + "outcome recorded" toast; `/report` gained withdrawn-(witness) labels and a witness-language-mix section; `+91-DEMO` conversation pinned into `/api/state` (busy sims can no longer push the interactive phone out of the payload — found by the re-ping screenshot run); chat log shows human chip labels, never wire IDs (`still:yes` → "Haan, wahin hai", per-language) | **83** |
 
 Verification cadence: full pytest per batch + Playwright smoke sessions
 (seeded boot, golden run at 30×, case detail, manual responder takeover,

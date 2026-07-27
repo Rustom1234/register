@@ -18,7 +18,7 @@ a live **demo control room** you can record.
 ```bash
 cd pukaar          # or just: make install && make demo
 uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
-.venv/bin/python -m pytest -q          # 72 tests
+.venv/bin/python -m pytest -q          # 83 tests
 .venv/bin/python -m pukaar             # http://127.0.0.1:8877
 ```
 
@@ -38,6 +38,11 @@ reports get the honest S-EXPECT-NIGHT string and queue for the morning round),
 **📊 metrics** (per-day stacked charts + the pre-registered kill-criteria
 table evaluated live), **🔔 event sounds**, and **⬇ session export**
 (full JSON of cases/orders/outcomes/audit for analysis or the video).
+The witness loop stays closed end to end: **live progress updates**
+(named worker en route → reached → outcome, in the witness's language)
+and a **"still there?" re-ping** for stale cases — yes refreshes, no
+withdraws honestly (found=0). A **/health** endpoint and a reconnect
+banner keep the control room graceful across restarts.
 
 **Trilingual by default:** the bot mirrors each witness's language —
 English in, English out; Hinglish in, Hinglish out; Devanagari in,

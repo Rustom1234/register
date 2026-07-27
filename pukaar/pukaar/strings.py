@@ -231,6 +231,19 @@ def fmt(string_id: str, lang: str = "hinglish", **kw: object) -> str:
     return text(string_id, lang).format(**kw)
 
 
+def button_label(btn_id: str, lang: str = "hinglish") -> str | None:
+    """Reverse lookup: human label for a known quick-reply button ID,
+    in the witness's language. None for unknown IDs (free text stays as-is)."""
+    lang = _norm(lang)
+    for base, per_lang in ((CATEGORY_BUTTONS, _CAT_BTNS), (FRESHNESS_BUTTONS, _FRESH_BTNS),
+                           (STILL_BUTTONS, _STILL_BTNS)):
+        btns = base if lang == "hinglish" else per_lang.get(lang, base)
+        for b in btns:
+            if b["id"] == btn_id:
+                return b["label"]
+    return None
+
+
 def localized_buttons(buttons: list[dict], lang: str) -> list[dict]:
     lang = _norm(lang)
     if lang == "hinglish" or not buttons:

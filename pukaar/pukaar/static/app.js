@@ -371,7 +371,10 @@ function renderRespPanel() {
     o.responder_id === selectedResp && ["accepted", "onsite", "escalated"].includes(o.status));
   if (active) {
     const c = state.cases.find((x) => x.id === active.case_id) || {};
-    const statusTxt = { accepted: "🛵 en route…", onsite: "📍 on site", escalated: "🩺 clinical follow-up pending" }[active.status];
+    let statusTxt = { accepted: "🛵 en route", onsite: "📍 on site", escalated: "🩺 clinical follow-up pending" }[active.status];
+    if (active.status === "accepted" && me && c.lat != null) {
+      statusTxt += ` · ${Math.round(haversineM(me.lat, me.lng, c.lat, c.lng))}m`;
+    }
     const outcomeBtns = active.status === "onsite" && me && me.manual ? `
       <div class="btns">
         <button class="accept" data-act="outcome" data-order="${active.id}" data-out="served">🟢 Diya</button>
@@ -389,8 +392,23 @@ function renderRespPanel() {
         ? { action: "outcome", order_id: b.dataset.order, outcome: b.dataset.out }
         : { action: b.dataset.act, assignment_id: b.dataset.asg };
       await fetch("/api/responder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (b.dataset.act === "outcome") flashRespToast("✓ outcome recorded");
       refresh();
     }));
+}
+
+let respToastUntil = 0;
+function flashRespToast(text) {
+  respToastUntil = Date.now() + 1600;
+  let t = document.getElementById("resp-toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "resp-toast";
+    document.getElementById("resp-panel").appendChild(t);
+  }
+  t.textContent = text;
+  t.hidden = false;
+  setTimeout(() => { if (Date.now() >= respToastUntil) t.hidden = true; }, 1700);
 }
 
 // ------------------------------------------------------- coordinator ----

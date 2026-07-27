@@ -116,8 +116,14 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             "metrics": svc.metrics(),
             "instructions": strings.INSTRUCTIONS,
             "kit_skus": strings.KIT_SKUS,
+            # Last 6 conversations, with the interactive demo phone always
+            # pinned (busy sessions must never push it out of the window).
             "conversations": {
-                phone: conv.log[-30:] for phone, conv in list(svc.conversations.items())[-6:]
+                phone: conv.log[-30:]
+                for phone, conv in (
+                    ([("+91-DEMO", svc.conversations["+91-DEMO"])] if "+91-DEMO" in svc.conversations else [])
+                    + [(p, c) for p, c in list(svc.conversations.items())[-6:] if p != "+91-DEMO"]
+                )
             },
         }
 
