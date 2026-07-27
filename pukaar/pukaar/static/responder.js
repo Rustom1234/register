@@ -81,6 +81,7 @@ function renderPick() {
 }
 
 function renderIdle(m) {
+  offersKey = activeKey = "";
   const kits = state.metrics.kits || {};
   $("kits").innerHTML = Object.entries(kits)
     .map(([sku, n]) => `<span>${(state.kit_skus[sku] || {}).name || sku}: <b>${n}</b></span>`)
@@ -100,10 +101,10 @@ function offerCard(a, order, c) {
   const ttl = (state.config && state.config.offer_ttl_s) || 180;
   const left = Math.max(0, a.offered_at + ttl - state.sim.sim_now);
   const kit = (state.kit_skus[order.sku] || {}).name || order.sku;
-  return `<div class="card offer ${order.priority === "P1" ? "p1" : ""}">
+  return `<div class="card offer ${order.priority === "P1" ? "p1" : ""}" data-aid="${a.id}">
     <div class="row1">
       <span class="pill ${order.priority === "P1" ? "p1" : "p2"}">${order.priority}</span>
-      <span class="kit">${CAT_ICON[order.category] || "•"} ${kit}</span>
+      <span class="kit">${CAT_ICON[c && c.category] || "•"} ${kit}</span>
     </div>
     <div class="meta"><span>📍 ${dist}</span><span>${c ? c.digipin || "" : ""}</span>
       <span>wave ${order.wave || 1}</span>${order.clinical_flag ? "<span>🩺 clinical flag</span>" : ""}</div>
@@ -115,8 +116,27 @@ function offerCard(a, order, c) {
   </div>`;
 }
 
+let offersKey = "";
 function renderOffers(offers) {
   const scr = $("scr-offers");
+  const key = offers.map(({ a, order }) => `${a.id}:${order.status}`).join("|");
+  if (key === offersKey && !scr.hidden) {
+    // Same cards — refresh only the countdowns, IN PLACE, so a button is
+    // never destroyed under the responder's finger mid-tap.
+    const ttl = (state.config && state.config.offer_ttl_s) || 180;
+    for (const { a } of offers) {
+      const card = scr.querySelector(`[data-aid="${a.id}"]`);
+      if (!card) continue;
+      const left = Math.max(0, a.offered_at + ttl - state.sim.sim_now);
+      const bar = card.querySelector(".ttl i");
+      if (bar) bar.style.width = `${(left / ttl) * 100}%`;
+      const acc = card.querySelector("[data-acc]");
+      if (acc && !acc.disabled) acc.textContent = `ACCEPT · ${Math.ceil(left / 60)} min left`;
+    }
+    return;
+  }
+  offersKey = key;
+  activeKey = "";
   scr.innerHTML = offers.map(({ a, order, c }) => offerCard(a, order, c)).join("");
   scr.querySelectorAll("[data-acc]").forEach((b) =>
     b.addEventListener("click", async () => {
@@ -132,6 +152,7 @@ function renderOffers(offers) {
   show("scr-offers");
 }
 
+let activeKey = "";
 function renderActive(order) {
   const m = me();
   const c = state.cases.find((x) => x.id === order.case_id);
@@ -143,6 +164,20 @@ function renderActive(order) {
   const pct = dist != null && startDist.has(order.id)
     ? Math.max(0, Math.min(100, 100 - (dist / startDist.get(order.id)) * 100)) : 0;
   const onsite = order.status === "onsite";
+  const key = `${order.id}:${order.status}`;
+  if (key === activeKey && !$("scr-active").hidden) {
+    // Same order & phase: move the distance readout and progress bar in
+    // place; never rebuild the DOM under the outcome buttons.
+    if (!onsite) {
+      const d = $("scr-active").querySelector(".dist");
+      if (d) d.innerHTML = `${dist != null ? Math.round(dist) : "—"}<small> m to go</small>`;
+      const bar = $("scr-active").querySelector(".bar i");
+      if (bar) bar.style.width = `${pct}%`;
+    }
+    return;
+  }
+  activeKey = key;
+  offersKey = "";
   const checklist = kit.contents
     ? `<ul class="check">${kit.contents.split(", ").map((x) => `<li>${x}</li>`).join("")}</ul>` : "";
   const instr = J(order.instruction_ids, [])
@@ -161,7 +196,7 @@ function renderActive(order) {
            move on the <a href="/" target="_blank">control room map</a>.</p>`}
     </div>
     <div class="card">
-      <h2>${CAT_ICON[order.category] || ""} ${kit.name} (${order.sku})</h2>
+      <h2>${CAT_ICON[c && c.category] || ""} ${kit.name} (${order.sku})</h2>
       ${checklist}
       ${order.clinical_flag ? '<p class="hint">🩺 clinical flag — medical escalation pre-approved.</p>' : ""}
     </div>

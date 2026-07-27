@@ -26,6 +26,19 @@ EMERGENCIES = [
     "ambulance chahiye jaldi",
     "emergency hai please",
     "wo mar raha hai",
+    # Devanagari — a supported witness language must never bypass the gate
+    "एक आदमी बेहोश पड़ा है सड़क पर",
+    "बहुत खून बह रहा है",
+    "खून रुक नहीं रहा",
+    "सांस नहीं ले पा रहा",
+    "एक्सीडेंट हो गया है ट्रक से",
+    "गाड़ी ने मार दी",
+    "उसको दौरा पड़ रहा है",
+    "आग लग गयी है झुग्गी में",
+    "करंट लग गया है",
+    "एम्बुलेंस चाहिए जल्दी",
+    "वो मर रहा है",
+    "इमरजेंसी है",
 ]
 
 NON_EMERGENCIES = [
@@ -36,6 +49,10 @@ NON_EMERGENCIES = [
     "chot lagi hai pair par, chal raha hai",
     "khana chahiye",
     "hello",
+    # Devanagari non-emergencies stay ordinary reports
+    "फ्लाईओवर के नीचे एक आदमी है, पैर में पट्टी है",
+    "एक बुज़ुर्ग भूखे हैं स्टेशन के पास",
+    "खाना चाहिए",
 ]
 
 

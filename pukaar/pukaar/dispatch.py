@@ -81,7 +81,9 @@ class DispatchEngine:
 
     def _start_wave(self, order: dict, wave: int) -> None:
         already = {a["responder_id"] for a in
-                   self.store.query("SELECT responder_id FROM assignments WHERE order_id=?", (order["id"],))}
+                   self.store.query("SELECT responder_id FROM assignments WHERE order_id=? "
+                                    "AND (response IS NULL OR response != 'timeout_night')",
+                                    (order["id"],))}
         k = self.cfg.wave_size_p1 if order["priority"] == "P1" else self.cfg.wave_size_default
         cands = self._candidates(order, already, k)
         if not cands:
@@ -108,6 +110,18 @@ class DispatchEngine:
                 self.store.update("assignments", a["id"], {"responded_at": now, "response": "timeout"})
             asgs = []
         if not asgs:  # everyone declined or timed out -> next wave / coordinator
+            if not self.in_dispatch_window(now):
+                # No fresh offers outside 07:00-21:00: park the order back in
+                # the queue; the morning tick re-waves it inside the window.
+                # A night timeout is not a decline — those responders stay
+                # eligible for the morning round.
+                self.store.execute(
+                    "UPDATE assignments SET response='timeout_night' "
+                    "WHERE order_id=? AND response='timeout'", (order["id"],))
+                self.store.update("orders", order["id"], {"status": "queued"})
+                self.store.audit("dispatch", "requeued_overnight", order["id"], "system",
+                                 "", "wave expired outside dispatch window", ts=now)
+                return
             if order["wave"] >= self.cfg.max_waves:
                 self._to_coordinator(order, "all waves exhausted")
             else:
@@ -125,7 +139,19 @@ class DispatchEngine:
         resp = self.store.one("SELECT * FROM responders WHERE id=? AND active=1", (responder_id,))
         if not order or not resp or order["status"] not in ("needs_coordinator", "queued", "offered"):
             return False
+        case = self.store.one("SELECT * FROM cases WHERE id=?", (order["case_id"],))
+        if not case or case["lat"] is None:
+            # Landmark-only case: nowhere to navigate to. The coordinator must
+            # get a pin (call the witness) before this order can be assigned —
+            # otherwise the responder would be locked to an unreachable job.
+            return False
         now = self.now()
+        won = self.store.claim(
+            "UPDATE orders SET status='accepted', responder_id=?, accepted_at=? "
+            "WHERE id=? AND status IN ('needs_coordinator', 'queued', 'offered')",
+            (responder_id, now, order_id))
+        if not won:  # a responder accepted concurrently — their lock stands
+            return False
         for other in self.store.query(
                 "SELECT * FROM assignments WHERE order_id=? AND responded_at IS NULL", (order_id,)):
             self.store.update("assignments", other["id"], {"responded_at": now, "response": "released"})
@@ -133,15 +159,15 @@ class DispatchEngine:
             "id": new_id("asg"), "order_id": order_id, "responder_id": responder_id,
             "offered_at": now, "responded_at": now, "response": "accepted",
         })
-        self.store.update("orders", order_id,
-                          {"status": "accepted", "responder_id": responder_id, "accepted_at": now})
         self.store.audit("coordinator", "manual_assign", order_id, "system", "", responder_id, ts=now)
         self.emit("manual_assign", {"order_id": order_id, "responder_id": responder_id})
         return True
 
     # ------------------------------------------------- responder actions --
     def respond(self, assignment_id: str, accepted: bool) -> bool:
-        """First accept locks the order; everyone else is released."""
+        """First accept locks the order; everyone else is released.
+        The lock is a compare-and-swap on the order row, so two concurrent
+        accepts (HTTP threadpool + sim tick) can never both win."""
         a = self.store.one("SELECT * FROM assignments WHERE id=?", (assignment_id,))
         if not a or a["responded_at"] is not None:
             return False
@@ -150,12 +176,17 @@ class DispatchEngine:
         if not order or order["status"] not in ("offered",):
             self.store.update("assignments", assignment_id, {"responded_at": now, "response": "released"})
             return False
-        self.store.update("assignments", assignment_id,
-                          {"responded_at": now, "response": "accepted" if accepted else "declined"})
         if not accepted:
+            self.store.update("assignments", assignment_id, {"responded_at": now, "response": "declined"})
             return True
-        self.store.update("orders", order["id"],
-                          {"status": "accepted", "responder_id": a["responder_id"], "accepted_at": now})
+        won = self.store.claim(
+            "UPDATE orders SET status='accepted', responder_id=?, accepted_at=? "
+            "WHERE id=? AND status='offered'",
+            (a["responder_id"], now, order["id"]))
+        if not won:  # someone else accepted between our read and this write
+            self.store.update("assignments", assignment_id, {"responded_at": now, "response": "released"})
+            return False
+        self.store.update("assignments", assignment_id, {"responded_at": now, "response": "accepted"})
         for other in self.store.query(
                 "SELECT * FROM assignments WHERE order_id=? AND responded_at IS NULL", (order["id"],)):
             self.store.update("assignments", other["id"], {"responded_at": now, "response": "released"})

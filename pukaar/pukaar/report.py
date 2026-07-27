@@ -6,6 +6,8 @@ Everything comes from the store; no live JS, no external assets.
 
 from __future__ import annotations
 
+import html
+
 from . import strings
 
 
@@ -37,8 +39,8 @@ def render_report(svc, sim) -> str:
         return "declined (respected)"
 
     rows = "".join(
-        f"<tr><td>{c['id'][-4:].upper()}</td>"
-        f"<td>{c['category'] or '—'}</td>"
+        f"<tr><td>{html.escape(c['id'][-4:].upper())}</td>"
+        f"<td>{html.escape(c['category'] or '—')}</td>"
         f"<td>{(orders.get(c['id']) or {}).get('priority', '—')}</td>"
         f"<td>{'🩺' if (orders.get(c['id']) or {}).get('clinical_flag') else ''}</td>"
         f"<td>{c['merged_witnesses']}</td>"

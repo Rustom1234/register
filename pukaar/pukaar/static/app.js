@@ -286,7 +286,7 @@ function renderCases() {
     return `<div class="case-row" data-id="${c.id}">
       <span class="dot" style="background:${CAT[c.category] || "#898781"}"></span>
       <span class="cid">${c.id.slice(-4).toUpperCase()}</span>
-      <span class="meta">${c.landmark_text || c.digipin || ""}${who}</span>${chip}</div>`;
+      <span class="meta">${escapeHtml(c.landmark_text || c.digipin || "")}${who}</span>${chip}</div>`;
   }).join("") || '<div class="fi"><span class="t"></span><span>none — quiet streets 🌙</span></div>';
   el.querySelectorAll(".case-row").forEach((row) =>
     row.addEventListener("click", () => showDetail(row.dataset.id)));
@@ -315,7 +315,7 @@ function renderDetail() {
     <div>category</div><div>${CAT_ICON[c.category] || ""} ${c.category || "—"} ${c.urgency === "high" ? "· <b style='color:var(--critical)'>P1 ⚠</b>" : ""}</div>
     <div>DIGIPIN</div><div>${c.digipin || "—"}</div>
     <div>witnesses</div><div>${c.merged_witnesses}${c.merged_witnesses > 1 ? " (deduped)" : ""}</div>
-    <div>detail</div><div>${(c.detail || c.landmark_text || "—").slice(0, 70)}</div>
+    <div>detail</div><div>${escapeHtml((c.detail || c.landmark_text || "—").slice(0, 70))}</div>
     <div>kit</div><div>${order ? order.sku : "—"}${order && order.clinical_flag ? " · 🩺 clinical flag" : ""}</div>
     <div>provenance</div><div>witness ✓ / agent_inferred ✓ (HMAC)</div>
   </div>`;
@@ -360,7 +360,7 @@ function renderRespPanel() {
     const instr = J(order.instruction_ids, []).map((i) => `<li>${state.instructions[i] || i}</li>`).join("");
     cards.push(`<div class="rcard">
       <div class="r-head"><b>${CAT_ICON[c.category] || "📦"} ${order.sku} · ${order.priority}</b><span>${dist}</span></div>
-      ${order.clinical_flag ? "🩺 clinical flag · " : ""}${(c.detail || c.landmark_text || "").slice(0, 60)}
+      ${order.clinical_flag ? "🩺 clinical flag · " : ""}${escapeHtml((c.detail || c.landmark_text || "").slice(0, 60))}
       <ul class="r-instr">${instr}</ul>
       <div class="btns">
         <button class="accept" data-act="accept" data-asg="${a.id}">✅ Accept</button>
@@ -421,7 +421,7 @@ function renderCoord() {
   document.getElementById("coord-body").innerHTML = stuck.map((o) => {
     const c = state.cases.find((x) => x.id === o.case_id) || {};
     return `<div class="fi warn"><span class="t">${o.sku}</span>
-      <span><b>${o.id.slice(-4).toUpperCase()}</b> ${(c.detail || "").slice(0, 34)}</span>
+      <span><b>${o.id.slice(-4).toUpperCase()}</b> ${escapeHtml((c.detail || "").slice(0, 34))}</span>
       <span class="act"><select data-order="${o.id}">${respOpts}</select>
       <button data-assign="${o.id}">assign</button></span></div>`;
   }).join("");

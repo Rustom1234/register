@@ -136,8 +136,14 @@ class Sim:
             ("photo", "serious infected wound on foot, old dirty bandage, pus visible"),
             ("button", "fresh:10"),
         ])
-        case = self.svc.store.one("SELECT * FROM cases ORDER BY created_at DESC")
-        order = self.svc.store.one("SELECT * FROM orders WHERE case_id=?", (case["id"],)) if case else None
+        # Resolve the case through the conversation we just played — a global
+        # "latest case" lookup can grab an unrelated case when the report
+        # dedup-merges or ties on created_at.
+        conv = self.svc.conversations.get(phone)
+        case_id = conv.state.get("case_id") if conv else None
+        order = (self.svc.store.one("SELECT * FROM orders WHERE case_id=? AND "
+                                    "status IN ('queued', 'offered')", (case_id,))
+                 if case_id else None)
         if order:
             self.golden[order["id"]] = med["id"]
         return f"golden run staged for {med['name']}"
@@ -187,6 +193,8 @@ class Sim:
         300-case test.)"""
         if self.sim_now < self._coord_next:
             return
+        if not self.svc.dispatch.in_dispatch_window(self.sim_now):
+            return  # the coordinator works the backlog inside partner hours
         self._coord_next = self.sim_now + 90
         stuck = self.svc.store.query(
             "SELECT * FROM orders WHERE status='needs_coordinator' ORDER BY created_at LIMIT 4")

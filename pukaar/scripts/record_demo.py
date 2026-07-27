@@ -129,6 +129,49 @@ def main():
         page.wait_for_timeout(1500)
         cap("Fixed 112 reply — no model ever speaks in the emergency path. Tested at 100% recall.", 4200)
 
+        # ---- the responder's side: /responder in a phone frame over the map
+        cap("The other side of the marketplace: the responder app — /responder on any phone")
+        page.evaluate(
+            "() => { const f = document.createElement('iframe');"
+            "f.id = 'pk-phone'; f.src = '/responder';"
+            "f.style.cssText = 'position:fixed;right:18px;top:64px;width:372px;height:700px;"
+            "z-index:999997;border:10px solid #23262e;border-radius:26px;background:#0d0d0d;"
+            "box-shadow:0 18px 60px rgba(0,0,0,0.65)';"
+            "document.body.appendChild(f); }")
+        phone = page.frame_locator("#pk-phone")
+        phone.locator("#duty-btn").wait_for(timeout=15000)
+        # duty on as an idle responder, then pin a fresh case ~500 m from them
+        rid = page.evaluate(
+            "async () => { const s = await (await fetch('/api/state')).json();"
+            "const idle = s.sim.responders.find(r => r.state === 'idle');"
+            "return idle ? idle.id : 'resp_1'; }")
+        phone.locator("#pick").select_option(rid)
+        phone.locator("#duty-btn").click()
+        page.wait_for_timeout(900)
+        page.evaluate(
+            "async (rid) => { const s = await (await fetch('/api/state')).json();"
+            "const me = s.sim.responders.find(r => r.id === rid);"
+            "const lat = me.lat + 350/111320,"
+            "      lng = me.lng + 350/(111320*Math.cos(me.lat*Math.PI/180));"
+            "const post = (u, b) => fetch(u, {method: 'POST',"
+            "  headers: {'content-type': 'application/json'}, body: JSON.stringify(b)});"
+            "await post('/api/wa/inbound', {phone: '+91-FIELD', kind: 'text',"
+            "  text: 'ek aadmi ghayal hai, pair se khoon nikal raha hai'});"
+            "await post('/api/wa/inbound', {phone: '+91-FIELD', kind: 'location', lat, lng});"
+            "await post('/api/wa/inbound', {phone: '+91-FIELD', kind: 'button', text: 'fresh:10'});"
+            "}", rid)
+        cap("A witness pins a case nearby… the offer ping lands: kit, distance, DIGIPIN, countdown")
+        offer = phone.locator('.offer:has-text("Medical kit")').locator("[data-acc]").first
+        offer.wait_for(timeout=60000)
+        page.wait_for_timeout(1400)
+        offer.click()
+        cap("ACCEPT — and the same responder starts moving on the map behind", 3000)
+        phone.locator(".banner.onsite").wait_for(timeout=90000)
+        cap("At the pin: kit checklist done, outcome recorded — the witness gets the closure message", 1600)
+        phone.locator('[data-out="served"]').click()
+        page.wait_for_timeout(2600)
+        page.evaluate("() => document.getElementById('pk-phone').remove()")
+
         # ---- metrics
         page.goto("http://localhost:8877/static/metrics.html", wait_until="domcontentloaded")
         page.wait_for_timeout(1200)
@@ -137,7 +180,7 @@ def main():
         # ---- close
         page.goto("http://localhost:8877/", wait_until="domcontentloaded")
         page.wait_for_timeout(2000)
-        cap("Witness → verify → deliver → care. 69 tests. No cameras. No database of the poor.", 5200)
+        cap("Witness → verify → deliver → care. 86 tests. No cameras. No database of the poor.", 5200)
         cap("PUKAAR · पुकार — the call", 3000)
 
         video = page.video

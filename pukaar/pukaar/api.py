@@ -77,11 +77,15 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         while True:
             await asyncio.sleep(1.0)
             now = time.monotonic()
-            sim.tick(now - last)
+            try:
+                sim.tick(now - last)
+                if sim.sim_now - last_purge > 6 * 3600:  # purge every 6 sim-hours
+                    svc.run_purge()
+                    last_purge = sim.sim_now
+            except Exception:  # one bad tick must never freeze the demo
+                import traceback
+                traceback.print_exc()
             last = now
-            if sim.sim_now - last_purge > 6 * 3600:  # purge every 6 sim-hours
-                svc.run_purge()
-                last_purge = sim.sim_now
 
     app = FastAPI(title="Pukaar demo", lifespan=lifespan)
     app.state.svc, app.state.sim = svc, sim
@@ -155,6 +159,8 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             ok = svc.dispatch.respond(act.assignment_id, act.action == "accept")
             return {"ok": ok}
         if act.action == "outcome" and act.order_id and act.outcome:
+            if act.outcome not in ("served", "escalated", "not_found", "declined"):
+                raise HTTPException(400, "outcome must be served|escalated|not_found|declined")
             closed = svc.dispatch.close(act.order_id, act.outcome)
             if closed:
                 svc.notify_outcome(closed["case_id"], act.outcome)

@@ -43,7 +43,11 @@ def test_stop_opts_out(svc):
     svc.wa_inbound("+91-902", "text", text="hello")
     replies = svc.wa_inbound("+91-902", "text", text="STOP")
     assert _texts(replies) == ["S-STOP"]
-    assert svc.wa_inbound("+91-902", "text", text="anything") == []
+    # stray taps stay silent while stopped…
+    assert svc.wa_inbound("+91-902", "button", text="cat:food") == []
+    assert svc.wa_inbound("+91-902", "location", lat=28.59, lng=77.25) == []
+    # …but a fresh text re-opens the line, as S-STOP promises
+    assert svc.wa_inbound("+91-902", "text", text="wapas hoon, madad chahiye") != []
 
 
 def test_category_buttons_when_ambiguous(svc):

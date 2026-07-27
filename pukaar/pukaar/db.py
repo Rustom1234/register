@@ -81,6 +81,14 @@ class Store:
             self._conn.execute(sql, params)
             self._conn.commit()
 
+    def claim(self, sql: str, params: tuple = ()) -> int:
+        """Conditional UPDATE returning the changed-row count — the
+        compare-and-swap primitive behind first-accept locks."""
+        with self._lock:
+            cur = self._conn.execute(sql, params)
+            self._conn.commit()
+            return cur.rowcount
+
     def query(self, sql: str, params: tuple = ()) -> list[dict]:
         with self._lock:
             cur = self._conn.execute(sql, params)

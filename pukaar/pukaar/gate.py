@@ -27,6 +27,16 @@ _PATTERNS = [
     r"\baag\s+lag", r"\bon\s+fire\b", r"current\s+lag", r"\belectrocut",
     # explicit sos
     r"\bemergency\b", r"\bambulance\b", r"\bmar\s+raha\b", r"\bmar\s+rahi\b", r"\bdying\b",
+    # Devanagari mirrors — deva is a fully supported witness language, so the
+    # gate must catch it too (\b doesn't work across Devanagari; match bare).
+    r"बेहोश",                              # unconscious
+    r"होश\s*(में\s*)?नहीं",                 # not conscious
+    r"बहुत\s*खून", r"खून\s*बह", r"खून\s*रुक\s*नहीं",   # heavy bleeding
+    r"साँ?स\s*नहीं", r"सांस\s*नहीं",         # not breathing
+    r"एक्सिडेंट", r"एक्सीडेंट", r"टक्कर", r"गाड़ी\s*ने\s*मार",  # accident
+    r"दौरा", r"गिर\s*के\s*बेहोश",            # seizure / collapse
+    r"आग\s*लग", r"करंट\s*लग", r"बिजली\s*का\s*झटका",   # fire / electrocution
+    r"एम्बुलेंस", r"एंबुलेंस", r"मर\s*रह[ाी]", r"इमरजेंसी",  # explicit sos
 ]
 
 _RX = [re.compile(p, re.IGNORECASE) for p in _PATTERNS]

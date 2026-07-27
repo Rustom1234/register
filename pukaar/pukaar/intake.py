@@ -56,8 +56,26 @@ class Intake:
         out: list[BotMsg] = []
         s["turns"] += 1
 
+        # The 112 gate outranks everything — even a stopped conversation.
+        # A witness who opted out and then texts an emergency gets the fixed
+        # redirect, never silence.
+        if kind == "text" and gate.is_emergency(text):
+            s["stopped"] = False
+            if s["stage"] == "done":
+                self._reset_report(s)
+            s["stage"] = "emergency_redirect"
+            return [BotMsg(strings.SAFETY["S-112"], string_id="S-112")]
+
         if s["stopped"]:
-            return []
+            # S-STOP promises "you can always write back" — a fresh text
+            # re-opens the line; everything else stays silent.
+            if kind == "text" and text and text.strip().upper() != "STOP":
+                s["stopped"] = False
+                if s["stage"] == "done":
+                    self._reset_report(s)
+                    s["stage"] = "new"
+            else:
+                return []
 
         if kind == "text" and text and text.strip().upper() == "STOP":
             s["stopped"] = True
@@ -74,16 +92,8 @@ class Intake:
         if s["stage"] == "done":
             if kind == "button":
                 return []
-            for slot in ("lat", "lng", "geo_conf", "landmark_text", "category",
-                         "freshness_min", "detail", "photo_hint"):
-                s[slot] = None
-            s["category_conf"], s["location_asked"], s["turns"] = 0.0, False, 1
+            self._reset_report(s)
             s["stage"] = "need_location"
-
-        # Deterministic emergency gate — before any model logic, always.
-        if kind == "text" and gate.is_emergency(text):
-            s["stage"] = "emergency_redirect"
-            return [BotMsg(strings.SAFETY["S-112"], string_id="S-112")]
 
         first_contact = s["stage"] == "new"
         if first_contact:
@@ -120,6 +130,17 @@ class Intake:
         return out
 
     # ------------------------------------------------------------------
+    @staticmethod
+    def _reset_report(s: dict) -> None:
+        """Clear all per-report slots so a new report starts clean —
+        including urgency, which must never leak from an earlier report."""
+        for slot in ("lat", "lng", "geo_conf", "landmark_text", "category",
+                     "freshness_min", "detail", "photo_hint"):
+            s[slot] = None
+        s.pop("urgency", None)
+        s["category_conf"], s["location_asked"], s["turns"] = 0.0, False, 1
+
+    # ------------------------------------------------------------------
     def _absorb(self, s: dict, kind: str, text: str | None,
                 lat: float | None, lng: float | None, photo_hint: str | None) -> None:
         if kind == "location" and lat is not None and lng is not None:
@@ -139,12 +160,18 @@ class Intake:
                 s["stage"] = "extras_done"
         if kind == "button" and text:
             if text.startswith("cat:"):
-                s["category"] = text.split(":", 1)[1]
-                s["category_conf"] = 1.0
+                value = text.split(":", 1)[1]
+                if value in ("medical", "food", "shelter"):  # never trust the wire
+                    s["category"] = value
+                    s["category_conf"] = 1.0
             elif text.startswith("fresh:"):
-                s["freshness_min"] = int(text.split(":", 1)[1])
-                if s["stage"] == "extras_asked":
-                    s["stage"] = "extras_done"
+                try:
+                    s["freshness_min"] = int(text.split(":", 1)[1])
+                except ValueError:
+                    pass  # malformed tap absorbed, like any unknown button
+                else:
+                    if s["stage"] == "extras_asked":
+                        s["stage"] = "extras_done"
         if kind == "text" and text:
             try:
                 ex = self.backend.extract(text, has_photo=bool(s["photo_hint"]))
