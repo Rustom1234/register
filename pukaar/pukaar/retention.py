@@ -1,8 +1,11 @@
 """Retention purge — privacy by architecture, executed (build plan §4/§5).
 
 media: purged at case close or 72h, whichever first.
-lat/lng: nulled at 7 days (the dedup cell key is kept).
-case rows: aggregated to coarse cells at 90 days, then deleted.
+lat/lng: nulled at 7 days once the case is closed — an open case keeps its
+pin, it is the only way to serve it (the dedup cell key is kept).
+case rows: closed cases aggregated to coarse cells at 90 days, then
+deleted; reports that never became a case (pre-case turns, 112 redirects)
+are swept on the same 90-day clock.
 
 The dangerous database never exists because this job runs, not because a
 policy document says so. `purge(now)` is idempotent and cheap; the API

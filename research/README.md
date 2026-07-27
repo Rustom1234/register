@@ -16,4 +16,6 @@ Working name for the concept: spot people on the street who need basic medical s
 
 Origin: seen on the street — a homeless man with a wrapped, bleeding foot; ~₹200 of antiseptic, dressings and an umbrella would have changed his week.
 
-**The demo exists.** [`../pukaar/`](../pukaar/) implements the whole loop from the build plan — trilingual WhatsApp-style intake agent, deterministic 112 gate, kit orders with code-enforced caution, GoodSAM-style dispatch, provenance, retention — plus a recordable live control room (`make demo`), a metrics/kill-criteria dashboard, and 69 automated tests. See [`../pukaar/README.md`](../pukaar/README.md) and [`../pukaar/CHANGELOG.md`](../pukaar/CHANGELOG.md).
+**The demo exists.** [`../pukaar/`](../pukaar/) implements the whole loop from the build plan — trilingual WhatsApp-style intake agent, deterministic 112 gate, kit orders with code-enforced caution, GoodSAM-style dispatch, provenance, retention — plus a recordable live control room (`make demo`), a metrics/kill-criteria dashboard, a standalone responder phone app at
+`/responder`, and 99 automated tests (hardened by a 23-agent adversarial
+audit). See [`../pukaar/README.md`](../pukaar/README.md) and [`../pukaar/CHANGELOG.md`](../pukaar/CHANGELOG.md).

@@ -27,7 +27,7 @@ function feedText(e) {
     case "coordinator_alert": return `⚠️ coordinator: ${e.reason}`;
     case "night_hold": return `🌙 ${s(e.case_id)} held for morning`;
     case "manual_assign": return `🧑‍✈️ manual assign ${s(e.order_id)}`;
-    case "purge": return `🧹 purge m${e.media}/g${e.latlng}/r${e.cases}`;
+    case "purge": return `🧹 purge m${e.media}/g${e.latlng}/r${e.cases}/o${e.orphan_reports ?? 0}`;
     default: return e.kind;
   }
 }

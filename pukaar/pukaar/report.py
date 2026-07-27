@@ -110,9 +110,12 @@ print this page for the handout</span></div>
 <p>{lang_mix}</p>
 
 <div class="foot">
-Every record is HMAC provenance-tagged (witness / agent_inferred / responder_observed).
+Witness reports and agent inferences are HMAC provenance-tagged; responder observations
+and system actions carry provenance labels in the audit log.
 Privacy by architecture: no identities of street residents are stored; photos delete at
-case close; exact locations null after 7 days; rows aggregate to coarse cells at 90 days.
+case close; exact locations null 7 days after a case closes (open cases keep their pin
+until served); closed rows aggregate to coarse cells at 90 days, when reports that never
+became a case are swept too.
 Emergency messages are fixed strings — no model ever speaks in the 112 path.
 Kit SKUs: {', '.join(f"{k} ({v['name']})" for k, v in strings.KIT_SKUS.items())}.
 </div>

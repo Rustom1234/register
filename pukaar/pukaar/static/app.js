@@ -248,7 +248,7 @@ function feedLine(e) {
     case "coordinator_flag":
       html = `⚠️ flag: ${e.reason}`; cls = "warn"; break;
     case "purge":
-      html = `🧹 retention purge — media ${e.media}, lat/lng ${e.latlng}, rows ${e.cases}`; break;
+      html = `🧹 retention purge — media ${e.media}, lat/lng ${e.latlng}, rows ${e.cases}, orphan reports ${e.orphan_reports ?? 0}`; break;
     case "night_hold":
       html = `🌙 <b>${short(e.case_id)}</b> held for the morning round (night mode)`; cls = "warn"; break;
     case "manual_assign":

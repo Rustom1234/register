@@ -1,8 +1,9 @@
 # Pukaar — build log
 
-One autonomous build session, 2026-07-26, on branch
-`claude/street-aid-research-4xqdpu`. Every batch kept the suite green;
-the test count tells the story.
+An autonomous build across sessions (2026-07-26 → 27) on branch
+`claude/street-aid-research-4xqdpu`, including a 23-agent adversarial
+audit round. Every batch kept the suite green; the test count tells the
+story.
 
 | Batch | What landed | Tests |
 |---|---|---|

@@ -62,7 +62,8 @@ with a scrubber, for recording clean takes.
 The **WhatsApp Cloud API transport is wired** (`/webhook` GET verify +
 POST intake, reply-button/location-request/media senders in
 `whatsapp.py`, parser fully tested) and dormant until `WA_TOKEN` +
-`WA_PHONE_ID` + `WA_VERIFY_TOKEN` exist — P1 onboarding is configuration,
+`WA_PHONE_ID` exist (`WA_VERIFY_TOKEN` defaults to `pukaar-verify` for the
+webhook handshake) — P1 onboarding is configuration,
 not code.
 
 A shot-by-shot recording guide is in [`demo-script.md`](./demo-script.md) —
@@ -110,22 +111,28 @@ demo:    sim.py (responders, scenarios) · api.py (FastAPI) · static/ (control 
 
 ## The rules the code enforces (not just documents)
 
-- **Safety text is never generated.** The 112 gate and every witness-facing
-  sentence are fixed strings with IDs (`strings.py`); the emergency test
-  requires 100% recall and blocks CI (`tests/test_gate.py`).
+- **Safety text is never generated.** The 112 gate (Latin *and* Devanagari)
+  and every witness-facing sentence are fixed strings with IDs
+  (`strings.py`); the emergency test requires 100% recall and blocks CI
+  (`tests/test_gate.py`). The gate also outranks a STOP opt-out — a stopped
+  line still gets the fixed 112 redirect, and any fresh text re-opens the
+  line per the S-STOP promise (`intake.py`).
 - **Uncertainty raises, never lowers.** A medical order with model
   confidence < 0.8 keeps `clinical_flag=true` regardless of what the model
   said (`orders.py`); backend failures fall back conservative + flagged.
 - **Structured outputs everywhere.** Witness content is delimited untrusted
   data; models can only answer in JSON schemas (`schemas.py`) — the
   correctness tool doubles as the prompt-injection control.
-- **The dangerous database never exists.** Media purge at close/72h,
-  lat/lng nulled at 7d, rows aggregated to coarse cells at 90d
-  (`retention.py`, tested), and no identity of the person in need is ever
-  stored — outcomes are coded enums only.
-- **Provenance on every record.** `witness` / `agent_inferred` /
-  `responder_observed`, HMAC-signed (`provenance.py`) — an agent's guess
-  can never masquerade as something a human said.
+- **The dangerous database never exists.** Media purge at close/72h;
+  lat/lng nulled at 7d once a case closes (an open case's pin survives —
+  it's the only way to serve it); closed rows aggregated to coarse cells
+  at 90d, and reports that never became a case (including 112 redirects)
+  swept on the same clock (`retention.py`, tested). No identity of the
+  person in need is ever stored — outcomes are coded enums only.
+- **Provenance on what matters most.** Witness statements and agent
+  inferences are HMAC-signed (`provenance.py`); responder observations and
+  system actions carry provenance labels in the audit log — an agent's
+  guess can never masquerade as something a human said.
 
 ## Honest limits (deliberate, per the build plan)
 
@@ -150,3 +157,5 @@ demo:    sim.py (responders, scenarios) · api.py (FastAPI) · static/ (control 
 | `PUKAAR_HMAC_KEY` | (ephemeral) | provenance key — set for persistence |
 | `PUKAAR_DB` | (in-memory) | set a file path to persist the demo DB across restarts |
 | `PUKAAR_PORT` | `8877` | demo port |
+| `PUKAAR_HOST` | `127.0.0.1` | bind address (`make docker-demo` uses 0.0.0.0) |
+| `PUKAAR_SEED_DEMO` | (unset) | pre-stage the photogenic demo session at boot (`make demo` sets it) |

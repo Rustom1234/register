@@ -1,9 +1,12 @@
 """Dispatch engine — the GoodSAM-shaped parallel wave (build plan §3.9).
 
 Parallel offer to the k nearest on-shift responders (k=3 for P1, else 2),
-first accept locks, 3-minute waves, <=3 waves, then the human coordinator
-is the terminal rung. Tick-driven with an injected clock so tests and the
-simulator control time; no threads, no sleeps.
+first accept locks (a compare-and-swap on the order row), 3-minute waves,
+<=3 waves, then the human coordinator is the terminal rung — inside the
+07:00-21:00 dispatch window. A wave that expires overnight re-queues the
+order for the morning round (night timeouts stay wave-eligible).
+Tick-driven with an injected clock so tests and the simulator control
+time; no threads, no sleeps.
 """
 
 from __future__ import annotations
@@ -109,7 +112,7 @@ class DispatchEngine:
             for a in asgs:  # expire the wave
                 self.store.update("assignments", a["id"], {"responded_at": now, "response": "timeout"})
             asgs = []
-        if not asgs:  # everyone declined or timed out -> next wave / coordinator
+        if not asgs:  # declined/timed out -> overnight requeue / next wave / coordinator
             if not self.in_dispatch_window(now):
                 # No fresh offers outside 07:00-21:00: park the order back in
                 # the queue; the morning tick re-waves it inside the window.
@@ -134,6 +137,8 @@ class DispatchEngine:
 
     def manual_assign(self, order_id: str, responder_id: str) -> bool:
         """Coordinator override: hand a stuck order to a chosen responder.
+        Refuses pinless (landmark-only) cases — get a pin first — and yields
+        if a responder accept wins the compare-and-swap concurrently.
         Recorded as an assignment like any other, provenance actor = human."""
         order = self.store.one("SELECT * FROM orders WHERE id=?", (order_id,))
         resp = self.store.one("SELECT * FROM responders WHERE id=? AND active=1", (responder_id,))

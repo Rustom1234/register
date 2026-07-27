@@ -73,12 +73,13 @@ flowchart LR
        offer_all(candidates, ttl=3min)      # order card; utility template if no open window
        accepted = first_accept_or_timeout(3min)
        wave += 1
-   if not accepted: coordinator_alert(order)  # terminal rung, always a human
+   if wave expired outside 07:00-21:00: requeue for the morning round (night timeouts stay wave-eligible)
+   elif not accepted: coordinator_alert(order)  # terminal rung inside the window, always a human
    P1 additionally pings the coordinator at wave 0.
    ```
    Queue cap: if a partner's open orders exceed their declared capacity, new P2/P3 cases hold with an honest witness message — the system must never manufacture NGO backlog.
 10. **Responder flow (all buttons, no typing):** order card (category, freshness, DIGIPIN + map link, photo if any, kit to carry, instruction strings) → **[Accept] [Decline] [Busy]** → on accept: pin + navigation → **[Pahunch gaya]** → outcome: **[Diya/Served] [Nahi mila/Not found] [Mana kiya/Declined] [Doctor bulaya/Escalated]**. Escalated keeps the case open until `escalation_completed` is confirmed by the clinical team.
-11. **Close:** witness gets **S-CLOSURE** (utility template if window closed, ~₹0.115; free if open — only sent to opt-ins). Media purged at close or 72h, whichever first. Exact lat/lng nulled at day 7 (H3 cell kept). Case row aggregated at day 90.
+11. **Close:** witness gets **S-CLOSURE** (utility template if window closed, ~₹0.115; free if open — only sent to opt-ins). Media purged at close or 72h, whichever first. Exact lat/lng nulled at day 7 once the case is closed (H3 cell kept; an open case keeps its pin — it is the only way to serve it). Closed case rows aggregated at day 90; reports that never became a case are swept on the same 90-day clock.
 12. **Night mode:** intake runs 24/7; dispatch honors partner shift windows (e.g. 07:00–21:00). Night P1 → **S-NIGHT** fixed strings (112, DUSIB 14461 + 011-23378789 + their WhatsApp 9871013284; DUSIB's 16 rescue vans run 22:00–04:00 in winter) and queues for the morning round. Honest copy, never "someone is on the way" at 2am.
 
 ## 4. Data model (Postgres; UTC; nightly purge job enforces every TTL)
@@ -86,7 +87,7 @@ flowchart LR
 | Table | Key fields | Retention |
 |---|---|---|
 | `reports` | case_id, reporter_hash (salted), wa_msg_ids, lang, body_ref, media_refs[], provenance=`witness`, hmac | body 90d; media 72h/close |
-| `cases` | status (new→routed→offered→accepted→enroute→closed/expired/emergency_redirect), category+conf, urgency, h3_r10, lat/lng+geo_conf, landmark_text, freshness_min, merged_witnesses | lat/lng→NULL at 7d; row→aggregate at 90d |
+| `cases` | status (new→routed→offered→accepted→enroute→closed/expired/emergency_redirect), category+conf, urgency, h3_r10, lat/lng+geo_conf, landmark_text, freshness_min, merged_witnesses | lat/lng→NULL at 7d and row→aggregate at 90d, both once closed (open cases keep pin + row until finished) |
 | `orders` | case_id, sku, addons[], clinical_flag, priority, partner_id, created_by (`agent:medical`…), confidence, hmac | 90d |
 | `assignments` | order_id, responder_id, offered_at, responded_at, response (accepted/declined/timeout) | 90d |
 | `outcomes` | found, served, person_accepted, escalated(+completed_at), closed_by, **coded enums only — no free text about the person** | 1y (no PII) |
@@ -102,7 +103,7 @@ Provenance channels: `witness` / `agent_inferred` / `responder_observed` — HMA
 
 | Obligation | Implementation |
 |---|---|
-| Rule 3 notice/consent (reporter) | In-chat first-contact notice (itemized, plain-language, Hindi/English) + grievance link; withdrawal = send STOP (honored instantly, as easy as opt-in) |
+| Rule 3 notice/consent (reporter) | In-chat first-contact notice (itemized, plain-language, Hindi/English) + grievance link; withdrawal = send STOP (honored instantly, as easy as opt-in; the deterministic 112 gate still answers a later emergency text with the fixed redirect, and any fresh message re-opens the line per the S-STOP "write back anytime" promise) |
 | Follow-up messages | Sent only to explicit in-chat opt-ins; utility template, cap per number/day |
 | Third-party photos (the person) | Legal basis: **DPDP §7(c) medical emergency / threat to health** for genuine-need photos (time-bound — hence deletion at case close); UX instructs "surroundings, not face"; no face detection/matching ever; commentary on bystander photos is a documented grey zone → deletion-by-default is the answer; ICRC doctrine followed (condition, never identity) |
 | Security safeguards (Rule 6) | TLS everywhere; at-rest encryption (DB + object storage); least-privilege access, 2FA on every console; **app logs PII-free by construction, retained 1y**; access log on the coordinator app |

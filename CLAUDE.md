@@ -16,7 +16,7 @@
 
 ## Project layout
 
-- `pukaar/` — the working system (FastAPI demo, 86+ tests, `make demo`).
+- `pukaar/` — the working system (FastAPI demo, 99+ tests, `make demo`).
 - `research/` — findings, plans, and the Kevin Xu Innovation Challenge
   proposal that the build traces back to.
 - Development branch: `claude/street-aid-research-4xqdpu`.

@@ -60,7 +60,9 @@ offline on a deterministic mock today; the same pipeline runs on Claude
 with structured outputs by setting one API key. The WhatsApp transport is
 wired and waiting for a number. This is Pukaar."*
 
-Extra beats if you have time: night mode (set a late sim hour — reports
-queue with the honest 🌙 S-EXPECT-NIGHT string), the coordinator queue (exhausted waves
+Extra beats if you have time: night mode (crank speed to 60× until the
+clock passes 21:00 — reports queue with the honest 🌙 S-EXPECT-NIGHT
+string, and a wave that expires overnight re-queues for the morning round
+instead of escalating), the coordinator queue (exhausted waves
 get manually assigned), and `/static/replay.html` scrubbing a whole day
 in seconds.
