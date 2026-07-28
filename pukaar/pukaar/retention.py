@@ -19,7 +19,7 @@ from .db import Store
 
 
 def purge(store: Store, cfg: Config, now: float) -> dict:
-    stats = {"media": 0, "latlng": 0, "cases": 0, "orphan_reports": 0}
+    stats = {"media": 0, "latlng": 0, "cases": 0, "orphan_reports": 0, "conversations": 0}
 
     closed = "(SELECT closed_at FROM cases WHERE cases.id = reports.case_id)"
     rows = store.query(
@@ -63,4 +63,11 @@ def purge(store: Store, cfg: Config, now: float) -> dict:
     for r in orphans:
         store.execute("DELETE FROM reports WHERE id=?", (r["id"],))
     stats["orphan_reports"] = len(orphans)
+
+    # Idle conversations hold raw witness chat; forget them at 30 days.
+    idle = store.query("SELECT phone FROM conversations WHERE updated_at < ?",
+                       (now - cfg.conversation_ttl_s,))
+    for r in idle:
+        store.execute("DELETE FROM conversations WHERE phone=?", (r["phone"],))
+    stats["conversations"] = len(idle)
     return stats

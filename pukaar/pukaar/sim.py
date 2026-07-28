@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import math
 import random
+import time
 
 from . import geo
 from .config import Config
@@ -69,6 +70,7 @@ class Sim:
         self._coord_next = 0.0                 # the sim plays the coordinator too
         self._pending_escalations: dict[str, float] = {}
         self._random_report_at = self.sim_now + self.rng.uniform(60, 240)
+        self.last_tick_real = time.monotonic()   # /health watchdog signal
         self._seed_world()
 
     # -------------------------------------------------------------- setup --
@@ -166,6 +168,7 @@ class Sim:
 
     # --------------------------------------------------------------- tick --
     def tick(self, real_dt: float) -> None:
+        self.last_tick_real = time.monotonic()   # heartbeat even while paused
         if not self.running:
             return
         dt = real_dt * self.speed

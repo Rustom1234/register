@@ -18,7 +18,7 @@ a live **demo control room** you can record.
 ```bash
 cd pukaar          # or just: make install && make demo
 uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
-.venv/bin/python -m pytest -q          # 103 tests
+.venv/bin/python -m pytest -q          # 111 tests
 .venv/bin/python -m pukaar             # http://127.0.0.1:8877
 ```
 
@@ -138,6 +138,12 @@ demo:    sim.py (responders, scenarios) · api.py (FastAPI) · static/ (control 
   inferences are HMAC-signed (`provenance.py`); responder observations and
   system actions carry provenance labels in the audit log — an agent's
   guess can never masquerade as something a human said.
+- **Resilience & abuse guards.** Conversations persist to SQLite, so a
+  restart never strands a witness mid-intake; a per-witness message budget
+  answers floods once then goes quiet (the 112 gate always bypasses it);
+  the Meta webhook verifies `X-Hub-Signature-256`; a non-local bind without
+  `PUKAAR_HMAC_KEY` refuses to start; `/health` reports `tick_age_s` for a
+  dead-loop watchdog (`service.py`, `whatsapp.py`, tested).
 
 ## Honest limits (deliberate, per the build plan)
 
@@ -164,3 +170,5 @@ demo:    sim.py (responders, scenarios) · api.py (FastAPI) · static/ (control 
 | `PUKAAR_PORT` | `8877` | demo port |
 | `PUKAAR_HOST` | `127.0.0.1` | bind address (`make docker-demo` uses 0.0.0.0) |
 | `PUKAAR_SEED_DEMO` | (unset) | pre-stage the photogenic demo session at boot (`make demo` sets it) |
+| `WA_APP_SECRET` | (unset) | Meta app secret — when set, `/webhook` verifies `X-Hub-Signature-256` |
+| `PUKAAR_ALLOW_INSECURE` | (unset) | permit a public bind without an HMAC key (throwaway demos; the Docker image sets it) |

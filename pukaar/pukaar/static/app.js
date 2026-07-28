@@ -3,6 +3,12 @@
 
 const CAT = { medical: "#3987e5", food: "#d95926", shelter: "#199e70" };
 const CAT_ICON = { medical: "🩹", food: "🍚", shelter: "🌧️" };
+// monochrome map-pin glyphs (inline SVG, no emoji rendering variance on the map)
+const CAT_GLYPH = {
+  medical: '<svg viewBox="0 0 24 24" class="pin-glyph"><path d="M10 3.5h4V10h6.5v4H14v6.5h-4V14H3.5v-4H10z"/></svg>',
+  food: '<svg viewBox="0 0 24 24" class="pin-glyph"><rect x="2.8" y="8.1" width="18.4" height="1.7" rx="0.85"/><path d="M3.6 10.4h16.8a8.4 8.4 0 0 1-16.8 0z"/></svg>',
+  shelter: '<svg viewBox="0 0 24 24" class="pin-glyph"><path d="M12 4 4 11.4V20h16v-8.6z"/></svg>',
+};
 const OUTCOME_TXT = {
   served: ["🟢", "served", "good"], escalated: ["🩺", "served + clinical escalation", "good"],
   not_found: ["🟡", "not found", "warn"], declined: ["🟡", "declined help", "warn"],
@@ -25,9 +31,17 @@ function haversineM(a, b, c, d) {
   return 2 * R * Math.asin(Math.sqrt(x));
 }
 
+// Monochrome toolbar icons (currentColor, inherit the button's hover/active color).
+const ICON_BELL =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
+const ICON_BELL_OFF =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
 function updateFollowBtn() {
+  // Toggle the .on class only — #btn-follow.on turns the SVG amber via currentColor.
+  // (Don't set textContent: that would wipe the inline icon.)
   const b = document.getElementById("btn-follow");
-  if (b) { b.classList.toggle("on", followGolden); b.textContent = followGolden ? "🎥 following" : "🎥"; }
+  if (b) b.classList.toggle("on", followGolden);
 }
 
 // ---------------------------------------------------------------- sound --
@@ -90,12 +104,11 @@ function caseIcon(c) {
   const pulse = open && (c.urgency === "high") ? " pulse" : "";
   const cls = open ? "" : " closedc";
   const color = CAT[c.category] || "#898781";
-  const emoji = CAT_ICON[c.category] || "";
+  const glyph = CAT_GLYPH[c.category] || "";
   return L.divIcon({
     className: "",
-    html: `<div class="case-pin${pulse}${cls}" style="background:${color};position:relative">` +
-          `<span class="pin-emoji">${emoji}</span></div>`,
-    iconSize: [18, 18], iconAnchor: [9, 9],
+    html: `<div class="case-pin${pulse}${cls}" style="background:${color}">${glyph}</div>`,
+    iconSize: [20, 20], iconAnchor: [10, 10],
   });
 }
 
@@ -193,19 +206,31 @@ function fmtDur(s) {
 function renderTiles() {
   const m = state.metrics;
   const low = m.kits_low || [];
+  // Same vocabulary as the responder app: one-word label from the shared
+  // kit_skus name so "Monsoon"/"Medical"/"Food" read identically on both
+  // surfaces (uppercased to keep the dense ops-tile look).
+  const kitWord = (k) => (((state.kit_skus || {})[k] || {}).name || k).split(/[\s-]/)[0].toUpperCase();
   const kits = Object.entries(m.kits || {}).map(([k, v]) =>
-    `${k.split("-")[0]} ${v}${low.includes(k) ? "⚠" : ""}`).join(" · ");
+    `${kitWord(k)} ${v}${low.includes(k) ? "⚠" : ""}`).join(" · ");
   const tiles = [
     ["open cases", m.open_cases, "", ""],
     ["served", m.served, m.escalated ? `${m.escalated} escalated 🩺` : "", ""],
     ["acceptance", m.acceptance_pct == null ? "—" : m.acceptance_pct + "%", "of offers", ""],
     ["accept time", fmtDur(m.median_accept_s), m.p90_accept_s ? `p90 ${fmtDur(m.p90_accept_s)}` : "sim-time", ""],
-    ["kits left", kits || "—", low.length ? `⚠ low: ${low.join(", ")} — restock en route` : "partner_1",
+    ["kits left", kits || "—", low.length ? `⚠ low: ${low.map(kitWord).join(", ")} — restock en route` : "partner_1",
      low.length ? " low" : ""],
   ];
-  document.getElementById("tiles").innerHTML = tiles.map(([l, v, s, cls]) =>
-    `<div class="tile${cls}"><div class="t-label">${l}</div><div class="t-value">${v}</div>` +
-    `<div class="t-sub">${s || "&nbsp;"}</div></div>`).join("");
+  const el = document.getElementById("tiles");
+  const prev = el.__vals || {};
+  const next = {};
+  el.innerHTML = tiles.map(([l, v, s, cls]) => {
+    next[l] = String(v);
+    const bump = prev[l] !== undefined && prev[l] !== String(v) ? " bump" : "";
+    return `<div class="tile${cls}"><div class="t-label">${l}</div>` +
+      `<div class="t-value${bump}${l === "kits left" ? " kits" : ""}">${v}</div>` +
+      `<div class="t-sub">${s || "&nbsp;"}</div></div>`;
+  }).join("");
+  el.__vals = next;
 }
 
 // ----------------------------------------------------------------- feed --
@@ -285,6 +310,7 @@ function renderCases() {
     const who = c.merged_witnesses > 1 ? ` · ${c.merged_witnesses} witnesses` : "";
     return `<div class="case-row" data-id="${c.id}">
       <span class="dot" style="background:${CAT[c.category] || "#898781"}"></span>
+      <span class="cat-ic" title="${escapeHtml(c.category || "")}">${CAT_ICON[c.category] || ""}</span>
       <span class="cid">${c.id.slice(-4).toUpperCase()}</span>
       <span class="meta">${escapeHtml(c.landmark_text || c.digipin || "")}${who}</span>${chip}</div>`;
   }).join("") || '<div class="fi"><span class="t"></span><span>none — quiet streets 🌙</span></div>';
@@ -412,18 +438,43 @@ function flashRespToast(text) {
 }
 
 // ------------------------------------------------------- coordinator ----
+// nearest idle responder to a case — the "suggested assignee" preselected
+// in the dropdown so the coordinator confirms one click instead of guessing
+function nearestIdle(c) {
+  if (c.lat == null) return null;
+  let best = null, bestD = Infinity;
+  for (const r of state.sim.responders) {
+    if (r.state !== "idle") continue;
+    const d = haversineM(r.lat, r.lng, c.lat, c.lng);
+    if (d < bestD) { bestD = d; best = r; }
+  }
+  return best ? { id: best.id, m: Math.round(bestD) } : null;
+}
+
 function renderCoord() {
   const stuck = state.orders.filter((o) => o.status === "needs_coordinator");
   const panel = document.getElementById("coord-panel");
   panel.hidden = stuck.length === 0;
+  document.getElementById("coord-count").textContent = stuck.length || "";
   if (!stuck.length) return;
-  const respOpts = state.sim.responders.map((r) => `<option value="${r.id}">${r.name}</option>`).join("");
   document.getElementById("coord-body").innerHTML = stuck.map((o) => {
     const c = state.cases.find((x) => x.id === o.case_id) || {};
+    const pinless = c.lat == null;
+    if (pinless) {
+      // no pin -> can't route; the fix is to get one from the witness
+      return `<div class="fi warn"><span class="t">${o.sku}</span>
+        <span><b>${o.id.slice(-4).toUpperCase()}</b> 📍 landmark only — ${escapeHtml((c.landmark_text || c.detail || "").slice(0, 28))}</span>
+        <span class="act"><button class="req-pin" data-case="${o.case_id}">request pin</button></span></div>`;
+    }
+    const sug = nearestIdle(c);
+    const opts = state.sim.responders.map((r) => {
+      const isSug = sug && r.id === sug.id;
+      return `<option value="${r.id}" ${isSug ? "selected" : ""}>${r.name}${isSug ? ` · ${sug.m}m ★` : ""}</option>`;
+    }).join("");
     return `<div class="fi warn"><span class="t">${o.sku}</span>
-      <span><b>${o.id.slice(-4).toUpperCase()}</b> ${escapeHtml((c.detail || "").slice(0, 34))}</span>
-      <span class="act"><select data-order="${o.id}">${respOpts}</select>
-      <button data-assign="${o.id}">assign</button></span></div>`;
+      <span><b>${o.id.slice(-4).toUpperCase()}</b> ${escapeHtml((c.detail || "").slice(0, 30))}</span>
+      <span class="act"><select data-order="${o.id}">${opts}</select>
+      <button class="accept" data-assign="${o.id}">assign</button></span></div>`;
   }).join("");
   document.querySelectorAll("#coord-body [data-assign]").forEach((b) =>
     b.addEventListener("click", async () => {
@@ -433,6 +484,14 @@ function renderCoord() {
         body: JSON.stringify({ action: "assign", order_id: b.dataset.assign, responder_id: sel.value }),
       });
       refresh();
+    }));
+  document.querySelectorAll("#coord-body .req-pin").forEach((b) =>
+    b.addEventListener("click", async () => {
+      b.disabled = true; b.textContent = "asked ✓";
+      await fetch("/api/coordinator/request_pin", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ case_id: b.dataset.case }),
+      });
     }));
 }
 
@@ -456,13 +515,29 @@ function renderPhone() {
     const mm = String(Math.floor((ts % 3600) / 60)).padStart(2, "0");
     return ` · ${h}:${mm}`;
   };
-  msgs.innerHTML = log.map((m) => {
-    const who = m.from === "bot" ? "bot" : "witness";
-    const voice = m.kind === "voice" ? ` voice" data-len="${3 + (m.text || "").length % 7}` : "";
-    return `<div class="bubble ${who}${voice}">${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Pukaar" : "you"}${bubbleTime(m.ts)}</span></div>`;
-  }).join("") + (typingUntil > Date.now()
-    ? '<div class="bubble bot typing"><span></span><span></span><span></span></div>' : "");
-  if (atBottom) msgs.scrollTop = msgs.scrollHeight;
+  // keyed render: rebuild only when the thread actually changed, and only
+  // NEW bubbles animate in — no strobing, no per-second DOM churn
+  const typing = typingUntil > Date.now();
+  const threadKey = `${activeConv}:${log.length}:${log.length ? log[log.length - 1].ts : 0}:${typing}`;
+  if (msgs.dataset.key !== threadKey) {
+    const sameConv = msgs.dataset.conv === activeConv;
+    const prevCount = sameConv ? +(msgs.dataset.count || 0) : Infinity;
+    // empty thread opens with the aid-line greeting so the pane never boots hollow
+    const greeting = log.length === 0 && !typing
+      ? `<div class="bubble bot"><b>Hello 🙏 This is Pukaar</b> — report someone on the street who needs help. Pick a scenario or type to begin.<span class="b-meta">Pukaar</span></div>`
+      : "";
+    msgs.innerHTML = greeting + log.map((m, i) => {
+      const who = m.from === "bot" ? "bot" : "witness";
+      const fresh = i >= prevCount ? " fresh" : "";
+      const voice = m.kind === "voice" ? ` voice" data-len="${3 + (m.text || "").length % 7}` : "";
+      return `<div class="bubble ${who}${fresh}${voice}">${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Pukaar" : "you"}${bubbleTime(m.ts)}</span></div>`;
+    }).join("") + (typing
+      ? '<div class="bubble bot typing"><span></span><span></span><span></span></div>' : "");
+    msgs.dataset.key = threadKey;
+    msgs.dataset.conv = activeConv;
+    msgs.dataset.count = String(log.length);
+    if (atBottom) msgs.scrollTop = msgs.scrollHeight;
+  }
 
   const last = log.length ? log[log.length - 1] : null;
   const quick = document.getElementById("quick");
@@ -582,7 +657,7 @@ function wire() {
     soundOn = !soundOn;
     if (soundOn && !audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (soundOn) { beep(660, 0.07); beep(880, 0.07, 0.09); }
-    document.getElementById("btn-sound").textContent = soundOn ? "🔔" : "🔕";
+    document.getElementById("btn-sound").innerHTML = soundOn ? ICON_BELL : ICON_BELL_OFF;
   });
   document.getElementById("btn-export").addEventListener("click", async () => {
     const res = await fetch("/api/export");
@@ -652,6 +727,11 @@ async function refresh() {
     state.prov_ephemeral ? "demo HMAC key (ephemeral) — set PUKAAR_HMAC_KEY for persistent provenance" : "persistent HMAC provenance key";
   syncMap(); renderTiles(); renderFeed(); renderCases(); renderPhone(); renderDetail();
   renderRespPanel(); renderCoord(); drawCells(); playNewFeedSounds();
+  const veil = document.getElementById("boot-veil");
+  if (veil && !veil.classList.contains("gone")) {
+    veil.classList.add("gone");
+    setTimeout(() => veil.remove(), 450);
+  }
 }
 
 // ------------------------------------------------- 90-day cell heatmap --

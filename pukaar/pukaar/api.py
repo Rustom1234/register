@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .report import render_report
-from .whatsapp import CloudApi, parse_webhook
+from .whatsapp import CloudApi, parse_webhook, verify_signature
 
 from . import geo, strings
 from .config import Config
@@ -179,9 +179,20 @@ def build_app(cfg: Config | None = None) -> FastAPI:
                 if act.outcome == "escalated":
                     sim._pending_escalations[act.order_id] = sim.sim_now + 900
             return {"ok": bool(closed)}
+        if act.action == "arrived" and act.order_id:
+            # geolocation-free fallback: the responder taps "I've arrived"
+            svc.dispatch.arrived(act.order_id)
+            return {"ok": True}
         if act.action == "assign" and act.order_id and act.responder_id:
             return {"ok": svc.dispatch.manual_assign(act.order_id, act.responder_id)}
         raise HTTPException(400, "bad action")
+
+    class PinReq(BaseModel):
+        case_id: str
+
+    @app.post("/api/coordinator/request_pin")
+    def request_pin(body: PinReq):
+        return {"ok": svc.request_pin(body.case_id)}
 
     class ScriptCtl(BaseModel):
         script: str            # auto | en | hinglish | deva  (latin = hinglish alias)
@@ -208,7 +219,10 @@ def build_app(cfg: Config | None = None) -> FastAPI:
 
     @app.get("/health")
     def health():
+        # tick_age_s is the watchdog signal: an external pinger alerting on
+        # age > ~10s catches a dead tick loop even while HTTP still serves.
         return {"ok": True, "backend": svc.backend.name, "sim_now": sim.sim_now,
+                "tick_age_s": round(time.monotonic() - sim.last_tick_real, 1),
                 "cases": len(svc.store.query("SELECT id FROM cases"))}
 
     @app.get("/report", response_class=HTMLResponse)
@@ -245,6 +259,10 @@ def build_app(cfg: Config | None = None) -> FastAPI:
 
     @app.post("/webhook")
     async def wa_webhook(request: Request):
+        raw = await request.body()
+        if not verify_signature(raw, request.headers.get("X-Hub-Signature-256"),
+                                cloud.app_secret):
+            raise HTTPException(403, "bad signature")
         payload = await request.json()
         handled = 0
         for m in parse_webhook(payload):

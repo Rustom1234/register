@@ -8,6 +8,13 @@
 <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
+<div id="boot-veil">
+  <div style="text-align:center">
+    <div class="bv-mark">🙏</div>
+    <div class="bv-name">PUKAAR</div>
+    <div class="bv-sub">connecting to the control room…</div>
+  </div>
+</div>
 <header id="topbar">
   <div class="brand">
     <span class="brand-mark">●</span>
@@ -30,13 +37,21 @@
   </div>
   <div class="top-right">
     <span id="backend-badge" class="badge">…</span>
-    <button id="btn-follow" class="ghost" title="camera follows the golden run" aria-label="Toggle follow camera">🎥</button>
-    <a class="ghost btnlike" href="/static/about.html" target="_blank" title="the Pukaar story (for judges)" aria-label="About Pukaar">ℹ️</a>
-    <a class="ghost btnlike" href="/report" target="_blank" title="printable session report" aria-label="Printable session report">🖨</a>
-    <a class="ghost btnlike" href="/static/metrics.html" target="_blank" title="metrics & kill criteria" aria-label="Metrics and kill criteria">📊</a>
-    <button id="btn-sound" class="ghost" title="event sounds" aria-label="Toggle event sounds">🔕</button>
-    <button id="btn-export" class="ghost" title="download session log (JSON)" aria-label="Download session log">⬇</button>
-    <button id="btn-purge" class="ghost" title="run retention purge now" aria-label="Run retention purge">🧹</button>
+    <div class="top-tools">
+      <div class="tgrp" role="group" aria-label="View controls">
+        <button id="btn-follow" class="ghost" title="camera follows the golden run" aria-label="Toggle follow camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></button>
+        <button id="btn-sound" class="ghost" title="event sounds" aria-label="Toggle event sounds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+      </div>
+      <div class="tgrp" role="group" aria-label="Reports and links">
+        <a class="ghost btnlike" href="/static/about.html" target="_blank" title="the Pukaar story (for judges)" aria-label="About Pukaar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></a>
+        <a class="ghost btnlike" href="/report" target="_blank" title="printable session report" aria-label="Printable session report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></a>
+        <a class="ghost btnlike" href="/static/metrics.html" target="_blank" title="metrics & kill criteria" aria-label="Metrics and kill criteria"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="10"/></svg></a>
+      </div>
+      <div class="tgrp" role="group" aria-label="Session data">
+        <button id="btn-export" class="ghost" title="download session log (JSON)" aria-label="Download session log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+        <button id="btn-purge" class="ghost" title="run retention purge now" aria-label="Run retention purge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -45,7 +60,7 @@
     <div class="phone" id="phone">
       <div class="phone-head">
         <div class="avatar">🙏</div>
-        <div>
+        <div class="ph-id">
           <div class="ph-name">Pukaar</div>
           <div class="ph-sub">aid line · <span id="conv-phone">+91-DEMO</span></div>
         </div>
@@ -107,8 +122,9 @@
   </section>
 
   <section id="right">
-    <div class="panel" id="coord-panel" hidden>
-      <div class="panel-title">⚠️ Coordinator queue</div>
+    <div class="panel panel-pop" id="coord-panel" hidden>
+      <div class="panel-title"><span>⚠️ Coordinator queue</span>
+        <span id="coord-count" class="chip"></span></div>
       <div id="coord-body"></div>
     </div>
     <div class="panel" id="detail-panel" hidden>

@@ -58,6 +58,9 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE TABLE IF NOT EXISTS analytics_cells (
   cell TEXT, category TEXT, n INTEGER, PRIMARY KEY (cell, category)
 );
+CREATE TABLE IF NOT EXISTS conversations (
+  phone TEXT PRIMARY KEY, phone_hash TEXT, state TEXT, log TEXT, updated_at REAL
+);
 """
 
 

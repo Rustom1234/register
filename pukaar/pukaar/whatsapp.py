@@ -15,10 +15,24 @@ witness-initiated flow rides the free 24h service window.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import os
 from typing import Any
 
 GRAPH = "https://graph.facebook.com/v20.0"
+
+
+def verify_signature(body: bytes, header: str | None, app_secret: str) -> bool:
+    """Meta signs webhook bodies with X-Hub-Signature-256 (HMAC-SHA256 of the
+    raw body with the app secret). Constant-time compare; no secret -> the
+    check is disabled (demo mode)."""
+    if not app_secret:
+        return True
+    if not header or not header.startswith("sha256="):
+        return False
+    expected = hmac.new(app_secret.encode(), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(header[len("sha256="):], expected)
 
 
 def parse_webhook(payload: dict) -> list[dict]:
@@ -58,6 +72,7 @@ class CloudApi:
         self.token = os.environ.get("WA_TOKEN", "")
         self.phone_id = os.environ.get("WA_PHONE_ID", "")
         self.verify_token = os.environ.get("WA_VERIFY_TOKEN", "pukaar-verify")
+        self.app_secret = os.environ.get("WA_APP_SECRET", "")
 
     @property
     def configured(self) -> bool:

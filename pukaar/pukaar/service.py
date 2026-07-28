@@ -8,6 +8,7 @@ event feed, metrics, and provenance signing.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import statistics
 from collections import deque
@@ -33,7 +34,7 @@ def detect_lang(text: str | None) -> str | None:
         return "en"
     return None
 
-from . import geo, digipin, strings
+from . import digipin, gate, geo, strings
 from .backends import make_backend
 from .config import Config
 from .db import Store, new_id
@@ -58,7 +59,29 @@ class PukaarService:
         self.conversations: dict[str, Conversation] = {}
         self.feed: deque[dict] = deque(maxlen=250)
         self.positions: dict[str, tuple[float, float]] = {}
+        self._msg_times: dict[str, deque] = {}   # phone -> recent inbound ts
         self.dispatch = DispatchEngine(store, cfg, now_fn, lambda: self.positions, self.emit)
+        self._load_conversations()
+
+    # ------------------------------------------------------- persistence --
+    # Conversations survive restarts (risk register #8): a witness mid-intake
+    # picks up where they left off instead of being stranded silently.
+    def _load_conversations(self) -> None:
+        for row in self.store.query("SELECT * FROM conversations"):
+            conv = Conversation(phone_hash=row["phone_hash"])
+            try:
+                conv.state.update(json.loads(row["state"]))
+                conv.log = json.loads(row["log"])
+            except (TypeError, ValueError):
+                continue  # corrupt row -> that witness simply starts fresh
+            self.conversations[row["phone"]] = conv
+
+    def _save_conversation(self, phone: str, conv: Conversation) -> None:
+        self.store.insert("conversations", {
+            "phone": phone, "phone_hash": conv.phone_hash,
+            "state": conv.state, "log": conv.log[-60:],
+            "updated_at": self.now(),
+        })
 
     # ------------------------------------------------------------- feed --
     def emit(self, kind: str, data: dict) -> None:
@@ -81,11 +104,12 @@ class PukaarService:
         resp = self.store.one("SELECT * FROM responders WHERE id=?", (responder_id,)) if responder_id else None
         name = (resp or {}).get("display_name") or "karyakarta"
         case_id = order["case_id"]
-        for conv in self.conversations.values():
+        for phone, conv in self.conversations.items():
             if conv.state.get("case_id") == case_id and not conv.state["stopped"]:
                 msg = strings.fmt(sid, self.lang_for(conv),
                                   case_id=case_id[-4:].upper(), name=name)
                 conv.remember("bot", "text", msg, ts=self.now())
+                self._save_conversation(phone, conv)
 
     def lang_for(self, conv: Conversation) -> str:
         if self.script != "auto":
@@ -98,6 +122,23 @@ class PukaarService:
                    photo_hint: str | None = None) -> list[BotMsg]:
         phone_hash = hashlib.sha256(f"pukaar:{phone}".encode()).hexdigest()[:12]
         conv = self.conversations.setdefault(phone, Conversation(phone_hash=phone_hash))
+
+        # Abuse guard: a per-witness message budget. Emergencies bypass it —
+        # the gate's fixed reply is cheap and a life is not (risk #5/#15).
+        now = self.now()
+        times = self._msg_times.setdefault(phone, deque())
+        while times and now - times[0] > self.cfg.rate_limit_window_s:
+            times.popleft()
+        if len(times) >= self.cfg.rate_limit_msgs and not (kind == "text" and gate.is_emergency(text)):
+            if len(times) == self.cfg.rate_limit_msgs:   # say it once, then silence
+                times.append(now)
+                msg = strings.text("S-SLOWDOWN", self.lang_for(conv))
+                conv.remember("bot", "text", msg, ts=now)
+                self._save_conversation(phone, conv)
+                return [BotMsg(msg, string_id="S-SLOWDOWN")]
+            return []
+        times.append(now)
+
         if kind == "location":
             shown = "📍 location"
         elif kind == "photo":
@@ -115,6 +156,26 @@ class PukaarService:
             if detected:
                 conv.state["lang"] = detected
         lang = self.lang_for(conv)
+
+        # A pin the coordinator asked for lands on the EXISTING case — it
+        # must not open a new report (risk #13: landmark-only cases).
+        if kind == "location" and lat is not None and conv.state.get("await_pin_case"):
+            cid = conv.state.pop("await_pin_case")
+            case = self.store.one(
+                "SELECT * FROM cases WHERE id=? AND status NOT IN ('closed','escalated')", (cid,))
+            if case and case["lat"] is None:
+                self.store.update("cases", cid, {
+                    "lat": lat, "lng": lng, "geo_conf": "pin",
+                    "cell": geo.cell_key(lat, lng, self.cfg.dedup_cell_m)})
+                order = self.store.one(
+                    "SELECT * FROM orders WHERE case_id=? AND status='needs_coordinator'", (cid,))
+                if order:
+                    self.store.update("orders", order["id"], {"status": "queued"})
+                self.emit("pin_received", {"case_id": cid})
+                msg = strings.fmt("S-PIN-THANKS", lang, case_id=cid[-4:].upper())
+                conv.remember("bot", "text", msg, ts=self.now())
+                self._save_conversation(phone, conv)
+                return [BotMsg(msg, string_id="S-PIN-THANKS")]
 
         # Voice notes carry a transcript (demo: canned; P1: Sarvam STT) and
         # flow through intake exactly like text.
@@ -149,6 +210,7 @@ class PukaarService:
 
         for r in replies:
             conv.remember("bot", "text", r.text, r.buttons, ts=self.now())
+        self._save_conversation(phone, conv)
         return replies
 
     def _record_report(self, conv: Conversation, kind: str, body: str | None, case_id: str | None) -> None:
@@ -213,15 +275,17 @@ class PukaarService:
             "AND o.status IN ('queued','offered','needs_coordinator') AND c.created_at < ?",
             (now - self.cfg.recheck_after_s,))
         for case in stale:
-            conv = next((c for c in self.conversations.values()
-                         if c.state.get("case_id") == case["id"] and not c.state["stopped"]), None)
+            found = next(((p, c) for p, c in self.conversations.items()
+                          if c.state.get("case_id") == case["id"] and not c.state["stopped"]), None)
             self.store.update("cases", case["id"], {"recheck_sent": 1})
-            if not conv:
+            if not found:
                 continue
+            phone, conv = found
             lang = self.lang_for(conv)
             msg = strings.fmt("S-STILLTHERE", lang, case_id=case["id"][-4:].upper())
             buttons = strings.localized_buttons(list(strings.STILL_BUTTONS), lang)
             conv.remember("bot", "text", msg, buttons, ts=now)
+            self._save_conversation(phone, conv)
             self.emit("recheck_sent", {"case_id": case["id"]})
 
     def _handle_recheck_reply(self, conv, answer: str) -> None:
@@ -239,14 +303,33 @@ class PukaarService:
             if order:
                 self.dispatch.cancel(order["id"], "witness says person moved on")
 
+    def request_pin(self, case_id: str) -> bool:
+        """Coordinator one-tap: ask the witness of a landmark-only case for
+        an exact pin. The next location they share updates THIS case."""
+        case = self.store.one("SELECT * FROM cases WHERE id=?", (case_id,))
+        if not case or case["lat"] is not None:
+            return False
+        found = next(((p, c) for p, c in self.conversations.items()
+                      if c.state.get("case_id") == case_id and not c.state["stopped"]), None)
+        if not found:
+            return False
+        phone, conv = found
+        conv.state["await_pin_case"] = case_id
+        msg = strings.fmt("S-PIN-PLEASE", self.lang_for(conv), case_id=case_id[-4:].upper())
+        conv.remember("bot", "text", msg, ts=self.now())
+        self._save_conversation(phone, conv)
+        self.emit("pin_requested", {"case_id": case_id})
+        return True
+
     # ------------------------------------------------------------ closure --
     def notify_outcome(self, case_id: str, outcome: str) -> None:
         sid = {"served": "S-CLOSURE-SERVED", "escalated": "S-CLOSURE-ESCALATED",
                "not_found": "S-CLOSURE-NOTFOUND", "declined": "S-CLOSURE-DECLINED"}[outcome]
-        for conv in self.conversations.values():
+        for phone, conv in self.conversations.items():
             if conv.state.get("case_id") == case_id and not conv.state["stopped"]:
                 msg = strings.fmt(sid, self.lang_for(conv), case_id=case_id[-4:].upper())
                 conv.remember("bot", "text", msg, ts=self.now())
+                self._save_conversation(phone, conv)
 
     # ------------------------------------------------------------ metrics --
     def metrics(self) -> dict:
@@ -337,8 +420,22 @@ class PukaarService:
     # -------------------------------------------------------------- misc --
     def run_purge(self) -> dict:
         stats = purge(self.store, self.cfg, self.now())
+        # evict the same idle conversations from memory that the purge forgot
+        cutoff = self.now() - self.cfg.conversation_ttl_s
+        kept = self.store.query("SELECT phone FROM conversations")
+        alive = {r["phone"] for r in kept}
+        for phone in [p for p in self.conversations
+                      if p not in alive and self._last_activity(p) < cutoff]:
+            self.conversations.pop(phone, None)
+            self._msg_times.pop(phone, None)
         self.emit("purge", stats)
         return stats
+
+    def _last_activity(self, phone: str) -> float:
+        conv = self.conversations.get(phone)
+        if not conv or not conv.log:
+            return 0.0
+        return conv.log[-1].get("ts", 0.0)
 
     def digipin_for(self, lat: float | None, lng: float | None) -> str | None:
         if lat is None or lng is None:

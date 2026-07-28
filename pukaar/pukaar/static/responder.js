@@ -66,6 +66,10 @@ function show(id) {
   for (const s of ["scr-pick", "scr-idle", "scr-offers", "scr-active"]) {
     $(s).hidden = s !== id;
   }
+  // The single-card off-duty pick screen centers in the tall phone; the
+  // idle screen now carries a live activity feed, so it top-aligns like the
+  // list/active screens.
+  document.querySelector("main").classList.toggle("centered", id === "scr-pick");
 }
 
 function toast(txt) {
@@ -99,7 +103,42 @@ function renderIdle(m) {
   $("me-stats").textContent =
     `${m.name} · ${mine.length} order${mine.length === 1 ? "" : "s"} closed this session` +
     (state.sim.is_night ? " · 🌙 night — dispatch resumes 07:00" : "");
+  renderIdleFeed();
   show("scr-idle");
+}
+
+// A read-only mini-feed of the last few dispatch events — the poll already
+// carries state.feed, so this reads as a live system with no new API.
+const AF_ICON = {
+  order_accepted: ["✅", "good"], responder_arrived: ["📍", ""],
+  outcome: ["🟢", "good"], order_created: ["📦", ""], wave_started: ["📣", ""],
+  case_created: ["🆕", ""], coordinator_alert: ["⚠️", "warn"], emergency_redirect: ["🚨", "crit"],
+};
+function renderIdleFeed() {
+  const el = $("idle-feed");
+  if (!el) return;
+  const kept = (state.feed || []).filter((e) => AF_ICON[e.kind]).slice(-6).reverse();
+  if (!kept.length) return;   // keep the "quiet" placeholder
+  const t = (ts) => `${String(Math.floor((ts % 86400) / 3600)).padStart(2, "0")}:` +
+                    `${String(Math.floor((ts % 3600) / 60)).padStart(2, "0")}`;
+  const nm = (id) => (state.sim.responders.find((r) => r.id === id) || { name: "" }).name;
+  const line = (e) => {
+    switch (e.kind) {
+      case "order_accepted": return `${nm(e.responder_id)} accepted a call`;
+      case "responder_arrived": return `${nm(e.responder_id)} reached the spot`;
+      case "outcome": return `case ${(e.case_id || "").slice(-4).toUpperCase()} · ${e.outcome}`;
+      case "order_created": return `new ${e.sku} order · ${e.priority}`;
+      case "wave_started": return `offers out for ${(e.order_id || "").slice(-4).toUpperCase()}`;
+      case "case_created": return `new case · ${e.category || "?"}`;
+      case "coordinator_alert": return `coordinator: ${e.reason}`;
+      case "emergency_redirect": return `112 emergency redirect`;
+      default: return e.kind;
+    }
+  };
+  el.innerHTML = kept.map((e) => {
+    const [ic, cls] = AF_ICON[e.kind];
+    return `<li class="${cls}"><span class="af-t">${t(e.ts)}</span><span>${ic} ${line(e)}</span></li>`;
+  }).join("");
 }
 
 function offerCard(a, order, c) {
@@ -200,8 +239,9 @@ function renderActive(order) {
            the witness gets the closure message automatically.</p>`
         : `<div class="dist">${dist != null ? Math.round(dist) : "—"}<small> m to go</small></div>
            <div class="bar"><i style="width:${pct}%"></i></div>
-           <p class="hint">Arrival is automatic when you reach the pin — watch yourself
-           move on the <a href="/" target="_blank">control room map</a>.</p>`}
+           <p class="hint">Arrival registers automatically at the pin — or tap below
+           when you're there.</p>
+           <button class="big arrived" data-arrived="${order.id}">📍 I've arrived</button>`}
     </div>
     <div class="card">
       <h2>${CAT_ICON[c && c.category] || ""} ${kit.name} (${order.sku})</h2>
@@ -223,6 +263,12 @@ function renderActive(order) {
         { action: "outcome", order_id: order.id, outcome: b.dataset.out });
       if (res.ok) { toast("✓ outcome recorded"); startDist.delete(order.id); }
     }));
+  const arr = $("scr-active").querySelector("[data-arrived]");
+  if (arr) arr.addEventListener("click", async () => {
+    arr.disabled = true; arr.textContent = "✓ marked arrived";
+    const res = await api("/api/responder", { action: "arrived", order_id: order.id });
+    if (res.ok) { toast("✓ arrived"); activeKey = ""; }
+  });
   show("scr-active");
 }
 

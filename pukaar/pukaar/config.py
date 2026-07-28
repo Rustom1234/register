@@ -49,6 +49,11 @@ class Config:
     media_ttl_s: int = 72 * 3600
     latlng_ttl_s: int = 7 * 24 * 3600
     case_row_ttl_s: int = 90 * 24 * 3600
+    conversation_ttl_s: int = 30 * 24 * 3600   # idle chats forgotten at 30d
+
+    # Abuse guard: per-witness inbound budget (the 112 gate bypasses it)
+    rate_limit_msgs: int = 30
+    rate_limit_window_s: int = 600
 
     # Simulation
     sim_speed: float = 6.0          # sim seconds per real second

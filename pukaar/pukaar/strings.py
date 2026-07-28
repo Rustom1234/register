@@ -53,6 +53,9 @@ SAFETY = {
     "S-CLOSURE-NOTFOUND": "🟡 Aapki report {case_id}: karyakarta pahuncha par vyakti nahi mila. Report record mein hai.",
     "S-CLOSURE-DECLINED": "🟡 Aapki report {case_id}: vyakti ne madad lene se mana kiya. Unki marzi ka samman kiya gaya.",
     "S-STOP": "Theek hai — aapka number hata diya gaya hai. Kabhi bhi wapas likh sakte hain.",
+    "S-SLOWDOWN": "🙏 Bahut saare messages aa gaye — thodi der baad phir koshish karein. Emergency ho to seedha 112 par call karein.",
+    "S-PIN-THANKS": "✅ Mil gaya! Report {case_id} ki jagah update ho gayi — team ab seedha wahan pahunch sakti hai. Shukriya!",
+    "S-PIN-PLEASE": "🙏 Report {case_id} ke liye humein exact jagah chahiye. 📍 Location pin bhej dein to karyakarta seedha pahunch sakega.",
 }
 
 CATEGORY_LABELS = {
@@ -136,6 +139,9 @@ SAFETY_DEVA = {
     "S-CLOSURE-NOTFOUND": "🟡 आपकी रिपोर्ट {case_id}: कार्यकर्ता पहुँचा पर व्यक्ति नहीं मिला। रिपोर्ट रिकॉर्ड में है।",
     "S-CLOSURE-DECLINED": "🟡 आपकी रिपोर्ट {case_id}: व्यक्ति ने मदद लेने से मना किया। उनकी मर्ज़ी का सम्मान किया गया।",
     "S-STOP": "ठीक है — आपका नंबर हटा दिया गया है। कभी भी वापस लिख सकते हैं।",
+    "S-SLOWDOWN": "🙏 बहुत सारे संदेश आ गए — थोड़ी देर बाद फिर कोशिश करें। इमरजेंसी हो तो सीधे 112 पर कॉल करें।",
+    "S-PIN-THANKS": "✅ मिल गया! रिपोर्ट {case_id} की जगह अपडेट हो गई — टीम अब सीधा वहाँ पहुँच सकती है। शुक्रिया!",
+    "S-PIN-PLEASE": "🙏 रिपोर्ट {case_id} के लिए हमें सटीक जगह चाहिए। 📍 लोकेशन पिन भेज दें तो कार्यकर्ता सीधा पहुँच सकेगा।",
 }
 
 CATEGORY_BUTTONS_DEVA = [
@@ -193,6 +199,9 @@ SAFETY_EN = {
     "S-CLOSURE-NOTFOUND": "🟡 Your report {case_id}: the worker went but couldn't find the person. Your report stays on record.",
     "S-CLOSURE-DECLINED": "🟡 Your report {case_id}: the person chose not to take help. Their choice was respected.",
     "S-STOP": "Okay — your number has been removed. You're welcome back anytime.",
+    "S-SLOWDOWN": "🙏 That's a lot of messages — please try again in a little while. If this is an emergency, call 112 directly.",
+    "S-PIN-THANKS": "✅ Got it! The location for report {case_id} is updated — the team can now come straight to it. Thank you!",
+    "S-PIN-PLEASE": "🙏 We need the exact spot for report {case_id}. Share a 📍 location pin and a worker can come straight to it.",
 }
 
 CATEGORY_BUTTONS_EN = [
