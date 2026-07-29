@@ -75,14 +75,44 @@ function playNewFeedSounds() {
 
 // ------------------------------------------------------------------ map --
 // MapLibre GL (vendored, keyless). The map constructs synchronously on an
-// offline-safe dark style, then upgrades itself to CARTO's dark-matter
-// vector style if the network allows — same graceful-degradation contract
-// the Leaflet build had, now with WebGL pan/zoom smoothness.
+// offline-safe dark canvas, then loads a real CARTO basemap: "streets"
+// (Voyager — the familiar Google-Maps-like light look, the default) or
+// "dark" (dark-matter ops look), toggled from the legend. If no basemap is
+// reachable, a visible notice says so and zoom-out is clamped so you never
+// stare into a void.
 const FALLBACK_STYLE = {
   version: 8, name: "pukaar-dark-offline", sources: {},
   layers: [{ id: "bg", type: "background", paint: { "background-color": "#0a0c10" } }],
 };
-const REMOTE_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const BASE_STYLES = {
+  streets: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
+  dark: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+};
+let styleKind = "fallback";        // fallback | streets | dark
+const styleCache = {};
+
+function loadBase(kind) {
+  const apply = (json) => {
+    styleKind = kind;
+    map.setMinZoom(3);
+    map.setStyle(json);
+    const b = document.getElementById("style-toggle");
+    if (b) { b.textContent = kind === "streets" ? "🌑 dark map" : "🗺 street map"; }
+    const n = document.getElementById("basemap-note");
+    if (n) n.hidden = true;
+  };
+  if (styleCache[kind]) { apply(styleCache[kind]); return; }
+  fetch(BASE_STYLES[kind], { signal: AbortSignal.timeout(6000) })
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error("style " + r.status))))
+    .then((json) => { styleCache[kind] = json; apply(json); })
+    .catch(() => {
+      if (styleKind === "fallback") {
+        map.setMinZoom(12.8);      // offline: keep the frame on the zone
+        const n = document.getElementById("basemap-note");
+        if (n) n.hidden = false;
+      }
+    });
+}
 
 function initMap(zone) {
   map = new maplibregl.Map({
@@ -96,10 +126,7 @@ function initMap(zone) {
   map.on("style.load", ensureLayers);
   map.on("click", (e) => placeWitnessPin(e.lngLat.lat, e.lngLat.lng));
   map.on("dragstart", () => { followGolden = false; updateFollowBtn(); });
-  fetch(REMOTE_STYLE, { signal: AbortSignal.timeout(4000) })
-    .then((r) => (r.ok ? r.json() : Promise.reject(new Error("style"))))
-    .then((style) => map.setStyle(style))
-    .catch(() => {});          // offline: stay on the fallback background
+  loadBase("streets");             // the familiar look is the default
 }
 
 // Custom sources/layers, re-added after every style (re)load. Data is
@@ -115,10 +142,11 @@ function ensureLayers() {
   if (!map.getLayer("cells-line")) map.addLayer({ id: "cells-line", type: "line", source: "cells",
     paint: { "line-color": ["get", "color"], "line-opacity": 0.35, "line-width": 1 } });
   if (!map.getLayer("zone-line")) map.addLayer({ id: "zone-line", type: "line", source: "zone",
-    paint: { "line-color": "#898781", "line-opacity": 0.7, "line-width": 1.2,
-             "line-dasharray": [2, 2.4] } });
+    paint: { "line-color": styleKind === "streets" ? "#6b6a66" : "#898781",
+             "line-opacity": 0.7, "line-width": 1.2, "line-dasharray": [2, 2.4] } });
   if (!map.getLayer("trail-lines")) map.addLayer({ id: "trail-lines", type: "line", source: "trails",
-    paint: { "line-color": "#e8e6df", "line-opacity": 0.22, "line-width": 2 } });
+    paint: { "line-color": styleKind === "streets" ? "#565b63" : "#e8e6df",
+             "line-opacity": styleKind === "streets" ? 0.35 : 0.22, "line-width": 2 } });
   if (!map.getLayer("route-lines")) map.addLayer({ id: "route-lines", type: "line", source: "routes",
     layout: { "line-cap": "round" },
     paint: { "line-color": ["get", "color"], "line-opacity": 0.85, "line-width": 2,
@@ -702,6 +730,10 @@ function wire() {
     cellsBtn.classList.toggle("on", cellsOn);
     cellsBtn.setAttribute("aria-pressed", String(cellsOn));
     drawCells();
+  });
+  document.getElementById("style-toggle").addEventListener("click", () => {
+    // fallback -> retry streets; streets <-> dark otherwise
+    loadBase(styleKind === "streets" ? "dark" : "streets");
   });
   const VOICE_SAMPLES = [
     "station ke bahar ek amma leti hain, uth nahi paa rahi hain",
