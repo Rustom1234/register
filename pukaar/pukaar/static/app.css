@@ -226,7 +226,14 @@ button.golden:hover { background: rgba(250,178,25,0.10); border-color: var(--war
     repeating-linear-gradient(90deg, transparent 0 79px, rgba(255,255,255,0.028) 79px 80px),
     radial-gradient(1100px 750px at 50% 42%, #121722 0%, #0a0c10 75%);
 }
-.leaflet-container { font: inherit; background: transparent; }
+.maplibregl-map { font: inherit; }
+.maplibregl-canvas:focus { outline: none; }
+.maplibregl-ctrl-attrib { background: rgba(18, 20, 26, 0.85) !important; color: var(--muted); }
+.maplibregl-ctrl-attrib a { color: var(--ink-2); }
+.maplibregl-ctrl-group { background: var(--surface-2) !important; border: 1px solid var(--line); }
+.maplibregl-ctrl-group button { background: transparent !important; }
+.maplibregl-ctrl-group button + button { border-top: 1px solid var(--line) !important; }
+.maplibregl-ctrl button .maplibregl-ctrl-icon { filter: invert(0.85); }
 .route-line { animation: routedash 0.9s linear infinite; }
 @keyframes routedash { to { stroke-dashoffset: -14; } }
 .tiles {
@@ -374,7 +381,6 @@ button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible
 @media (prefers-reduced-motion: reduce) {
   .case-pin.pulse::after, .route-line, .bubble.typing span, .bubble,
   .tile .t-value.bump, .panel-pop, #boot-veil .bv-mark { animation: none; }
-  .leaflet-fade-anim .leaflet-tile { transition: none; }
   button, .case-row, .fi, .tile { transition: none; }
 }
 

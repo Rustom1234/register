@@ -14,9 +14,9 @@ const OUTCOME_TXT = {
   not_found: ["🟡", "not found", "warn"], declined: ["🟡", "declined help", "warn"],
 };
 
-let state = null, map, zoneCircle, witnessPin = null, selectedCase = null, wired = false;
-const caseMarkers = new Map(), respMarkers = new Map(), routeLines = new Map();
-const respTrails = new Map(), trailLines = new Map();   // responder movement trails
+let state = null, map, witnessPin = null, selectedCase = null, wired = false;
+const caseMarkers = new Map(), respMarkers = new Map();
+const respTrails = new Map();   // responder movement breadcrumbs (GeoJSON source)
 let followGolden = false;                                // 🎥 camera follows the golden run
 let activeConv = "+91-DEMO";
 let selectedResp = "resp_1";
@@ -74,29 +74,83 @@ function playNewFeedSounds() {
 }
 
 // ------------------------------------------------------------------ map --
+// MapLibre GL (vendored, keyless). The map constructs synchronously on an
+// offline-safe dark style, then upgrades itself to CARTO's dark-matter
+// vector style if the network allows — same graceful-degradation contract
+// the Leaflet build had, now with WebGL pan/zoom smoothness.
+const FALLBACK_STYLE = {
+  version: 8, name: "pukaar-dark-offline", sources: {},
+  layers: [{ id: "bg", type: "background", paint: { "background-color": "#0a0c10" } }],
+};
+const REMOTE_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+
 function initMap(zone) {
-  map = L.map("map", { zoomControl: false, attributionControl: true })
-    .setView([zone.lat, zone.lng], 15);
-  L.control.zoom({ position: "bottomright" }).addTo(map);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-  }).addTo(map);
-  zoneCircle = L.circle([zone.lat, zone.lng], {
-    radius: zone.radius_m, color: "#898781", weight: 1.2, dashArray: "6 7",
-    fill: false, opacity: 0.7,
-  }).addTo(map);
-  map.on("click", (e) => placeWitnessPin(e.latlng.lat, e.latlng.lng));
+  map = new maplibregl.Map({
+    container: "map",
+    style: FALLBACK_STYLE,
+    center: [zone.lng, zone.lat],
+    zoom: 14.2,
+    attributionControl: { compact: true, customAttribution: "© OpenStreetMap © CARTO" },
+  });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+  map.on("style.load", ensureLayers);
+  map.on("click", (e) => placeWitnessPin(e.lngLat.lat, e.lngLat.lng));
   map.on("dragstart", () => { followGolden = false; updateFollowBtn(); });
+  fetch(REMOTE_STYLE, { signal: AbortSignal.timeout(4000) })
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error("style"))))
+    .then((style) => map.setStyle(style))
+    .catch(() => {});          // offline: stay on the fallback background
+}
+
+// Custom sources/layers, re-added after every style (re)load. Data is
+// repopulated by the 1 Hz sync, so this only guarantees existence.
+function ensureLayers() {
+  const empty = { type: "FeatureCollection", features: [] };
+  for (const id of ["cells", "zone", "trails", "routes"]) {
+    if (!map.getSource(id)) map.addSource(id, { type: "geojson", data: empty });
+  }
+  if (state && state.zone) map.getSource("zone").setData(zoneRing(state.zone));
+  if (!map.getLayer("cells-fill")) map.addLayer({ id: "cells-fill", type: "fill", source: "cells",
+    paint: { "fill-color": ["get", "color"], "fill-opacity": ["get", "op"] } });
+  if (!map.getLayer("cells-line")) map.addLayer({ id: "cells-line", type: "line", source: "cells",
+    paint: { "line-color": ["get", "color"], "line-opacity": 0.35, "line-width": 1 } });
+  if (!map.getLayer("zone-line")) map.addLayer({ id: "zone-line", type: "line", source: "zone",
+    paint: { "line-color": "#898781", "line-opacity": 0.7, "line-width": 1.2,
+             "line-dasharray": [2, 2.4] } });
+  if (!map.getLayer("trail-lines")) map.addLayer({ id: "trail-lines", type: "line", source: "trails",
+    paint: { "line-color": "#e8e6df", "line-opacity": 0.22, "line-width": 2 } });
+  if (!map.getLayer("route-lines")) map.addLayer({ id: "route-lines", type: "line", source: "routes",
+    layout: { "line-cap": "round" },
+    paint: { "line-color": ["get", "color"], "line-opacity": 0.85, "line-width": 2,
+             "line-dasharray": [1.4, 2] } });
+  lastCellsKey = "";           // force a cells re-push after any style swap
+}
+
+function zoneRing(zone) {
+  const pts = [];
+  for (let i = 0; i <= 72; i++) {
+    const a = (i / 72) * 2 * Math.PI;
+    pts.push([
+      zone.lng + (zone.radius_m * Math.sin(a)) / (111320 * Math.cos(zone.lat * Math.PI / 180)),
+      zone.lat + (zone.radius_m * Math.cos(a)) / 111320,
+    ]);
+  }
+  return { type: "Feature", geometry: { type: "LineString", coordinates: pts } };
+}
+
+function setSrc(id, data) {
+  const s = map.getSource && map.getSource(id);
+  if (s) s.setData(data);
 }
 
 function placeWitnessPin(lat, lng) {
   if (!witnessPin) {
-    witnessPin = L.marker([lat, lng], {
-      draggable: true,
-      icon: L.divIcon({ className: "", html: '<div class="witness-pin">📍</div>', iconAnchor: [11, 22] }),
-    }).addTo(map);
-  } else witnessPin.setLatLng([lat, lng]);
+    const el = document.createElement("div");
+    el.className = "witness-pin";
+    el.textContent = "📍";
+    witnessPin = new maplibregl.Marker({ element: el, draggable: true, anchor: "bottom" })
+      .setLngLat([lng, lat]).addTo(map);
+  } else witnessPin.setLngLat([lng, lat]);
 }
 
 // ------------------------------------------------------ smooth motion --
@@ -108,48 +162,57 @@ const REDUCED_MOTION = window.matchMedia
 const respTweens = new Map();   // id -> {m, from, to, start}
 let tweenRaf = null;
 
-function glideMarker(id, m, to) {
-  if (REDUCED_MOTION || !map || map === "failed") { m.setLatLng(to); return; }
-  const cur = m.getLatLng();
-  if (cur.lat === to[0] && cur.lng === to[1]) { respTweens.delete(id); return; }
-  respTweens.set(id, { m, from: [cur.lat, cur.lng], to, start: performance.now() });
+function glideMarker(id, m, toLngLat) {
+  if (REDUCED_MOTION || !map || map === "failed") { m.setLngLat(toLngLat); return; }
+  const cur = m.getLngLat();
+  if (cur.lng === toLngLat[0] && cur.lat === toLngLat[1]) { respTweens.delete(id); return; }
+  respTweens.set(id, { m, from: [cur.lng, cur.lat], to: toLngLat, start: performance.now() });
   if (!tweenRaf) tweenRaf = requestAnimationFrame(tweenTick);
 }
 
 function tweenTick(now) {
   for (const [id, t] of respTweens) {
     const k = Math.min(1, (now - t.start) / 950);   // ~one poll interval
-    const lat = t.from[0] + (t.to[0] - t.from[0]) * k;
-    const lng = t.from[1] + (t.to[1] - t.from[1]) * k;
-    t.m.setLatLng([lat, lng]);
-    const line = routeLines.get(id);
-    if (line) {
-      const ll = line.getLatLngs();
-      if (ll.length === 2) line.setLatLngs([[lat, lng], ll[1]]);
-    }
+    t.m.setLngLat([t.from[0] + (t.to[0] - t.from[0]) * k,
+                   t.from[1] + (t.to[1] - t.from[1]) * k]);
     if (k >= 1) respTweens.delete(id);
   }
+  if (respTweens.size && routeTargets.size) pushRoutes();   // line rides the dot
   tweenRaf = respTweens.size ? requestAnimationFrame(tweenTick) : null;
 }
 
-function caseIcon(c) {
+function caseHtml(c) {
   const open = !["closed"].includes(c.status);
   const pulse = open && (c.urgency === "high") ? " pulse" : "";
   const cls = open ? "" : " closedc";
   const color = CAT[c.category] || "#898781";
   const glyph = CAT_GLYPH[c.category] || "";
-  return L.divIcon({
-    className: "",
-    html: `<div class="case-pin${pulse}${cls}" style="background:${color}">${glyph}</div>`,
-    iconSize: [20, 20], iconAnchor: [10, 10],
-  });
+  return `<div class="case-pin${pulse}${cls}" style="background:${color}">${glyph}</div>`;
 }
 
-function respIcon(r) {
-  return L.divIcon({
-    className: "",
-    html: `<div class="resp-marker ${r.state}">${r.name[0]}</div>`,
-    iconSize: [22, 22], iconAnchor: [11, 11],
+function domMarker(html, lngLat, z) {
+  const el = document.createElement("div");
+  el.innerHTML = html;
+  if (z) el.style.zIndex = z;
+  return new maplibregl.Marker({ element: el, anchor: "center" })
+    .setLngLat(lngLat).addTo(map);
+}
+
+// enroute destinations per responder — the tween loop reads this to keep
+// each route line glued to its gliding marker
+const routeTargets = new Map();   // id -> {to: [lng, lat], color}
+
+function pushRoutes() {
+  setSrc("routes", {
+    type: "FeatureCollection",
+    features: [...routeTargets.entries()].map(([id, t]) => {
+      const mk = respMarkers.get(id);
+      const from = mk ? mk.getLngLat() : null;
+      return from && {
+        type: "Feature", properties: { color: t.color },
+        geometry: { type: "LineString", coordinates: [[from.lng, from.lat], t.to] },
+      };
+    }).filter(Boolean),
   });
 }
 
@@ -161,45 +224,50 @@ function syncMap() {
     const closedLong = c.status === "closed" && state.sim.sim_now - (c.closed_at || 0) > 1800;
     if (closedLong) continue;
     liveIds.add(c.id);
+    const key = `${c.status}|${c.urgency}|${c.category}`;
     if (!caseMarkers.has(c.id)) {
-      const m = L.marker([c.lat, c.lng], { icon: caseIcon(c) })
-        .on("click", () => showDetail(c.id)).addTo(map);
+      const m = domMarker(caseHtml(c), [c.lng, c.lat]);
+      m.getElement().style.cursor = "pointer";
+      m.getElement().addEventListener("click", (ev) => { ev.stopPropagation(); showDetail(c.id); });
+      m.__key = key;
       caseMarkers.set(c.id, m);
     } else {
-      caseMarkers.get(c.id).setIcon(caseIcon(c));
+      const m = caseMarkers.get(c.id);
+      if (m.__key !== key) { m.getElement().innerHTML = caseHtml(c); m.__key = key; }
     }
   }
   for (const [id, m] of caseMarkers) if (!liveIds.has(id)) { m.remove(); caseMarkers.delete(id); }
 
-  const liveResp = new Set();
+  const trailFeatures = [];
   for (const r of state.sim.responders) {
-    liveResp.add(r.id);
     if (!respMarkers.has(r.id)) {
-      respMarkers.set(r.id, L.marker([r.lat, r.lng], { icon: respIcon(r), zIndexOffset: 500 })
-        .bindTooltip(r.name, { direction: "top", offset: [0, -10] }).addTo(map));
+      const m = domMarker(`<div class="resp-marker ${r.state}">${r.name[0]}</div>`,
+                          [r.lng, r.lat], "500");
+      m.getElement().title = r.name;
+      m.__stateKey = r.state;
+      respMarkers.set(r.id, m);
     } else {
       const m = respMarkers.get(r.id);
-      glideMarker(r.id, m, [r.lat, r.lng]);
-      // swap the icon only on a state change — replacing the DOM node every
-      // poll flickers and would cut any in-flight glide
-      if (m.__stateKey !== r.state) { m.setIcon(respIcon(r)); m.__stateKey = r.state; }
+      glideMarker(r.id, m, [r.lng, r.lat]);
+      // swap the pin class only on a state change — no per-poll DOM churn
+      if (m.__stateKey !== r.state) {
+        m.getElement().innerHTML = `<div class="resp-marker ${r.state}">${r.name[0]}</div>`;
+        m.__stateKey = r.state;
+      }
     }
     // movement trail: keep the last ~24 points while working, fade otherwise
     const trail = respTrails.get(r.id) || [];
     const last = trail[trail.length - 1];
-    if (!last || last[0] !== r.lat || last[1] !== r.lng) trail.push([r.lat, r.lng]);
+    if (!last || last[0] !== r.lng || last[1] !== r.lat) trail.push([r.lng, r.lat]);
     while (trail.length > 24) trail.shift();
     if (r.state === "idle" && trail.length > 2) trail.splice(0, 2);   // idle: trail evaporates
     respTrails.set(r.id, trail);
     if (trail.length > 1) {
-      if (!trailLines.has(r.id)) {
-        trailLines.set(r.id, L.polyline(trail, {
-          color: "#e8e6df", weight: 2, opacity: 0.22, interactive: false }).addTo(map));
-      } else trailLines.get(r.id).setLatLngs(trail);
-    } else if (trailLines.has(r.id)) {
-      trailLines.get(r.id).remove(); trailLines.delete(r.id);
+      trailFeatures.push({ type: "Feature", properties: {},
+                           geometry: { type: "LineString", coordinates: trail } });
     }
   }
+  setSrc("trails", { type: "FeatureCollection", features: trailFeatures });
 
   // 🎥 follow the golden run's responder while its order is live
   if (followGolden && (state.sim.golden || []).length) {
@@ -207,33 +275,22 @@ function syncMap() {
     const order = state.orders.find((o) => o.id === gid);
     if (order && ["accepted", "onsite"].includes(order.status) && order.responder_id) {
       const r = state.sim.responders.find((x) => x.id === order.responder_id);
-      if (r) map.panTo([r.lat, r.lng], { animate: true, duration: 0.8 });
+      if (r) map.panTo([r.lng, r.lat], { duration: 800 });
     } else if (order && ["closed", "escalated"].includes(order.status)) {
       followGolden = false;   // arc over — release the camera
       updateFollowBtn();
     }
   }
 
-  const liveLines = new Set();
+  routeTargets.clear();
   for (const r of state.sim.responders) {
     if (r.state !== "enroute" || !r.order_id) continue;
     const order = state.orders.find((o) => o.id === r.order_id);
     const c = order && state.cases.find((x) => x.id === order.case_id);
     if (!c || c.lat == null) continue;
-    liveLines.add(r.id);
-    // the route line starts at the MARKER's gliding position, not the raw
-    // server position, so the line stays glued to the moving dot
-    const mk = respMarkers.get(r.id);
-    const mp = mk ? mk.getLatLng() : { lat: r.lat, lng: r.lng };
-    const pts = [[mp.lat, mp.lng], [c.lat, c.lng]];
-    if (!routeLines.has(r.id)) {
-      routeLines.set(r.id, L.polyline(pts, {
-        color: CAT[c.category] || "#fff", weight: 2, dashArray: "6 8", opacity: 0.85,
-        className: "route-line",
-      }).addTo(map));
-    } else routeLines.get(r.id).setLatLngs(pts);
+    routeTargets.set(r.id, { to: [c.lng, c.lat], color: CAT[c.category] || "#fff" });
   }
-  for (const [id, l] of routeLines) if (!liveLines.has(id)) { l.remove(); routeLines.delete(id); }
+  pushRoutes();
 }
 
 // ---------------------------------------------------------------- tiles --
@@ -362,7 +419,7 @@ function showDetail(caseId) {
   selectedCase = caseId;
   renderDetail();
   const c = state.cases.find((x) => x.id === caseId);
-  if (c && c.lat != null && map && map !== "failed") map.panTo([c.lat, c.lng]);
+  if (c && c.lat != null && map && map !== "failed") map.panTo([c.lng, c.lat]);
 }
 
 function renderDetail() {
@@ -622,7 +679,7 @@ function wire() {
   document.getElementById("msg-in").addEventListener("keydown", (e) => { if (e.key === "Enter") sendText(); });
   document.getElementById("btn-loc").addEventListener("click", () => {
     let lat, lng;
-    if (witnessPin) ({ lat, lng } = witnessPin.getLatLng());
+    if (witnessPin) ({ lat, lng } = witnessPin.getLngLat());
     else {
       const z = state.zone;
       lat = z.lat + (Math.random() - 0.5) * 0.012; lng = z.lng + (Math.random() - 0.5) * 0.012;
@@ -776,11 +833,11 @@ async function refresh() {
 // ------------------------------------------------- 90-day cell heatmap --
 // The privacy story, visible: after the purge, coarse cell + count is ALL
 // the location data that still exists — so that's all this layer can show.
-let cellsOn = false, cellRects = [], lastCellsKey = "";
+let cellsOn = false, lastCellsKey = "";
 function drawCells() {
   if (!map || map === "failed") return;
   if (!cellsOn) {
-    if (cellRects.length) { cellRects.forEach((r) => r.remove()); cellRects = []; }
+    if (lastCellsKey !== "") { setSrc("cells", { type: "FeatureCollection", features: [] }); }
     lastCellsKey = "";
     return;
   }
@@ -788,18 +845,18 @@ function drawCells() {
   const key = cells.map((c) => `${c.cell}/${c.category}/${c.n}`).join("|");
   if (key === lastCellsKey) return;
   lastCellsKey = key;
-  cellRects.forEach((r) => r.remove());
-  cellRects = [];
   const maxN = Math.max(1, ...cells.map((c) => c.n));
-  for (const c of cells) {
-    const color = CAT[c.category] || "#898781";
-    const r = L.rectangle([[c.south, c.west], [c.north, c.east]], {
-      color, weight: 1, opacity: 0.35, fillColor: color,
-      fillOpacity: 0.12 + 0.38 * (c.n / maxN), interactive: true,
-    }).addTo(map);
-    r.bindTooltip(`${c.category} · ${c.n} case${c.n === 1 ? "" : "s"} — 90-day aggregate (all that survives the purge)`);
-    cellRects.push(r);
-  }
+  setSrc("cells", {
+    type: "FeatureCollection",
+    features: cells.map((c) => ({
+      type: "Feature",
+      properties: { color: CAT[c.category] || "#898781",
+                    op: 0.12 + 0.38 * (c.n / maxN) },
+      geometry: { type: "Polygon", coordinates: [[
+        [c.west, c.south], [c.east, c.south], [c.east, c.north],
+        [c.west, c.north], [c.west, c.south]]] },
+    })),
+  });
 }
 
 refresh();
