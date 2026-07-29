@@ -99,6 +99,39 @@ function placeWitnessPin(lat, lng) {
   } else witnessPin.setLatLng([lat, lng]);
 }
 
+// ------------------------------------------------------ smooth motion --
+// The UI polls at 1 Hz, so raw positions arrive as 1-second jumps. Responder
+// markers glide between polls via one rAF loop (their attached route line
+// rides along). Reduced-motion users get instant snaps.
+const REDUCED_MOTION = window.matchMedia
+  && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const respTweens = new Map();   // id -> {m, from, to, start}
+let tweenRaf = null;
+
+function glideMarker(id, m, to) {
+  if (REDUCED_MOTION || !map || map === "failed") { m.setLatLng(to); return; }
+  const cur = m.getLatLng();
+  if (cur.lat === to[0] && cur.lng === to[1]) { respTweens.delete(id); return; }
+  respTweens.set(id, { m, from: [cur.lat, cur.lng], to, start: performance.now() });
+  if (!tweenRaf) tweenRaf = requestAnimationFrame(tweenTick);
+}
+
+function tweenTick(now) {
+  for (const [id, t] of respTweens) {
+    const k = Math.min(1, (now - t.start) / 950);   // ~one poll interval
+    const lat = t.from[0] + (t.to[0] - t.from[0]) * k;
+    const lng = t.from[1] + (t.to[1] - t.from[1]) * k;
+    t.m.setLatLng([lat, lng]);
+    const line = routeLines.get(id);
+    if (line) {
+      const ll = line.getLatLngs();
+      if (ll.length === 2) line.setLatLngs([[lat, lng], ll[1]]);
+    }
+    if (k >= 1) respTweens.delete(id);
+  }
+  tweenRaf = respTweens.size ? requestAnimationFrame(tweenTick) : null;
+}
+
 function caseIcon(c) {
   const open = !["closed"].includes(c.status);
   const pulse = open && (c.urgency === "high") ? " pulse" : "";
@@ -146,8 +179,10 @@ function syncMap() {
         .bindTooltip(r.name, { direction: "top", offset: [0, -10] }).addTo(map));
     } else {
       const m = respMarkers.get(r.id);
-      m.setLatLng([r.lat, r.lng]);
-      m.setIcon(respIcon(r));
+      glideMarker(r.id, m, [r.lat, r.lng]);
+      // swap the icon only on a state change — replacing the DOM node every
+      // poll flickers and would cut any in-flight glide
+      if (m.__stateKey !== r.state) { m.setIcon(respIcon(r)); m.__stateKey = r.state; }
     }
     // movement trail: keep the last ~24 points while working, fade otherwise
     const trail = respTrails.get(r.id) || [];
@@ -186,7 +221,11 @@ function syncMap() {
     const c = order && state.cases.find((x) => x.id === order.case_id);
     if (!c || c.lat == null) continue;
     liveLines.add(r.id);
-    const pts = [[r.lat, r.lng], [c.lat, c.lng]];
+    // the route line starts at the MARKER's gliding position, not the raw
+    // server position, so the line stays glued to the moving dot
+    const mk = respMarkers.get(r.id);
+    const mp = mk ? mk.getLatLng() : { lat: r.lat, lng: r.lng };
+    const pts = [[mp.lat, mp.lng], [c.lat, c.lng]];
     if (!routeLines.has(r.id)) {
       routeLines.set(r.id, L.polyline(pts, {
         color: CAT[c.category] || "#fff", weight: 2, dashArray: "6 8", opacity: 0.85,
