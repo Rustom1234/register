@@ -14,6 +14,7 @@ Working name for the concept: spot people on the street who need basic medical s
 | [critique-and-scope.md](./critique-and-scope.md) | Holes in the original plan, what survives, and a scoped 90-day MVP |
 | [deep-research-prompt.md](./deep-research-prompt.md) | Copy-paste prompt to re-run this research in Claude (web search / Research mode) |
 | [pitch/](./pitch/) | Kevin Xu Innovation Challenge pitch deck ("Wayside") — pptx, a plain-text version, and the generator script |
+| [session-log.md](./session-log.md) | Running handoff log of what's built, decided, and still open — start here after a break or on a new machine |
 
 Origin: seen on the street — a homeless man with a wrapped, bleeding foot; ~₹200 of antiseptic, dressings and an umbrella would have changed his week.
 
