@@ -7,10 +7,14 @@ see the root project's open thread on that.
 
 | File | What it is |
 |---|---|
-| [wayside-kxic-pitch.pptx](./wayside-kxic-pitch.pptx) | The deck — 9 slides |
+| [wayside-kxic-pitch.pptx](./wayside-kxic-pitch.pptx) | The deck — 13 slides, dark throughout, expanded to match the long-form pitch |
 | [wayside-kxic-pitch.md](./wayside-kxic-pitch.md) | The same pitch as plain text, in slide order — read this if you can't open the pptx |
 | [build_deck.js](./build_deck.js) | Generates the pptx via [pptxgenjs](https://gitbrent.github.io/PptxGenJS/) |
-| [assets/](./assets) | The two demo screenshots the deck embeds |
+| [assets/](./assets) | The six demo screenshots the deck embeds (header chrome cropped out) |
+
+A longer, illustrated version of the same pitch — full prose instead of slide
+fragments, six screenshots instead of two — exists as a self-contained web
+page; ask in-session for a copy if you don't have the link.
 
 To regenerate the deck:
 

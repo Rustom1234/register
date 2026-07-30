@@ -11,9 +11,9 @@ it traces back to is [`../kevin-xu-proposal.md`](../kevin-xu-proposal.md).
 
 ## 1 · Title
 
-📍 **WAYSIDE** — see it, send word.
+**Wayside.** — see it, send word.
 
-One WhatsApp number that turns anyone who stops on the street into the start of a real aid response.
+One WhatsApp number turns anyone who stops on the street into the start of a real aid response — no app to download, no face on file, no database of the people it serves. Just a message that gets answered.
 
 `No cameras` · `No database of the poor` · `Working demo · 111 tests`
 
@@ -21,15 +21,27 @@ One WhatsApp number that turns anyone who stops on the street into the start of 
 
 ---
 
-## 2 · The problem — Everyone walks past — because nothing works to do
+## 2 · The problem — Everyone walks past, because there's nothing to do
 
-You see a man under a flyover, foot wrapped in a soaked bandage. You stop. And then… what? 112 is for emergencies. Helplines go to voicemail. Giving cash can now mean a police case for him. So the two minutes of caring evaporate — every day, in every city.
+You see a man under a flyover. His foot is wrapped in a bandage that's gone through and darkened again. You stop — for a second, you actually stop. And then: what?
 
-**Who it affects.** 1.7 million+ people live on India's streets; injuries, hunger and exposure kill quietly every winter and monsoon. And it affects every passer-by who wanted to act and had no channel.
+112 is for emergencies, and a soaked bandage doesn't sound like one on the phone. The helpline numbers people forward on WhatsApp ring out or go to voicemail. Handing over cash can, in some cities, turn into a police matter for *him*, not you.
 
-**Why care now.** The two dominant answers both fail: surveillance and black holes.
+So you do the only thing left: you keep walking. The two minutes you were willing to give evaporate — the same way they do for the next person, every day, in every city.
 
-- **10–15%** — accuracy of San Jose's camera-AI homeless detection, shut down in 2025
+**Who it affects.** More than 1.7 million people sleep on India's streets. Injuries go septic, hunger and exposure do their quiet work every winter and monsoon — not dramatically, just steadily, unwitnessed by anyone with the power to act.
+
+**Why care now.** It isn't only their problem — it's the passer-by's too: the one who wanted to do something real and found no channel built for the two minutes they had.
+
+*The gap isn't compassion. It's a channel that answers.*
+
+---
+
+## 3 · The problem, in numbers — Two answers already exist. Both fail.
+
+One end of the spectrum watches too much. The other answers too little.
+
+- **10–15%** — accuracy of San Jose's camera-AI homeless detection system, shut down in 2025
 - **23% / 5%** — of UK StreetLink reports led to finding / housing the person — witnesses stop reporting into silence
 - **₹0** — reaches the person in the moment a witness cares, today
 
@@ -37,58 +49,83 @@ You see a man under a flyover, foot wrapped in a soaked bandage. You stop. And t
 
 ---
 
-## 3 · The opportunity — Why now, why me
+## 4 · Why now — Why now, why me
 
-- **Everyone already has the app** — 500M+ Indians use WhatsApp daily. Reporting must cost one message — now it can.
-- **AI can finally take the report** — LLMs reliably structure Hinglish/Hindi/English into location + need + urgency for pennies. Impossible two years ago.
-- **Dispatch patterns are proven** — GoodSAM showed parallel offers + first-accept gets a yes in ~a minute. India Post's DIGIPIN gives every pavement a 4m address.
-- **Privacy is now the moat** — DPDP Act (2023) punishes hoarding personal data. A system designed to never build the dangerous database wins partners and regulators.
+- **DISTRIBUTION — Everyone already has the app.** 500 million-plus Indians open WhatsApp every day. Reporting can cost exactly one message — the channel they already use is the channel that answers.
+- **TECHNOLOGY — AI can finally take the report.** LLMs now reliably turn a panicked, code-switched voice note — Hindi, English, Hinglish — into a structured report. Two years ago this took a call centre; today it's a pipeline, for pennies a message.
+- **OPERATIONS — Dispatch patterns are proven.** GoodSAM showed that offering a case to several nearby responders at once, first-to-accept, gets a yes inside a minute. India Post's DIGIPIN now gives every stretch of pavement its own short address.
+- **REGULATION — Privacy is now the moat.** India's DPDP Act makes hoarding personal data a liability, not an asset. A system built to never collect a name, a face, or an address is the version regulators and NGOs trust first.
 
-**The edge.** *"The sensor isn't a camera. It's a person who already stopped."* Equitech alum · built the working system solo — pipeline, control room, responder app, 111 tests — before asking for a rupee. Every design choice cites evidence from systems that failed before it.
+**The edge.** *"The sensor isn't a camera. It's a person who already stopped."* Equitech alum. Built the whole system solo — intake pipeline, control room, responder app, 111 automated tests — before asking anyone for a rupee. Every design choice in it cites a real system that came before and failed, for a specific, documented reason.
 
 *Nothing here requires new behaviour — only a number worth saving.*
 
 ---
 
-## 4 · The solution — One message, answered — end to end
+## 5 · How it works — One message, answered — start to finish (1/2)
 
-1. **Witness sends one WhatsApp** — text, voice note or photo — English, Hinglish or हिंदी
-2. **Deterministic 112 gate** — real emergencies get a fixed redirect before any AI speaks
-3. **AI agent structures the report** — location (DIGIPIN), need, urgency → medical / food / shelter kit order
-4. **Parallel offers, first accept wins** — nearest trusted NGO responders get the job like a ride request
-5. **Kit delivered, outcome recorded** — served · escalated to clinical · not found · declined — respected
-6. **The witness is told how it ended** — *"Meena reached him, help was given. Thank you."*
+Six steps. Most take under a minute. None of them ask the witness to do anything but send what they'd already send a friend.
 
-**Value hypothesis:** closing the loop turns one-time witnesses into repeat reporters — gratitude is the growth engine. Delivered as a service: a WhatsApp line for the public (nothing to install), a control room + responder web app for the NGO.
+1. **Witness sends one WhatsApp** — text, a voice note, or a photo, in English, Hinglish, or हिंदी, whatever's natural in the moment.
+2. **Deterministic 112 gate** — before any model reads the message, a fixed, code-level check looks for real emergencies and redirects them immediately — no AI in the loop for the moment that matters most.
+3. **AI agent structures the report** — the message becomes a location (down to a DIGIPIN), a need, and an urgency level — a kit order is raised automatically: medical, food, or shelter.
 
----
-
-## 5 · The demo — it runs today — Not a mockup: 111 tests, three surfaces, one loop
-
-- **Control room** — live map, dispatch waves, kit stock, kill-criteria dashboard
-- **Responder app** — offer ping → checklist → outcome, on any phone
-- **Witness phone** — trilingual chat, photo picker, live progress, "still there?" check
-
-*Recorded 2:22 walkthrough + interactive session replay available · runs offline on a laptop with zero API keys*
+*(deck inset: the witness's phone — no app to install)*
 
 ---
 
-## 6 · The customer — who pays — NGOs and CSR budgets buying verified outcomes
+## 6 · How it works — …and it closes the loop (2/2)
 
-- **Who buys** — NGO street-outreach programs and the CSR funders behind them (India mandates 2% of corporate profit to CSR), plus municipal shelter boards.
+4. **Parallel offers, first accept wins** — the order goes out to the nearest trusted responders at once, like a ride-hailing request. Whoever accepts first gets the case; the rest stand down.
+5. **Kit delivered, outcome recorded** — served, escalated to clinical care, not found, or declined — every outcome is recorded, including a person's right to say no.
+6. **The witness is told how it ended** — *"Meena reached him, help was given. Thank you."* Not silence — an answer, which is the whole point.
+
+*(deck inset: the responder's phone — accept, 3 minutes on the clock)*
+
+**Value hypothesis:** closing the loop turns one-time witnesses into repeat reporters — gratitude is the growth engine.
+
+---
+
+## 7 · See it run — Not a mockup (1/2)
+
+111 automated tests. Three real surfaces — control room, responder phone, witness phone — running the same loop end to end, offline, with zero paid API calls.
+
+- **Control room** — live map, dispatch waves, kit stock, kill-criteria dashboard.
+- **Responder app** — offer ping → checklist → outcome, on any phone.
+- **Witness phone** — trilingual chat, photo picker, live progress, a "still there?" check.
+
+*(deck plate: the control room, mid-shift — dispatch waves, kit stock, coordinator queue, live ops feed)*
+
+---
+
+## 8 · See it run — Dignity, and a paper trail (2/2)
+
+What a responder sees at the pin, and what a coordinator sees behind every case.
+
+*(deck plates: at the pin — greet, ask, don't assume, respect a no · the coordinator's view — full provenance, from report to order to outcome, HMAC-signed)*
+
+**On record.** Screens shown as captured during development, under the project's original working name — a rename pass to Wayside is under way across the running product.
+
+*Recorded 2:22 walkthrough and an interactive session replay available on request.*
+
+---
+
+## 9 · Who pays — NGOs and CSR budgets, buying verified outcomes
+
+- **Who buys** — NGO street-outreach programs and the CSR funders behind them — India mandates 2% of corporate profit to CSR — plus municipal shelter boards.
 - **Pain solved** — Outreach teams find people too late and blind; donors get activity reports, not verified outcomes; data practices now carry DPDP legal risk.
 - **What they get** — A per-zone service: verified need → delivered kit → coded outcome, with provenance-tagged records and privacy by architecture — audit-ready.
-- **First customer** — One Delhi NGO, one pilot zone (Nizamuddin). Reached through the Equitech network and an existing Goonj relationship — pitch is a working demo, not a proposal.
+- **First customer** — One Delhi NGO, one pilot zone — Nizamuddin. Reached through the Equitech network and an existing Goonj relationship. The pitch is a working demo, not a proposal.
 
 *Unit economics to defend in the pilot: ~₹300 kit + delivery ≈ ₹430 per person served — kill line at ₹900.*
 
 ---
 
-## 7 · The users — Three users — and one deliberate non-user
+## 10 · Who it's for — Three users, and one deliberate non-user
 
-- **The witness** — any passer-by · uses only WhatsApp, nothing to install · gets progress + closure, so they report again
-- **The responder** — vetted NGO field worker · gets the offer ping with kit, distance, DIGIPIN · one tap records the outcome
-- **The coordinator** — NGO staff · watches the control room · handles the edge cases the system refuses to guess at
+- **The witness** — any passer-by. Uses only WhatsApp, nothing to install. Gets progress and closure, so they report again.
+- **The responder** — a vetted NGO field worker. Gets the offer ping with kit, distance, and DIGIPIN. One tap records the outcome.
+- **The coordinator** — NGO staff. Watches the control room. Handles the edge cases the system refuses to guess at.
 
 **The person in need is served — never enrolled.** No name, no photo of a face, no profile is ever stored. Exact locations are wiped once a case closes; after 90 days only coarse heat-cells remain. In a country that still criminalises begging, the strongest protection is that the dangerous database never exists.
 
@@ -96,29 +133,42 @@ You see a man under a flyover, foot wrapped in a soaked bandage. You stop. And t
 
 ---
 
-## 8 · Roadmap — Three months to truth, twelve to scale — or an honest stop
+## 11 · Roadmap — Three months to truth, twelve to scale — or an honest stop (1/2)
 
 **Next 3 months — one zone, real people:**
-- Real WhatsApp number live (transport is built — onboarding is configuration)
+- Real WhatsApp number live — transport is built, onboarding is configuration
 - One NGO partner, 6–10 rostered responders, Nizamuddin pilot zone
 - Hindi/Hinglish voice-note speech-to-text bake-off (Sarvam vs Whisper)
 - 8-week pilot measured against pre-registered kill criteria
 
 **By 12 months — if the numbers hold:**
-- Three zones, two partners — onboarding a partner is config + a playbook
-- Voice-first reporting; DPDP audit + published transparency report
+- Three zones, two partners — onboarding a partner is config plus a playbook
+- Voice-first reporting; DPDP audit and a published transparency report
 - Public dashboard of outcomes — the same one the funders see
-
-**Pre-registered kill criteria — public before the pilot starts:** offer acceptance ≥ 50% · verified-need rate ≥ 40% · cost per person served ≤ ₹900 · backlog never outgrows capacity. If Wayside stops earning its numbers, its own dashboard says so — and we publish that and stop.
 
 **Resources needed:** pilot grant (kits, responder stipends, WhatsApp + AI costs, DPIA/legal review) · partner introductions · mentorship on NGO ops.
 
 ---
 
-## 9 · Close
+## 12 · Roadmap · kill criteria — Pre-registered, public before the pilot starts (2/2)
 
-📍 No cameras. No database of the poor. **No one left by the wayside.**
+| Kill criterion | Now | Target | Status |
+|---|---|---|---|
+| Verified-need rate (found / closed) | 75% | ≥ 40% | ✓ healthy |
+| Offer acceptance | 50% | ≥ 50% | ✓ healthy |
+| Cost per person served | ₹580 | ≤ ₹900 | ✓ healthy |
+| Open backlog | 11 | ≤ 12 capacity | ✓ healthy |
+
+*(deck plate: the same dashboard the funders see — public before the pilot starts)*
+
+*If Wayside stops earning its numbers, its own dashboard says so — and we publish that, and stop.*
+
+---
+
+## 13 · Close
+
+No cameras. No database of the poor. **No one left by the wayside.**
 
 *The ask:* pilot funding for one zone · introductions to Delhi street-outreach NGOs · a mentor who has run field ops.
 
-Rustom Dubash · rustommdubash@gmail.com · working demo, 2:22 video and full research corpus on request
+Rustom Dubash · rustommdubash@gmail.com · working demo, 2:22 video, and full research corpus on request
