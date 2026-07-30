@@ -111,7 +111,7 @@ title(s, "Why now, why me");
 const reasons = [
   ["DISTRIBUTION", "Everyone already has the app", "500 million-plus Indians open WhatsApp every day. Reporting can cost exactly one message — the channel they already use is the channel that answers."],
   ["TECHNOLOGY", "AI can finally take the report", "LLMs now reliably turn a panicked, code-switched voice note — Hindi, English, Hinglish — into a structured report. Two years ago this took a call centre; today it's a pipeline, for pennies a message."],
-  ["OPERATIONS", "Dispatch patterns are proven", "GoodSAM-style dispatch offers a case to several nearby responders at once, first-to-accept — and gets someone moving in under two minutes. India Post's DIGIPIN now gives every stretch of pavement its own short address."],
+  ["OPERATIONS", "Dispatch patterns are proven", "GoodSAM showed that offering a case to several nearby responders at once, first-to-accept, gets a yes inside a minute. India Post's DIGIPIN now gives every stretch of pavement its own short address."],
   ["REGULATION", "Privacy is now the moat", "India's DPDP Act makes hoarding personal data a liability, not an asset. A system built to never collect a name, a face, or an address is the version regulators and NGOs trust first."],
 ];
 reasons.forEach(([tag, h, b], i) => {
