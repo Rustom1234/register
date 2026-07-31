@@ -15,6 +15,10 @@ function haversineM(la1, lo1, la2, lo2) {
     Math.cos(la1 * p) * Math.cos(la2 * p) * Math.sin(((lo2 - lo1) * p) / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(a));
 }
+function fmtDur(s) {
+  if (s == null) return "—";
+  return s < 90 ? `${Math.round(s)}s` : `${Math.round(s / 60)}m`;
+}
 
 let state = null;
 let myId = localStorage.getItem("pukaar_resp") || "";
@@ -204,7 +208,10 @@ function renderActive(order) {
   const m = me();
   const c = state.cases.find((x) => x.id === order.case_id);
   const kit = state.kit_skus[order.sku] || { name: order.sku, contents: "" };
-  const dist = c && c.lat != null && m ? haversineM(m.lat, m.lng, c.lat, c.lng) : null;
+  // Road-routed distance/ETA from the sim (not a beeline — matches what the
+  // control room map is actually animating along).
+  const dist = m && m.dist_m != null ? m.dist_m : null;
+  const eta = m && m.eta_s != null ? m.eta_s : null;
   if (order.status === "accepted" && dist != null && !startDist.has(order.id)) {
     startDist.set(order.id, Math.max(dist, 1));
   }
@@ -217,7 +224,7 @@ function renderActive(order) {
     // place; never rebuild the DOM under the outcome buttons.
     if (!onsite) {
       const d = $("scr-active").querySelector(".dist");
-      if (d) d.innerHTML = `${dist != null ? Math.round(dist) : "—"}<small> m to go</small>`;
+      if (d) d.innerHTML = `${fmtDur(eta)}<small> away · ${dist != null ? Math.round(dist) : "—"} m by road</small>`;
       const bar = $("scr-active").querySelector(".bar i");
       if (bar) bar.style.width = `${pct}%`;
     }
@@ -237,7 +244,7 @@ function renderActive(order) {
       ${onsite
         ? `<p class="hint">You're on site. Give what's needed, then record what happened —
            the witness gets the closure message automatically.</p>`
-        : `<div class="dist">${dist != null ? Math.round(dist) : "—"}<small> m to go</small></div>
+        : `<div class="dist">${fmtDur(eta)}<small> away · ${dist != null ? Math.round(dist) : "—"} m by road</small></div>
            <div class="bar"><i style="width:${pct}%"></i></div>
            <p class="hint">Arrival registers automatically at the pin — or tap below
            when you're there.</p>

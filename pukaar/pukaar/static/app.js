@@ -125,7 +125,7 @@ function tweenTick(now) {
     const line = routeLines.get(id);
     if (line) {
       const ll = line.getLatLngs();
-      if (ll.length === 2) line.setLatLngs([[lat, lng], ll[1]]);
+      if (ll.length >= 2) line.setLatLngs([[lat, lng], ...ll.slice(1)]);
     }
     if (k >= 1) respTweens.delete(id);
   }
@@ -183,6 +183,8 @@ function syncMap() {
       // swap the icon only on a state change — replacing the DOM node every
       // poll flickers and would cut any in-flight glide
       if (m.__stateKey !== r.state) { m.setIcon(respIcon(r)); m.__stateKey = r.state; }
+      const label = r.state === "enroute" && r.eta_s != null ? `${r.name} · ${fmtDur(r.eta_s)}` : r.name;
+      if (m.__tipLabel !== label) { m.setTooltipContent(label); m.__tipLabel = label; }
     }
     // movement trail: keep the last ~24 points while working, fade otherwise
     const trail = respTrails.get(r.id) || [];
@@ -216,16 +218,17 @@ function syncMap() {
 
   const liveLines = new Set();
   for (const r of state.sim.responders) {
-    if (r.state !== "enroute" || !r.order_id) continue;
+    if (r.state !== "enroute" || !r.order_id || !r.route || !r.route.length) continue;
     const order = state.orders.find((o) => o.id === r.order_id);
     const c = order && state.cases.find((x) => x.id === order.case_id);
     if (!c || c.lat == null) continue;
     liveLines.add(r.id);
     // the route line starts at the MARKER's gliding position, not the raw
-    // server position, so the line stays glued to the moving dot
+    // server position, so the line stays glued to the moving dot — the rest
+    // is the actual street-mesh path the backend routed, not a beeline
     const mk = respMarkers.get(r.id);
     const mp = mk ? mk.getLatLng() : { lat: r.lat, lng: r.lng };
-    const pts = [[mp.lat, mp.lng], [c.lat, c.lng]];
+    const pts = [[mp.lat, mp.lng], ...r.route];
     if (!routeLines.has(r.id)) {
       routeLines.set(r.id, L.polyline(pts, {
         color: CAT[c.category] || "#fff", weight: 2, dashArray: "6 8", opacity: 0.85,
@@ -408,6 +411,9 @@ function renderDetail() {
 
 // ------------------------------------------------------- responder phone --
 function renderRespPanel() {
+  // The manual-takeover panel isn't on the supervisor view — a responder
+  // plays their own role from /responder instead.
+  if (!document.getElementById("resp-select")) return;
   const sel = document.getElementById("resp-select");
   sel.innerHTML = state.sim.responders.map((r) =>
     `<option value="${r.id}" ${r.id === selectedResp ? "selected" : ""}>${r.name}${r.medical ? " 🩺" : ""}</option>`).join("");
@@ -437,8 +443,8 @@ function renderRespPanel() {
   if (active) {
     const c = state.cases.find((x) => x.id === active.case_id) || {};
     let statusTxt = { accepted: "🛵 en route", onsite: "📍 on site", escalated: "🩺 clinical follow-up pending" }[active.status];
-    if (active.status === "accepted" && me && c.lat != null) {
-      statusTxt += ` · ${Math.round(haversineM(me.lat, me.lng, c.lat, c.lng))}m`;
+    if (active.status === "accepted" && me && me.eta_s != null) {
+      statusTxt += ` · ETA ${fmtDur(me.eta_s)}`;
     }
     const outcomeBtns = active.status === "onsite" && me && me.manual ? `
       <div class="btns">
@@ -536,6 +542,9 @@ function renderCoord() {
 
 // ---------------------------------------------------------------- phone --
 function renderPhone() {
+  // Not every surface has the phone panel (the supervisor view doesn't) —
+  // the witness's own conversation lives on /witness instead.
+  if (!document.getElementById("conv-select")) return;
   const sel = document.getElementById("conv-select");
   const phones = Object.keys(state.conversations);
   if (!phones.includes(activeConv) && !phones.includes("+91-DEMO")) {
@@ -617,7 +626,10 @@ function localEcho(text, kind) {
 }
 
 // ---------------------------------------------------------------- wires --
-function wire() {
+function wirePhone() {
+  // Only present on surfaces that embed the phone panel (index.html's demo
+  // harness) — the standalone reporter view lives on /witness instead.
+  if (!document.getElementById("msg-in")) return;
   document.getElementById("btn-send").addEventListener("click", sendText);
   document.getElementById("msg-in").addEventListener("keydown", (e) => { if (e.key === "Enter") sendText(); });
   document.getElementById("btn-loc").addEventListener("click", () => {
@@ -639,13 +651,6 @@ function wire() {
       photoMenu.hidden = true;
       sendInbound("photo", { photo_hint: b.dataset.hint });
     }));
-  const cellsBtn = document.getElementById("cells-toggle");
-  cellsBtn.addEventListener("click", () => {
-    cellsOn = !cellsOn;
-    cellsBtn.classList.toggle("on", cellsOn);
-    cellsBtn.setAttribute("aria-pressed", String(cellsOn));
-    drawCells();
-  });
   const VOICE_SAMPLES = [
     "station ke bahar ek amma leti hain, uth nahi paa rahi hain",
     "flyover ke neeche aadmi ke pair se khoon aa raha hai, patti gandi ho gayi hai",
@@ -672,6 +677,30 @@ function wire() {
       if (b.dataset.sc === "golden_run") { followGolden = true; updateFollowBtn(); }
       refresh();
     }));
+}
+
+function wireRespPanel() {
+  // Only present where the manual-takeover panel lives — a responder plays
+  // their own role from /responder, not from the supervisor view.
+  if (!document.getElementById("resp-select")) return;
+  document.getElementById("resp-select").addEventListener("change", (e) => { selectedResp = e.target.value; renderRespPanel(); });
+  document.getElementById("resp-manual").addEventListener("change", async (e) => {
+    await fetch("/api/manual", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ responder_id: selectedResp, manual: e.target.checked }) });
+    refresh();
+  });
+}
+
+function wire() {
+  wirePhone();
+  wireRespPanel();
+  const cellsBtn = document.getElementById("cells-toggle");
+  cellsBtn.addEventListener("click", () => {
+    cellsOn = !cellsOn;
+    cellsBtn.classList.toggle("on", cellsOn);
+    cellsBtn.setAttribute("aria-pressed", String(cellsOn));
+    drawCells();
+  });
   document.getElementById("btn-follow").addEventListener("click", () => {
     followGolden = !followGolden;
     updateFollowBtn();
@@ -686,12 +715,6 @@ function wire() {
   });
   document.getElementById("btn-purge").addEventListener("click", async () => { await fetch("/api/purge", { method: "POST" }); refresh(); });
   document.getElementById("detail-close").addEventListener("click", () => { selectedCase = null; renderDetail(); });
-  document.getElementById("resp-select").addEventListener("change", (e) => { selectedResp = e.target.value; renderRespPanel(); });
-  document.getElementById("resp-manual").addEventListener("change", async (e) => {
-    await fetch("/api/manual", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ responder_id: selectedResp, manual: e.target.checked }) });
-    refresh();
-  });
   document.getElementById("btn-sound").addEventListener("click", () => {
     soundOn = !soundOn;
     if (soundOn && !audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -754,10 +777,12 @@ async function refresh() {
   document.getElementById("btn-pause").textContent = state.sim.running ? "⏸" : "▶";
   const speedSel = document.getElementById("speed");
   if ([...speedSel.options].some((o) => +o.value === state.sim.speed)) speedSel.value = String(state.sim.speed);
-  document.getElementById("btn-script").textContent =
-    { auto: "🌐", en: "EN", hinglish: "Hi", deva: "अ" }[state.script] || "🌐";
-  document.getElementById("btn-script").title =
-    `bot language: ${state.script}` + (state.script === "auto" ? " (mirrors the witness)" : "") + " — click to cycle";
+  const scriptBtn = document.getElementById("btn-script");
+  if (scriptBtn) {
+    scriptBtn.textContent = { auto: "🌐", en: "EN", hinglish: "Hi", deva: "अ" }[state.script] || "🌐";
+    scriptBtn.title = `bot language: ${state.script}` +
+      (state.script === "auto" ? " (mirrors the witness)" : "") + " — click to cycle";
+  }
   const badge = document.getElementById("backend-badge");
   badge.textContent = state.backend === "claude" ? "CLAUDE LIVE" : "MOCK AGENT";
   badge.classList.toggle("live", state.backend === "claude");

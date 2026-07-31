@@ -116,6 +116,8 @@ button.golden:hover { background: rgba(250,178,25,0.10); border-color: var(--war
 #center { position: relative; min-width: 0; }
 #right { padding: 10px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
 #right > .panel:not(.grow) { flex: 0 0 auto; }
+/* supervisor view: no phone/scenario/responder-panel column */
+body.no-left #layout { grid-template-columns: 1fr 380px; }
 
 .panel {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 42%), var(--surface);

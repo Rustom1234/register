@@ -13,7 +13,7 @@ import math
 import random
 import time
 
-from . import geo
+from . import geo, routing
 from .config import Config
 from .db import new_id
 from .service import PukaarService
@@ -57,6 +57,7 @@ class Sim:
         self.svc = svc
         self.cfg = cfg
         self.rng = random.Random(seed)
+        self.mesh = routing.RoadMesh(cfg.zone_lat, cfg.zone_lng, cfg.zone_radius_m)
         self.sim_now = 8 * 3600.0          # 08:00 sim time, day 0
         self.running = True
         self.speed = cfg.sim_speed
@@ -91,7 +92,7 @@ class Sim:
                 "speed": self.rng.uniform(3.5, 5.5),          # m per sim-second (~cycle)
                 "accept_p": self.rng.uniform(0.55, 0.85),      # GoodSAM band, generous end
                 "state": "idle", "order_id": None, "target": None,
-                "dwell_until": None,
+                "dwell_until": None, "route": None, "route_idx": 0,
             }
             self.svc.positions[rid] = (lat, lng)
 
@@ -226,6 +227,7 @@ class Sim:
                 order = self.svc.store.one("SELECT * FROM orders WHERE id=?", (r["order_id"],))
                 if not order or order["status"] in ("closed", "escalated"):
                     r["state"], r["order_id"], r["target"] = "idle", None, None
+                    r["route"], r["route_idx"] = None, 0
             else:
                 order = self.svc.store.one(
                     "SELECT * FROM orders WHERE responder_id=? AND status='accepted'", (r["id"],))
@@ -273,29 +275,55 @@ class Sim:
             "SELECT c.* FROM cases c JOIN orders o ON o.case_id = c.id WHERE o.id=?", (order_id,))
         if not case or case["lat"] is None:
             return
-        r["state"], r["order_id"], r["target"] = "enroute", order_id, (case["lat"], case["lng"])
+        target = (case["lat"], case["lng"])
+        waypoints, _ = self.mesh.route(r["lat"], r["lng"], *target)
+        r["state"], r["order_id"], r["target"] = "enroute", order_id, target
+        # waypoints[0] is the responder's own current position — start at [1]
+        r["route"], r["route_idx"] = waypoints, 1
+
+    def _advance_route(self, r: dict, dist_m: float) -> None:
+        """Walk r along its mesh route by dist_m, waypoint by waypoint —
+        never a straight beeline through whatever's between here and there."""
+        route = r.get("route")
+        if not route:
+            r["lat"], r["lng"] = geo.step_towards(r["lat"], r["lng"], *r["target"], dist_m)
+            return
+        remaining = dist_m
+        while remaining > 0 and r["route_idx"] < len(route):
+            nxt = route[r["route_idx"]]
+            d = geo.haversine_m(r["lat"], r["lng"], *nxt)
+            if d <= remaining:
+                r["lat"], r["lng"] = nxt
+                remaining -= d
+                r["route_idx"] += 1
+            else:
+                r["lat"], r["lng"] = geo.step_towards(r["lat"], r["lng"], *nxt, remaining)
+                remaining = 0.0
 
     def _responders_move(self, dt: float) -> None:
         for r in self._resp.values():
             if r["state"] == "enroute" and r["target"]:
-                r["lat"], r["lng"] = geo.step_towards(r["lat"], r["lng"], *r["target"], r["speed"] * dt)
+                self._advance_route(r, r["speed"] * dt)
                 if geo.haversine_m(r["lat"], r["lng"], *r["target"]) <= self.cfg.arrive_radius_m:
                     self.svc.dispatch.arrived(r["order_id"])
                     r["state"] = "onsite"
                     r["dwell_until"] = self.sim_now + self.rng.uniform(120, 300)
+                    r["route"], r["route_idx"] = None, 0
             elif r["state"] == "onsite":
                 if r["id"] not in self.manual and self.sim_now >= (r["dwell_until"] or 0):
                     self._close_order(r)
-            else:  # idle drift
+            else:  # idle drift — still mesh-routed, just slower and ambient
                 if r["target"] is None or self.rng.random() < 0.005:
                     r["target"] = self._random_point()
-                r["lat"], r["lng"] = geo.step_towards(r["lat"], r["lng"], *r["target"], r["speed"] * 0.4 * dt)
+                    r["route"], r["route_idx"] = self.mesh.route(r["lat"], r["lng"], *r["target"])[0], 1
+                self._advance_route(r, r["speed"] * 0.4 * dt)
             self.svc.positions[r["id"]] = (r["lat"], r["lng"])
 
     def _close_order(self, r: dict) -> None:
         order = self.svc.store.one("SELECT * FROM orders WHERE id=?", (r["order_id"],))
         if not order:
             r["state"], r["order_id"], r["target"] = "idle", None, None
+            r["route"], r["route_idx"] = None, 0
             return
         if order["id"] in self.golden:
             outcome = "escalated"                # the arc the video needs, every time
@@ -318,6 +346,7 @@ class Sim:
                 due = 600 if order["id"] in self.golden else self.rng.uniform(600, 1500)
                 self._pending_escalations[r["order_id"]] = self.sim_now + due
         r["state"], r["order_id"], r["target"] = "idle", None, None
+        r["route"], r["route_idx"] = None, 0
 
     # ------------------------------------------------- inventory & restock --
     def _consume_kit(self, sku: str) -> None:
@@ -384,12 +413,19 @@ class Sim:
             "running": self.running,
             "is_night": not self.svc.dispatch.in_dispatch_window(self.sim_now),
             "golden": list(self.golden.keys()),
-            "responders": [
-                {"id": r["id"], "name": r["name"], "medical": r["medical"],
-                 "lat": r["lat"], "lng": r["lng"], "state": r["state"], "order_id": r["order_id"],
-                 "manual": r["id"] in self.manual}
-                for r in self._resp.values()
-            ],
+            "responders": [self._responder_view(r) for r in self._resp.values()],
+        }
+
+    def _responder_view(self, r: dict) -> dict:
+        route_out, eta_s, dist_m = None, None, None
+        if r["state"] == "enroute" and r.get("route"):
+            route_out = [[lat, lng] for lat, lng in r["route"][r["route_idx"]:]]
+            dist_m = round(routing.route_remaining_m(r["route"], r["route_idx"], r["lat"], r["lng"]))
+            eta_s = round(dist_m / r["speed"]) if r["speed"] > 0 else None
+        return {
+            "id": r["id"], "name": r["name"], "medical": r["medical"],
+            "lat": r["lat"], "lng": r["lng"], "state": r["state"], "order_id": r["order_id"],
+            "manual": r["id"] in self.manual, "route": route_out, "eta_s": eta_s, "dist_m": dist_m,
         }
 
     def _clock_str(self) -> str:

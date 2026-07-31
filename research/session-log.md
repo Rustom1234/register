@@ -66,6 +66,39 @@ done because the user hasn't said the word yet.
   Google Maps-like street basemap with an offline fallback, built so the
   main branch is never put at risk. Merge decision is pending the user
   testing it locally.
+- **Real road-following responder movement + ETA** (`pukaar/routing.py`,
+  new): responders used to glide in a straight line toward a case,
+  cutting across roads/buildings. There's no reachable live routing API
+  from this sandbox (Overpass/OSM is blocked by the network policy — see
+  below), so this generates a deterministic, locally-coherent street mesh
+  around the demo zone (rotated + jittered grid, ~625 nodes, connectivity
+  guaranteed) and does real Dijkstra pathfinding over it — genuine
+  multi-waypoint routes and realistic detour distances (1.4–1.9x
+  beeline), not surveyed Nizamuddin geometry. Wired into `sim.py`'s
+  `_responders_move`; exposed via `/api/state` as `route` (waypoints) and
+  `eta_s`/`dist_m` per responder; drawn as a real bent polyline on the
+  map (was a straight dashed line) with an ETA readout on the marker
+  tooltip, the sidebar responder card, and the standalone responder app.
+- **Three separate interfaces**, per the user's request that a demo
+  showing one combined screen isn't realistic:
+  - `/witness` (new) — standalone reporter view: just the phone chat +
+    a map for pin-dropping + scenario buttons. No supervisor/responder
+    controls visible. Verified end-to-end (typed Hinglish message → real
+    bot reply → pin drop → real case created in the backend).
+  - `/supervisor` (new) — standalone map + live feed + coordinator queue
+    + open cases, with quick links to the other two. Reuses `app.js`
+    (now defensive about missing phone/responder-panel DOM via
+    `wirePhone()`/`wireRespPanel()` guards) rather than forking it.
+  - `/responder` — already existed, unchanged.
+  - `/` — the original all-in-one demo/recording harness, left as-is
+    (still useful for pitch videos where one screen needs to show
+    everything at once).
+
+**Network policy note for future sessions:** this sandbox's egress proxy
+denies `overpass-api.de` (and presumably other live map/routing APIs) —
+confirmed via `curl $HTTPS_PROXY/__agentproxy/status`, reason
+`policy denial`. Don't re-attempt live OSM fetches; the synthetic-mesh
+approach above is the worked-around answer already in the repo.
 
 ## Pitch deliverables (`research/pitch/`)
 
@@ -136,4 +169,8 @@ done because the user hasn't said the word yet.
 5. GitHub link: https://github.com/Rustom1234/register/tree/claude/street-aid-research-4xqdpu
 
 ---
-**Last updated:** 2026-07-30, after the dispatch-speed citation revert.
+**Last updated:** 2026-07-31, after the routing/ETA engine and the
+witness/supervisor interface split. All 111 tests pass; verified live
+with Playwright (route lines render as real bent paths, ETA shows
+correctly, all 4 pages load with zero console errors, a real message
+typed on /witness flows through to a real case in the backend).

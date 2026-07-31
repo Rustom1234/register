@@ -291,5 +291,13 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     def responder_app():
         return FileResponse(STATIC / "responder.html")
 
+    @app.get("/witness")
+    def witness_app():
+        return FileResponse(STATIC / "witness.html")
+
+    @app.get("/supervisor")
+    def supervisor_app():
+        return FileResponse(STATIC / "supervisor.html")
+
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
     return app
