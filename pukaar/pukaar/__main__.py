@@ -23,7 +23,22 @@ def main() -> None:
             f"Refusing to bind {host} without PUKAAR_HMAC_KEY. Set a key, or "
             "set PUKAAR_ALLOW_INSECURE=1 for a throwaway demo.")
     print(f"Pukaar demo · backend={cfg.resolve_backend()} · http://{host}:{port}")
-    uvicorn.run(build_app(cfg), host=host, port=port, log_level="warning")
+    app = build_app(cfg)
+
+    # Optional Telegram chat line (the WhatsApp-equivalent that needs no
+    # Meta verification): set PUKAAR_TELEGRAM_TOKEN and the bridge long-polls
+    # in a daemon thread. Absent a token it never even imports the module.
+    tg_token = os.environ.get("PUKAAR_TELEGRAM_TOKEN", "").strip()
+    if tg_token:
+        import threading
+
+        from .telegram import TelegramBridge
+
+        bridge = TelegramBridge(tg_token, app.state.svc)
+        threading.Thread(target=bridge.run, daemon=True).start()
+        print("Telegram bridge: polling (witnesses can message the bot)")
+
+    uvicorn.run(app, host=host, port=port, log_level="warning")
 
 
 if __name__ == "__main__":

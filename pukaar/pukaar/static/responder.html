@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pukaar · Responder</title>
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#0b0c10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wayside">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <style>
 /* Standalone responder app — same validated palette as the control room.
    Phone-first: this page IS the responder's phone (open it in a narrow
@@ -196,10 +202,13 @@ footer { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--mut
 
   <footer>
     <span id="f-status">connecting…</span>
+    <button id="sos-btn" hidden
+            style="background:#2a1215;border:1px solid #d03b3b;color:#ff9d99;border-radius:999px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer"
+            title="Alert the coordinator that you need help">🆘 SOS</button>
     <span>first accept wins · every pinned case closes</span>
   </footer>
 </div>
 <div id="toast" role="status">✓ recorded</div>
-<script src="/static/responder.js"></script>
+<script src="/static/responder.js?v=20260801a"></script>
 </body>
 </html>

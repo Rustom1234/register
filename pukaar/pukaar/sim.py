@@ -28,6 +28,22 @@ RESPONDER_SEED = [
 # dot's arrival matches the ETA we display (remaining metres / this speed).
 MODE_SPEED_MPS = {"walk": 1.4, "cycle": 3.3, "scooter": 5.6}
 
+# Kit depots — placeholder NGO locations until the partner supplies real
+# ones (founder decision 2026-08-01: placeholders for now). Kits live HERE,
+# not in riders' bags: dispatch routes the rider via the cheapest-detour
+# depot that has the kit, and stock/restock is tracked per depot.
+DEPOT_SEED = [
+    ("depot_basti", "Basti Office", 28.5936, 77.2455),
+    ("depot_east", "Nizamuddin East Community Room", 28.5878, 77.2585),
+    ("depot_station", "Station-side Partner Shop", 28.5872, 77.2540),
+]
+# depot_id -> {sku: seed count}; totals match the old single-store world.
+DEPOT_STOCK_SEED = {
+    "depot_basti":   {"MED-1": 8, "FOOD-1": 10, "SEAS-M": 6},
+    "depot_east":    {"MED-1": 6, "FOOD-1": 8, "SEAS-M": 5},
+    "depot_station": {"MED-1": 4, "FOOD-1": 6, "SEAS-M": 4},
+}
+
 OUTCOME_WEIGHTS = [("served", 0.72), ("escalated", 0.08), ("declined", 0.08), ("not_found", 0.12)]
 
 SCENARIOS = {
@@ -75,8 +91,8 @@ class Sim:
         self.speed = cfg.sim_speed
         self.manual: set[str] = set()      # responders a human is playing via the UI
         self.golden: dict[str, str] = {}   # order_id -> chosen responder (scripted clean arc)
-        self._restock_flagged: set[str] = set()
-        self._pending_restocks: dict[str, float] = {}   # sku -> delivery due (sim ts)
+        self._restock_flagged: set[tuple[str, str]] = set()          # (depot, sku)
+        self._pending_restocks: dict[tuple[str, str], float] = {}    # (depot, sku) -> due
         self._phone_counter = 0
         self._resp: dict[str, dict] = {}
         self._decides: dict[str, float] = {}   # assignment_id -> decision due (per-offer, not per-responder)
@@ -88,10 +104,12 @@ class Sim:
 
     # -------------------------------------------------------------- setup --
     def _seed_world(self) -> None:
-        for sku, count in (("MED-1", 18), ("FOOD-1", 24), ("SEAS-M", 15)):
-            self.svc.store.execute(
-                "INSERT OR REPLACE INTO inventory (partner_id, sku, count, restock_threshold) "
-                "VALUES ('partner_1', ?, ?, 6)", (sku, count))
+        # Stock lives at depots (inventory.partner_id carries the depot id).
+        for depot_id, stock in DEPOT_STOCK_SEED.items():
+            for sku, count in stock.items():
+                self.svc.store.execute(
+                    "INSERT OR REPLACE INTO inventory (partner_id, sku, count, restock_threshold) "
+                    "VALUES (?, ?, ?, 3)", (depot_id, sku, count))
         for i, (name, medical, mode) in enumerate(RESPONDER_SEED):
             rid = f"resp_{i+1}"
             self.svc.store.insert("responders", {
@@ -105,15 +123,58 @@ class Sim:
                 "accept_p": self.rng.uniform(0.55, 0.85),      # GoodSAM band, generous end
                 "state": "idle", "order_id": None, "target": None,
                 "dwell_until": None, "route": None, "route_idx": 0,
+                "depot_id": None, "depot_name": None, "pickup_idx": None, "picked_up": True,
             }
             self.svc.positions[rid] = (lat, lng)
 
     def _route_to(self, r: dict, tlat: float, tlng: float) -> list[tuple[float, float]]:
         """Waypoints for r to reach (tlat, tlng) by its travel mode, over
         the real road graph when available."""
+        return self._route_between(r["mode"], r["lat"], r["lng"], tlat, tlng)
+
+    def _route_between(self, mode: str, alat: float, alng: float,
+                       blat: float, blng: float) -> list[tuple[float, float]]:
         if self.graph is not None:
-            return self.graph.route(r["lat"], r["lng"], tlat, tlng, mode=r["mode"])[0]
-        return self.mesh.route(r["lat"], r["lng"], tlat, tlng)[0]
+            return self.graph.route(alat, alng, blat, blng, mode=mode)[0]
+        return self.mesh.route(alat, alng, blat, blng)[0]
+
+    @staticmethod
+    def _polyline_m(pts: list[tuple[float, float]]) -> float:
+        return sum(geo.haversine_m(*a, *b) for a, b in zip(pts, pts[1:]))
+
+    # ------------------------------------------------------------- depots --
+    def _depot_stock(self, depot_id: str, sku: str) -> int:
+        row = self.svc.store.one(
+            "SELECT count FROM inventory WHERE partner_id=? AND sku=?", (depot_id, sku))
+        return row["count"] if row else 0
+
+    def _choose_depot(self, r: dict, sku: str, target: tuple[float, float]):
+        """The cheapest-detour depot that still has the kit: minimizes
+        road-distance(rider -> depot) + road-distance(depot -> case).
+        Returns (depot_tuple, leg1, leg2) or None when every depot is dry."""
+        best = None
+        for depot in DEPOT_SEED:
+            if self._depot_stock(depot[0], sku) <= 0:
+                continue
+            leg1 = self._route_to(r, depot[2], depot[3])
+            leg2 = self._route_between(r["mode"], depot[2], depot[3], *target)
+            cost = self._polyline_m(leg1) + self._polyline_m(leg2)
+            if best is None or cost < best[0]:
+                best = (cost, depot, leg1, leg2)
+        return None if best is None else best[1:]
+
+    def depots(self) -> list[dict]:
+        rows = self.svc.store.query("SELECT * FROM inventory")
+        by_depot: dict[str, dict] = {}
+        for row in rows:
+            by_depot.setdefault(row["partner_id"], {})[row["sku"]] = row["count"]
+        out = []
+        for depot_id, name, lat, lng in DEPOT_SEED:
+            stock = by_depot.get(depot_id, {})
+            low = [s for s, n in stock.items() if n <= 3]
+            out.append({"id": depot_id, "name": name, "lat": lat, "lng": lng,
+                        "stock": stock, "low": low})
+        return out
 
     def _random_point(self, radius_frac: float = 1.0) -> tuple[float, float]:
         r = self.cfg.zone_radius_m * radius_frac * (self.rng.random() ** 0.5)
@@ -294,11 +355,31 @@ class Sim:
             "SELECT c.* FROM cases c JOIN orders o ON o.case_id = c.id WHERE o.id=?", (order_id,))
         if not case or case["lat"] is None:
             return
+        order = self.svc.store.one("SELECT * FROM orders WHERE id=?", (order_id,))
         target = (case["lat"], case["lng"])
-        waypoints = self._route_to(r, *target)
+        # Kits live at depots: route via the cheapest-detour depot that has
+        # this SKU. A network-wide stockout goes direct + flags the
+        # coordinator rather than stranding the case.
+        pick = self._choose_depot(r, order["sku"], target) if order else None
+        if pick:
+            depot, leg1, leg2 = pick
+            waypoints = leg1 + leg2[1:]
+            r["depot_id"], r["depot_name"] = depot[0], depot[1]
+            r["pickup_idx"], r["picked_up"] = max(1, len(leg1) - 1), False
+        else:
+            waypoints = self._route_to(r, *target)
+            r["depot_id"], r["depot_name"] = None, None
+            r["pickup_idx"], r["picked_up"] = None, True
+            if order:
+                self.svc.emit("coordinator_flag", {
+                    "order_id": order_id,
+                    "reason": f"stockout: no depot holds {order['sku']} — rider going direct"})
         r["state"], r["order_id"], r["target"] = "enroute", order_id, target
         # waypoints[0] is the responder's own current position — start at [1]
         r["route"], r["route_idx"] = waypoints, 1
+        # fresh safety clock: idle dwell before this job must not count as
+        # "hasn't moved while en route"
+        r["_last_pos"], r["_last_move_ts"] = None, self.sim_now
 
     def _advance_route(self, r: dict, dist_m: float) -> None:
         """Walk r along its mesh route by dist_m, waypoint by waypoint —
@@ -318,9 +399,37 @@ class Sim:
             else:
                 r["lat"], r["lng"] = geo.step_towards(r["lat"], r["lng"], *nxt, remaining)
                 remaining = 0.0
+        # kit pickup: passing the depot waypoint flips the flag, once
+        if (r["state"] == "enroute" and not r.get("picked_up")
+                and r.get("pickup_idx") is not None and r["route_idx"] > r["pickup_idx"]):
+            r["picked_up"] = True
+            self.svc.emit("kit_pickup", {
+                "responder_id": r["id"], "name": r["name"],
+                "depot": r.get("depot_name"), "order_id": r.get("order_id")})
+
+    def _check_overdue(self, r: dict) -> None:
+        """Rider safety: an enroute responder whose position hasn't changed
+        for 150+ sim-seconds gets flagged to the coordinator, once per
+        order. Simulated riders always move — this fires for humans. The
+        clock is reset at accept, so idle dwell never counts."""
+        if r["state"] != "enroute":
+            return
+        pos = (round(r["lat"], 6), round(r["lng"], 6))
+        moved = r.get("_last_pos") != pos
+        if moved:
+            r["_last_pos"], r["_last_move_ts"] = pos, self.sim_now
+            return
+        if (self.sim_now - r.get("_last_move_ts", self.sim_now) > 150
+                and r.get("_overdue_for") != r["order_id"]):
+            r["_overdue_for"] = r["order_id"]
+            self.svc.emit("safety_alert", {
+                "responder_id": r["id"], "name": r["name"], "order_id": r["order_id"],
+                "reason": "no movement for 2½ min while en route — check in",
+            })
 
     def _responders_move(self, dt: float) -> None:
         for r in self._resp.values():
+            self._check_overdue(r)
             if r["state"] == "enroute" and r["target"]:
                 self._advance_route(r, r["speed"] * dt)
                 if geo.haversine_m(r["lat"], r["lng"], *r["target"]) <= self.cfg.arrive_radius_m:
@@ -359,34 +468,44 @@ class Sim:
         closed = self.svc.dispatch.close(r["order_id"], outcome)
         if closed:
             if outcome in ("served", "escalated"):
-                self._consume_kit(order["sku"])
+                self._consume_kit(order["sku"], r.get("depot_id"))
             self.svc.notify_outcome(order["case_id"], outcome)
             if outcome == "escalated":
                 due = 600 if order["id"] in self.golden else self.rng.uniform(600, 1500)
                 self._pending_escalations[r["order_id"]] = self.sim_now + due
         r["state"], r["order_id"], r["target"] = "idle", None, None
         r["route"], r["route_idx"] = None, 0
+        r["depot_id"], r["depot_name"], r["pickup_idx"], r["picked_up"] = None, None, None, True
 
     # ------------------------------------------------- inventory & restock --
-    def _consume_kit(self, sku: str) -> None:
+    def _depot_name(self, depot_id: str | None) -> str:
+        return next((d[1] for d in DEPOT_SEED if d[0] == depot_id), depot_id or "?")
+
+    def _consume_kit(self, sku: str, depot_id: str | None = None) -> None:
+        depot_id = depot_id or DEPOT_SEED[0][0]   # stockout fallback: book it somewhere honest
         self.svc.store.execute(
-            "UPDATE inventory SET count = MAX(count - 1, 0) WHERE partner_id='partner_1' AND sku=?",
-            (sku,))
+            "UPDATE inventory SET count = MAX(count - 1, 0) WHERE partner_id=? AND sku=?",
+            (depot_id, sku))
         row = self.svc.store.one(
-            "SELECT * FROM inventory WHERE partner_id='partner_1' AND sku=?", (sku,))
-        if row and row["count"] <= (row["restock_threshold"] or 0) and sku not in self._restock_flagged:
-            self._restock_flagged.add(sku)
-            self._pending_restocks[sku] = self.sim_now + 600   # courier rail: ~10 sim-min
-            self.svc.emit("restock_needed", {"sku": sku, "count": row["count"]})
+            "SELECT * FROM inventory WHERE partner_id=? AND sku=?", (depot_id, sku))
+        key = (depot_id, sku)
+        if row and row["count"] <= (row["restock_threshold"] or 0) and key not in self._restock_flagged:
+            self._restock_flagged.add(key)
+            self._pending_restocks[key] = self.sim_now + 600   # courier rail: ~10 sim-min
+            self.svc.emit("restock_needed", {"sku": sku, "count": row["count"],
+                                             "depot": self._depot_name(depot_id)})
 
     def _process_restocks(self) -> None:
-        done = [sku for sku, due in self._pending_restocks.items() if self.sim_now >= due]
-        for sku in done:
+        done = [k for k, due in self._pending_restocks.items() if self.sim_now >= due]
+        for key in done:
+            depot_id, sku = key
             self.svc.store.execute(
-                "UPDATE inventory SET count = count + 12 WHERE partner_id='partner_1' AND sku=?", (sku,))
-            del self._pending_restocks[sku]
-            self._restock_flagged.discard(sku)
-            self.svc.emit("restock_delivered", {"sku": sku, "qty": 12})
+                "UPDATE inventory SET count = count + 8 WHERE partner_id=? AND sku=?",
+                (depot_id, sku))
+            del self._pending_restocks[key]
+            self._restock_flagged.discard(key)
+            self.svc.emit("restock_delivered", {"sku": sku, "qty": 8,
+                                                "depot": self._depot_name(depot_id)})
 
     def _complete_escalations(self) -> None:
         done = [oid for oid, t in self._pending_escalations.items() if self.sim_now >= t]
@@ -410,8 +529,11 @@ class Sim:
                 "ON CONFLICT(cell, category) DO UPDATE SET n = n + 1",
                 (geo.cell_key(lat, lng),
                  self.rng.choice(["medical", "food", "food", "shelter"])))
+        # Trips are longer now that riders travel real streets at real
+        # per-mode speeds AND detour via a kit depot — the first staged case
+        # needs a wider window to reach a closed outcome before boot.
         self.run_scenario("hungry_elder")
-        self._fast_forward(900)
+        self._fast_forward(2100)
         self.run_scenario("family_rain")
         self._fast_forward(240)
         self.run_scenario("golden_run")
@@ -445,6 +567,7 @@ class Sim:
             "id": r["id"], "name": r["name"], "medical": r["medical"], "mode": r["mode"],
             "lat": r["lat"], "lng": r["lng"], "state": r["state"], "order_id": r["order_id"],
             "manual": r["id"] in self.manual, "route": route_out, "eta_s": eta_s, "dist_m": dist_m,
+            "depot": r.get("depot_name"), "picked_up": bool(r.get("picked_up", True)),
         }
 
     def _clock_str(self) -> str:

@@ -224,8 +224,50 @@ three-way parallel workflow + serial integration:
   + night, zero console errors; route lines visibly follow streets
   with turns and ETA labels ("Sunita · 6m"). 139 tests pass.
 
+**Phases 2-6 SHIPPED (2026-08-01)** — "go with all phases":
+- **Map, better** (the founder's "it doesn't work right"): cache-busting
+  `?v=` params on every static include (stale-JS after `git pull` was the
+  likely breakage — hard-refresh no longer needed), zoom/pan clamps +
+  maxBounds so the camera can't get lost off-zone, 476 deterministic
+  building footprints in the geojson + a zoom-faded building layer, round
+  line joins. The basti now reads like a real quarter at z15+.
+- **Phase 2 (rider app):** manifest.webmanifest + icons (amber pin, named
+  Wayside) + sw.js → installable on Android and iOS (Add to Home Screen);
+  real Web Push via pywebpush + self-generated VAPID keys stored in db
+  (`/api/push/vapid`, `/api/push/subscribe`; offer pings pushed on
+  wave_started; dead subs pruned) with an in-page Notification fallback
+  when the tab is hidden; 🆘 SOS button (footer, on-duty only) → crit
+  feed event + triple-beep; overdue safety alarm (enroute + stationary
+  150 sim-s → once-per-order safety_alert; clock resets at accept — a
+  stale-idle-clock false-positive was caught live and fixed).
+- **Phase 3 (depots):** 3 placeholder depots (Basti Office, Nizamuddin
+  East Community Room, Station-side Partner Shop) hold the stock
+  (inventory.partner_id = depot id; network totals unchanged); dispatch
+  routes the accepted rider via the cheapest-detour depot WITH stock
+  (leg1+leg2 concatenated; ETA covers both); kit_pickup feed event at the
+  depot waypoint; consumption + per-(depot,sku) courier restock (+8 at
+  threshold 3); network stockout → direct route + coordinator flag; depot
+  markers with live per-SKU stock tags on the map (amber when low);
+  rider app shows "Collect the kit at X — detour already in your ETA."
+- **Phase 4 (chat line):** telegram.py — full dormant adapter (long-poll
+  bridge, inline-keyboard buttons, location/photo mapping, tg:<chat_id>
+  as phone; 17 mocked tests; never constructed without
+  PUKAAR_TELEGRAM_TOKEN, wired in __main__). Founder-facing setup doc:
+  research/telegram-setup.md. WhatsApp path unchanged/dormant (Meta
+  deferred by founder).
+- **Phase 5 (website):** /site/index.html — self-contained Wayside page
+  ("See it, send word."), zero external requests, responsive-verified at
+  390/1440px, byline "Rustom Dubash, founder"; site/DEPLOY.md covers
+  GitHub Pages + Netlify Drop free hosting.
+- **Phase 6 (money page):** research/cost-breakdown.md — sourced,
+  funder-readable; ~₹1.55L 8-week pilot incl. an explicitly-placeholder
+  stipend line; "deliberately ₹0" section.
+- Suite now at **167 tests, all passing**; every surface Playwright-
+  verified again post-integration (0 console errors, 0 false safety
+  alerts, 5 organic kit pickups in the seeded session).
+
 ---
-**Last updated:** 2026-07-31, after writing the v1 product plan. Before
+**Last updated:** 2026-08-01, after Phases 2-6 shipped. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render
 as real bent paths, ETA shows correctly, all 4 pages load with zero

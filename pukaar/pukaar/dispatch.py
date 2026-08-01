@@ -100,7 +100,7 @@ class DispatchEngine:
             })
         self.store.update("orders", order["id"], {"status": "offered", "wave": wave})
         self.emit("wave_started", {"order_id": order["id"], "wave": wave, "offered_to": cands,
-                                   "priority": order["priority"]})
+                                   "priority": order["priority"], "sku": order["sku"]})
         if order["priority"] == "P1" and wave == 1:
             self.emit("coordinator_flag", {"order_id": order["id"], "reason": "P1 dispatched — watch"})
 

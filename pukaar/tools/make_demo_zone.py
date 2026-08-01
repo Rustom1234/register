@@ -6,7 +6,9 @@ curved primary artery, Lodhi Road east-west in the north, a rail corridor
 through the south-east with exactly two road crossings, Humayun's Tomb and
 Sunder Nursery as road-free parks, a dense irregular basti of lanes and
 footways around the Dargah, and the calmer planned grid of Nizamuddin East
-between the rail and the Tomb.
+between the rail and the Tomb. Building footprints — small jittered quads
+roughly parallel to their street — line the residential roads and lanes,
+packed tight in the basti and sparser in the Nizamuddin East blocks.
 
 Everything is planned in local metres (x east, y north of the zone center)
 and converted to lat/lng with pukaar.geo.offset_m, rounded to 6 decimal
@@ -121,6 +123,7 @@ WEST_MARG = [(-1100, 1020), (-1180, 700), (-1220, 400), (-1220, 50),
 
 # Rail corridor: thin band angling NNE through the SE quadrant.
 RAIL_P0, RAIL_P1, RAIL_HALF_W = (610.0, -1950.0), (1000.0, -200.0), 40.0
+WATER_P0, WATER_P1, WATER_HALF_W = (-1400.0, -1120.0), (250.0, -1330.0), 25.0
 
 TOMB_RING = [(740, -300), (1460, -300), (1500, -260), (1500, 460),
              (1460, 500), (740, 500), (700, 460), (700, -260)]
@@ -145,6 +148,12 @@ BASTI_ROW_NAMES = {0: ("Ghalib Road", "residential"),
 BASTI_COL_NAMES = {0: ("Dargah Bazar Lane", "lane"),
                    -3: ("Kalan Masjid Lane", "lane"),
                    2: ("Chausath Khamba Lane", "lane")}
+
+# Buildings: grid center of the basti (matches _basti), and the clearance
+# every footprint corner keeps from every road centerline — a margin over
+# the 3.5 m contract the tests enforce, so 6-decimal rounding can't nick it.
+BASTI_CX, BASTI_CY = -650.0, 60.0
+BUILDING_CLEAR_M = 4.0
 
 
 def _band_ring(p0, p1, half_w):
@@ -301,6 +310,94 @@ def _build() -> Net:
     return net
 
 
+def _seg_dist(px, py, ax, ay, bx, by) -> float:
+    """Metre distance from point (px, py) to segment (ax, ay)-(bx, by)."""
+    dx, dy = bx - ax, by - ay
+    t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)
+    t = max(0.0, min(1.0, t))
+    return math.hypot(px - ax - t * dx, py - ay - t * dy)
+
+
+def _in_ring(x, y, ring) -> bool:
+    """Ray-cast point-in-polygon over a metre-space ring (unclosed)."""
+    inside = False
+    for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]):
+        if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1):
+            inside = not inside
+    return inside
+
+
+def _buildings(net: Net) -> list[list[tuple[float, float]]]:
+    """Building footprints: quads with 6-16 m sides, jitter-rotated roughly
+    parallel to their street and set 5-9 m off residential/lane centerlines
+    — dense in the basti, sparser elsewhere (Nizamuddin East's calm blocks).
+    Every corner keeps BUILDING_CLEAR_M from every road centerline, stays
+    out of park/water/rail polygons and inside the zone; candidates that
+    fail are simply dropped, so the fixed-seed draw stays deterministic."""
+    rng = random.Random(SEED + 1)
+    segs = []                       # (bbox x0, y0, x1, y1, ax, ay, bx, by)
+    for r in net.roads:
+        for a, b in zip(r["nodes"], r["nodes"][1:]):
+            (ax, ay), (bx, by) = net.meters[a], net.meters[b]
+            segs.append((min(ax, bx), min(ay, by), max(ax, bx), max(ay, by),
+                         ax, ay, bx, by))
+    avoid = [TOMB_RING, NURSERY_RING,
+             _band_ring(RAIL_P0, RAIL_P1, RAIL_HALF_W),
+             _band_ring(WATER_P0, WATER_P1, WATER_HALF_W)]
+
+    def clear(x: float, y: float) -> bool:
+        if math.hypot(x, y) > 2050 or any(_in_ring(x, y, r) for r in avoid):
+            return False
+        m = BUILDING_CLEAR_M
+        for x0, y0, x1, y1, ax, ay, bx, by in segs:
+            if (x0 - m < x < x1 + m and y0 - m < y < y1 + m
+                    and _seg_dist(x, y, ax, ay, bx, by) < m):
+                return False
+        return True
+
+    quads: list[list[tuple[float, float]]] = []
+    placed: list[tuple[float, float, float]] = []    # (cx, cy, half-diagonal)
+    for r in net.roads:
+        if r["cls"] not in ("residential", "lane"):
+            continue
+        for a, b in zip(r["nodes"], r["nodes"][1:]):
+            (ax, ay), (bx, by) = net.meters[a], net.meters[b]
+            length = math.hypot(bx - ax, by - ay)
+            if length < 24:
+                continue
+            ux, uy = (bx - ax) / length, (by - ay) / length
+            basti = math.hypot((ax + bx) / 2 - BASTI_CX,
+                               (ay + by) / 2 - BASTI_CY) < 620
+            step = 30.0 if basti else 46.0
+            p_build = 0.58 if basti else 0.4
+            t = step * rng.uniform(0.35, 0.65)
+            while t < length - 8:
+                px, py = ax + ux * t, ay + uy * t
+                for side in (1, -1):
+                    if rng.random() > p_build:
+                        continue
+                    w, d = rng.uniform(6, 16), rng.uniform(6, 13)
+                    off = side * (rng.uniform(5, 9) + d / 2)
+                    rot = math.radians(rng.uniform(-9, 9))
+                    fx = ux * math.cos(rot) - uy * math.sin(rot)
+                    fy = ux * math.sin(rot) + uy * math.cos(rot)
+                    cx, cy = px - fy * off, py + fx * off
+                    hw, hd = w / 2, d / 2
+                    quad = [(cx + fx * hw - fy * hd, cy + fy * hw + fx * hd),
+                            (cx - fx * hw - fy * hd, cy - fy * hw + fx * hd),
+                            (cx - fx * hw + fy * hd, cy - fy * hw - fx * hd),
+                            (cx + fx * hw + fy * hd, cy + fy * hw - fx * hd)]
+                    rad = math.hypot(hw, hd)
+                    if (all(clear(x, y) for x, y in quad)
+                            and all(math.hypot(cx - qx, cy - qy)
+                                    >= 0.75 * (rad + qr)
+                                    for qx, qy, qr in placed)):
+                        quads.append(quad)
+                        placed.append((cx, cy, rad))
+                t += step * rng.uniform(0.85, 1.25)
+    return quads
+
+
 def generate() -> dict:
     net = _build()
     features = []
@@ -325,7 +422,13 @@ def generate() -> dict:
     area("park", TOMB_RING, "Humayun's Tomb")
     area("park", NURSERY_RING, "Sunder Nursery")
     area("rail", _band_ring(RAIL_P0, RAIL_P1, RAIL_HALF_W))
-    area("water", _band_ring((-1400, -1120), (250, -1330), 25), "Barapullah Drain")
+    area("water", _band_ring(WATER_P0, WATER_P1, WATER_HALF_W), "Barapullah Drain")
+
+    for quad in _buildings(net):
+        ring = [list(_lnglat(*p)) for p in quad]
+        ring.append(ring[0])
+        features.append({"type": "Feature", "properties": {"kind": "building"},
+                         "geometry": {"type": "Polygon", "coordinates": [ring]}})
 
     for name, icon, (x, y) in LANDMARKS:
         features.append({
@@ -345,6 +448,8 @@ def _check(fc: dict, net: Net) -> None:
     assert net.scooter_connected(), "scooter graph is not one component"
     names = {f["properties"].get("name") for f in roads} - {None}
     assert len(names) >= 8, names
+    bldgs = [f for f in fc["features"] if f["properties"]["kind"] == "building"]
+    assert 250 <= len(bldgs) <= 500, len(bldgs)
     for f in fc["features"]:
         g = f["geometry"]
         pts = ([g["coordinates"]] if g["type"] == "Point"
@@ -369,8 +474,10 @@ def main() -> None:
     args.out.write_text(render(fc), encoding="utf-8")
     roads = [f for f in fc["features"] if f["properties"]["kind"] == "road"]
     named = sum(1 for f in roads if f["properties"].get("name"))
+    bldgs = sum(1 for f in fc["features"]
+                if f["properties"]["kind"] == "building")
     print(f"wrote {args.out} — {len(fc['features'])} features, "
-          f"{len(roads)} roads ({named} named), "
+          f"{len(roads)} roads ({named} named), {bldgs} buildings, "
           f"{args.out.stat().st_size / 1024:.0f} KB")
 
 

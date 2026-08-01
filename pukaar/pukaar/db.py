@@ -61,6 +61,12 @@ CREATE TABLE IF NOT EXISTS analytics_cells (
 CREATE TABLE IF NOT EXISTS conversations (
   phone TEXT PRIMARY KEY, phone_hash TEXT, state TEXT, log TEXT, updated_at REAL
 );
+CREATE TABLE IF NOT EXISTS push_meta (
+  k TEXT PRIMARY KEY, v TEXT
+);
+CREATE TABLE IF NOT EXISTS push_subs (
+  endpoint TEXT PRIMARY KEY, responder_id TEXT, sub TEXT
+);
 """
 
 

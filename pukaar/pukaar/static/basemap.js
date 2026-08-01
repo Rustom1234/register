@@ -31,6 +31,8 @@
       parkOutline: "#a9d2a6",
       water: "#a6d8f5",
       rail: "#e4e2dd",
+      building: "#e8e4dc",
+      buildingOutline: "#dcd7cd",
       minorCasing: "#d5d3cc",
       minorFill: "#ffffff",
       majorCasing: "#f5cf70",
@@ -50,6 +52,8 @@
       parkOutline: "#213528",
       water: "#12283a",
       rail: "#1a1d24",
+      building: "#1c1f27",
+      buildingOutline: "#242834",
       minorCasing: "#383e52",
       minorFill: "#2c3040",
       majorCasing: "#383e52",
@@ -174,6 +178,23 @@
         source: "zone",
         filter: kindIs("rail"),
         paint: { "fill-color": t.rail }
+      },
+
+      // ---- building footprints (fade in from z14.2, Google-style) ----
+      {
+        id: "building",
+        type: "fill",
+        source: "zone",
+        minzoom: 14.2,
+        filter: kindIs("building"),
+        paint: {
+          "fill-color": t.building,
+          "fill-opacity": [
+            "interpolate", ["linear"], ["zoom"],
+            14.2, 0, 15, 0.75, 16.5, 1
+          ],
+          "fill-outline-color": t.buildingOutline
+        }
       },
 
       // ---- footways (thin dashed, no casing) -------------------------

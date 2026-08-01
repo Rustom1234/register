@@ -42,6 +42,7 @@ from .dispatch import DispatchEngine
 from .intake import BotMsg, Conversation, Intake
 from .orders import build_order, route
 from .provenance import Provenance
+from .push import PushService
 from .retention import purge
 
 
@@ -61,6 +62,7 @@ class PukaarService:
         self.positions: dict[str, tuple[float, float]] = {}
         self._msg_times: dict[str, deque] = {}   # phone -> recent inbound ts
         self.dispatch = DispatchEngine(store, cfg, now_fn, lambda: self.positions, self.emit)
+        self.push = PushService(store)
         self._load_conversations()
 
     # ------------------------------------------------------- persistence --
@@ -94,6 +96,11 @@ class PukaarService:
         elif kind == "responder_arrived":
             self._notify_progress(data.get("order_id"), "S-PROGRESS-ARRIVED",
                                   data.get("responder_id"))
+        elif kind == "wave_started":
+            # The offer ping reaches the phone even with the app closed.
+            for rid in data.get("offered_to", []):
+                self.push.notify(rid, "Wayside — new offer",
+                                 f"{data.get('sku', 'kit')} nearby · first accept wins")
 
     def _notify_progress(self, order_id: str | None, sid: str, responder_id: str | None) -> None:
         if not order_id:
@@ -343,9 +350,14 @@ class PukaarService:
         accepts = q("SELECT COUNT(*) n FROM orders WHERE accepted_at IS NOT NULL")[0]["n"]
         accept_times = [r["accepted_at"] - r["created_at"] for r in
                         q("SELECT created_at, accepted_at FROM orders WHERE accepted_at IS NOT NULL")]
-        inv = q("SELECT sku, count, restock_threshold FROM inventory WHERE partner_id='partner_1'")
+        # Stock is held per depot (inventory.partner_id = depot id); the
+        # headline tile shows the network total, the map shows each depot.
+        inv = q("SELECT sku, SUM(count) AS count, MIN(restock_threshold) AS restock_threshold "
+                "FROM inventory GROUP BY sku")
         kits = {r["sku"]: r["count"] for r in inv}
-        kits_low = [r["sku"] for r in inv if r["count"] <= (r["restock_threshold"] or 0)]
+        low_rows = q("SELECT DISTINCT sku FROM inventory "
+                     "WHERE count <= COALESCE(restock_threshold, 0)")
+        kits_low = [r["sku"] for r in low_rows]
         return {
             "open_cases": open_cases,
             "served": served,

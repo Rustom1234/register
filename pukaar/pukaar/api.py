@@ -123,6 +123,7 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             "prov_ephemeral": svc.prov.ephemeral,
             "zone": {"lat": cfg.zone_lat, "lng": cfg.zone_lng, "radius_m": cfg.zone_radius_m},
             "sim": sim.snapshot(),
+            "depots": sim.depots(),
             "cases": cases,
             "orders": orders,
             "assignments": svc.store.query(
@@ -185,7 +186,26 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             return {"ok": True}
         if act.action == "assign" and act.order_id and act.responder_id:
             return {"ok": svc.dispatch.manual_assign(act.order_id, act.responder_id)}
+        if act.action == "sos" and act.responder_id:
+            # Rider safety: one tap reaches the coordinator, loudly.
+            name = next((r["name"] for r in sim.snapshot()["responders"]
+                         if r["id"] == act.responder_id), act.responder_id)
+            svc.emit("sos", {"responder_id": act.responder_id, "name": name})
+            return {"ok": True}
         raise HTTPException(400, "bad action")
+
+    class PushSub(BaseModel):
+        responder_id: str
+        subscription: dict
+
+    @app.get("/api/push/vapid")
+    def push_vapid():
+        return {"key": svc.push.vapid_public_key()}
+
+    @app.post("/api/push/subscribe")
+    def push_subscribe(body: PushSub):
+        svc.push.subscribe(body.responder_id, body.subscription)
+        return {"ok": True}
 
     class PinReq(BaseModel):
         case_id: str

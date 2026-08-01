@@ -15,7 +15,7 @@ const OUTCOME_TXT = {
 };
 
 let state = null, map, witnessPin = null, selectedCase = null, wired = false;
-const caseMarkers = new Map(), respMarkers = new Map();
+const caseMarkers = new Map(), respMarkers = new Map(), depotMarkers = new Map();
 const respTrails = new Map();   // responder movement trails (drawn via the trails source)
 let followGolden = false;                                // 🎥 camera follows the golden run
 let activeConv = "+91-DEMO";
@@ -62,6 +62,8 @@ function soundFor(e) {
     case "outcome": if (e.outcome === "served" || e.outcome === "escalated") beep(523, 0.16, 0, 0.05); break;
     case "order_created": if (e.priority === "P1") { beep(220, 0.13, 0, 0.06, "square"); beep(220, 0.13, 0.18, 0.06, "square"); } break;
     case "coordinator_alert": beep(392, 0.2, 0, 0.05, "triangle"); break;
+    case "sos": beep(220, 0.18, 0, 0.07, "square"); beep(220, 0.18, 0.24, 0.07, "square"); beep(220, 0.18, 0.48, 0.07, "square"); break;
+    case "safety_alert": beep(392, 0.2, 0, 0.05, "triangle"); beep(330, 0.2, 0.26, 0.05, "triangle"); break;
   }
 }
 
@@ -80,11 +82,18 @@ function playNewFeedSounds() {
 let mapTheme = localStorage.getItem("pukaar_map_theme") || "day";
 
 function initMap(zone) {
+  // Zoom/pan clamps: the world outside the zone is empty canvas — never
+  // let the camera get lost in it.
+  const dLat = (zone.radius_m * 2.6) / 111320;
+  const dLng = dLat / Math.cos(zone.lat * Math.PI / 180);
   map = new maplibregl.Map({
     container: "map",
     style: WaysideBasemap.buildStyle("/data/demo_zone.geojson", mapTheme),
     center: [zone.lng, zone.lat],
-    zoom: 14.6,
+    zoom: 14.9,
+    minZoom: 13.2,
+    maxZoom: 18.5,
+    maxBounds: [[zone.lng - dLng, zone.lat - dLat], [zone.lng + dLng, zone.lat + dLat]],
     attributionControl: { compact: true, customAttribution: "demo geometry — representative, not surveyed" },
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
@@ -229,8 +238,33 @@ function pushRoutes() {
   });
 }
 
+const SKU_LETTER = { "MED-1": "M", "FOOD-1": "F", "SEAS-M": "S" };
+
+function depotHtml(d) {
+  const stock = Object.entries(d.stock || {})
+    .map(([sku, n]) => `${SKU_LETTER[sku] || sku[0]}${n}`).join(" ");
+  const low = (d.low || []).length ? " low" : "";
+  return `<div class="depot-wrap"><div class="depot-box${low}">📦</div>` +
+    `<div class="resp-tag depot-tag${low}">${d.name} · ${stock}</div></div>`;
+}
+
+function syncDepots() {
+  for (const d of state.depots || []) {
+    const key = depotHtml(d);
+    if (!depotMarkers.has(d.id)) {
+      const m = domMarker(key, [d.lng, d.lat]);
+      m.__key = key;
+      depotMarkers.set(d.id, m);
+    } else {
+      const m = depotMarkers.get(d.id);
+      if (m.__key !== key) { m.getElement().innerHTML = key; m.__key = key; }
+    }
+  }
+}
+
 function syncMap() {
   if (!map || map === "failed") return;
+  syncDepots();
   const liveIds = new Set();
   for (const c of state.cases) {
     if (c.lat == null) continue;
@@ -383,6 +417,10 @@ function feedLine(e) {
       html = `⚠️ coordinator: order ${short(e.order_id)} — ${e.reason}`; cls = "warn"; break;
     case "coordinator_flag":
       html = `⚠️ flag: ${e.reason}`; cls = "warn"; break;
+    case "sos":
+      html = `🆘 <b>${e.name || respName(e.responder_id)}</b> pressed SOS — contact them NOW`; cls = "crit"; break;
+    case "safety_alert":
+      html = `🛟 safety: <b>${e.name || respName(e.responder_id)}</b> — ${e.reason}`; cls = "warn"; break;
     case "purge":
       html = `🧹 retention purge — media ${e.media}, lat/lng ${e.latlng}, rows ${e.cases}, orphan reports ${e.orphan_reports ?? 0}`; break;
     case "night_hold":
@@ -390,9 +428,11 @@ function feedLine(e) {
     case "manual_assign":
       html = `🧑‍✈️ coordinator assigned ${short(e.order_id)} → <b>${respName(e.responder_id)}</b>`; cls = "good"; break;
     case "restock_needed":
-      html = `📦 ${e.sku} low (${e.count} left) — courier restock requested`; cls = "warn"; break;
+      html = `📦 ${e.sku} low at ${e.depot || "depot"} (${e.count} left) — courier restock requested`; cls = "warn"; break;
     case "restock_delivered":
-      html = `📦 courier delivered +${e.qty} × ${e.sku} to partner_1`; cls = "good"; break;
+      html = `📦 courier delivered +${e.qty} × ${e.sku} to ${e.depot || "depot"}`; cls = "good"; break;
+    case "kit_pickup":
+      html = `📦 <b>${e.name || respName(e.responder_id)}</b> collected the kit at ${e.depot || "the depot"}`; cls = "good"; break;
     case "recheck_sent":
       html = `🤔 asked the witness of <b>${short(e.case_id)}</b>: still there?`; break;
     case "recheck_confirmed":

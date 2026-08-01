@@ -218,7 +218,8 @@ function renderActive(order) {
   const pct = dist != null && startDist.has(order.id)
     ? Math.max(0, Math.min(100, 100 - (dist / startDist.get(order.id)) * 100)) : 0;
   const onsite = order.status === "onsite";
-  const key = `${order.id}:${order.status}`;
+  const pickupPending = m && m.depot && !m.picked_up && !onsite;
+  const key = `${order.id}:${order.status}:${pickupPending}`;
   if (key === activeKey && !$("scr-active").hidden) {
     // Same order & phase: move the distance readout and progress bar in
     // place; never rebuild the DOM under the outcome buttons.
@@ -246,6 +247,9 @@ function renderActive(order) {
            the witness gets the closure message automatically.</p>`
         : `<div class="dist">${fmtDur(eta)}<small> away · ${dist != null ? Math.round(dist) : "—"} m by road</small></div>
            <div class="bar"><i style="width:${pct}%"></i></div>
+           ${pickupPending
+             ? `<p class="hint">📦 <b>Collect the kit at ${m.depot}</b> — it's on your route, the detour is already in your ETA.</p>`
+             : (m && m.depot ? `<p class="hint">✅ Kit collected at ${m.depot}.</p>` : "")}
            <p class="hint">Arrival registers automatically at the pin — or tap below
            when you're there.</p>
            <button class="big arrived" data-arrived="${order.id}">📍 I've arrived</button>`}
@@ -288,6 +292,7 @@ function render() {
   const onDuty = !!(m && m.manual);
   $("duty-pill").textContent = onDuty ? `on duty · ${m.name}` : "off duty";
   $("duty-pill").classList.toggle("on", onDuty);
+  $("sos-btn").hidden = !onDuty;
   if (!onDuty) { renderPick(); return; }
 
   const active = state.orders.find(
@@ -300,8 +305,13 @@ function render() {
     .map((a) => ({ a, order: byOrder[a.order_id] }))
     .filter((x) => x.order && x.order.status === "offered")
     .map((x) => ({ ...x, c: state.cases.find((c) => c.id === x.order.case_id) }));
-  for (const { a } of offers) {
-    if (!seenOffers.has(a.id)) { seenOffers.add(a.id); beep(988); beep(784); }
+  for (const { a, order, c } of offers) {
+    if (!seenOffers.has(a.id)) {
+      seenOffers.add(a.id);
+      beep(988); beep(784);
+      localNotify("Wayside — new offer",
+        `${order.sku}${c && c.category ? " · " + c.category : ""} · first accept wins`);
+    }
   }
   if (offers.length) { renderOffers(offers); return; }
   renderIdle(m);
@@ -329,12 +339,60 @@ $("duty-btn").addEventListener("click", async () => {
   myId = $("pick").value;
   localStorage.setItem("pukaar_resp", myId);
   await api("/api/manual", { responder_id: myId, manual: true });
+  enableNotifications();     // needs the user gesture we just got
   await poll();
 });
 
 $("duty-off").addEventListener("click", async () => {
   await api("/api/manual", { responder_id: myId, manual: false });
   await poll();
+});
+
+// ------------------------------------------------ app-ness & notifying --
+// Installable app: register the service worker (harmless if unsupported).
+let swReg = null;
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/static/sw.js")
+    .then((r) => { swReg = r; })
+    .catch(() => { /* http or old browser — the page still works */ });
+}
+
+// Real push (phone buzzes with the app closed) when the server has keys
+// and the browser supports it; in-page notifications otherwise.
+async function enableNotifications() {
+  try {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "default") await Notification.requestPermission();
+    if (Notification.permission !== "granted") return;
+    const { key } = await (await fetch("/api/push/vapid")).json();
+    if (!key || !swReg || !("pushManager" in swReg)) return;
+    const b64 = (key + "=".repeat((4 - key.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+    const raw = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const sub = await swReg.pushManager.subscribe({
+      userVisibleOnly: true, applicationServerKey: raw });
+    await api("/api/push/subscribe", { responder_id: myId, subscription: sub.toJSON() });
+  } catch { /* denied / unsupported / offline push service — beeps still work */ }
+}
+
+// In-page fallback: a system notification for offers that arrive while the
+// tab is hidden (covers the no-push cases: iOS un-installed, http, sandbox).
+function localNotify(title, body) {
+  try {
+    if (document.visibilityState === "visible") return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    if (swReg && swReg.showNotification) {
+      swReg.showNotification(title, { body, icon: "/static/icons/icon-192.png", tag: "wayside-offer" });
+    } else {
+      new Notification(title, { body, icon: "/static/icons/icon-192.png" });
+    }
+  } catch { /* notifications are best-effort */ }
+}
+
+// SOS: one tap, coordinator alerted, loudly.
+$("sos-btn").addEventListener("click", async () => {
+  if (!myId) return;
+  const res = await api("/api/responder", { action: "sos", responder_id: myId });
+  if (res.ok) toast("🆘 coordinator alerted");
 });
 
 poll();

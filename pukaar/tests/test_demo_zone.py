@@ -7,6 +7,7 @@ component (footways excluded)."""
 import importlib.util
 import json
 import math
+import random
 from pathlib import Path
 
 import pytest
@@ -69,7 +70,7 @@ def _component_count(roads):
 def test_parses_with_note_and_size(fc):
     assert fc["type"] == "FeatureCollection"
     assert "NOT surveyed" in fc["note"]
-    assert DATA.stat().st_size < 500_000
+    assert DATA.stat().st_size < 700_000
 
 
 def test_every_feature_matches_the_contract(fc):
@@ -83,6 +84,10 @@ def test_every_feature_matches_the_contract(fc):
             assert g["type"] == "Polygon"
             ring = g["coordinates"][0]
             assert len(ring) >= 4 and ring[0] == ring[-1]
+        elif kind == "building":
+            assert g["type"] == "Polygon"
+            ring = g["coordinates"][0]
+            assert len(ring) == 5 and ring[0] == ring[-1]  # closed quad
         elif kind == "landmark":
             assert g["type"] == "Point"
             assert props["icon"] in ICONS and props["name"]
@@ -96,6 +101,44 @@ def test_road_count_and_names(fc):
     names = {f["properties"].get("name") for f in roads} - {None}
     assert len(names) >= 8
     assert {"Mathura Road", "Lodhi Road"} <= names
+
+
+def _buildings(fc):
+    return [f for f in fc["features"] if f["properties"]["kind"] == "building"]
+
+
+def _to_m(pt):
+    """[lng, lat] -> local metres east/north of the zone center — the
+    inverse of the generator's geo.offset_m(ZONE_LAT, ZONE_LNG, ...)."""
+    lng, lat = pt
+    return ((lng - ZONE_LNG) * 111_320.0 * math.cos(math.radians(ZONE_LAT)),
+            (lat - ZONE_LAT) * 111_320.0)
+
+
+def _seg_dist_m(p, a, b):
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy)
+    t = max(0.0, min(1.0, t))
+    return math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy)
+
+
+def test_building_count_range(fc):
+    assert 250 <= len(_buildings(fc)) <= 500
+
+
+def test_sampled_buildings_keep_clear_of_road_centerlines(fc):
+    """No building vertex within 3.5 m of any road centerline segment,
+    spot-checked on ~40 seeded-random buildings against every road."""
+    segs = []
+    for road in _roads(fc):
+        cs = [_to_m(c) for c in road["geometry"]["coordinates"]]
+        segs.extend(zip(cs, cs[1:]))
+    sample = random.Random(42).sample(_buildings(fc), 40)
+    for f in sample:
+        for pt in f["geometry"]["coordinates"][0][:-1]:
+            p = _to_m(pt)
+            d = min(_seg_dist_m(p, a, b) for a, b in segs)
+            assert d >= 3.5, (f["geometry"]["coordinates"][0], d)
 
 
 def test_landmarks(fc):

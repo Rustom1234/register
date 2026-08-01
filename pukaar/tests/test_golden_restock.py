@@ -64,24 +64,32 @@ def test_golden_run_is_repeatable():
 
 
 def test_restock_triggers_and_delivers():
+    # Depot world: stock and the courier rail are per (depot, sku).
     cfg, svc, sim = _mk()
-    svc.store.execute("UPDATE inventory SET count=7 WHERE sku='MED-1'")
-    sim._consume_kit("MED-1")
-    assert svc.store.one("SELECT count FROM inventory WHERE sku='MED-1'")["count"] == 6
-    assert any(e["kind"] == "restock_needed" for e in svc.feed)
-    assert "MED-1" in sim._pending_restocks
+    svc.store.execute(
+        "UPDATE inventory SET count=4 WHERE partner_id='depot_basti' AND sku='MED-1'")
+    sim._consume_kit("MED-1", "depot_basti")
+    row = svc.store.one(
+        "SELECT count FROM inventory WHERE partner_id='depot_basti' AND sku='MED-1'")
+    assert row["count"] == 3                      # at threshold -> flagged
+    assert any(e["kind"] == "restock_needed" and e.get("depot") == "Basti Office"
+               for e in svc.feed)
+    assert ("depot_basti", "MED-1") in sim._pending_restocks
 
     _run(sim, 700)
-    assert svc.store.one("SELECT count FROM inventory WHERE sku='MED-1'")["count"] == 18
+    row = svc.store.one(
+        "SELECT count FROM inventory WHERE partner_id='depot_basti' AND sku='MED-1'")
+    assert row["count"] == 11                     # 3 + 8 courier top-up
     assert any(e["kind"] == "restock_delivered" for e in svc.feed)
-    assert "MED-1" not in sim._pending_restocks
+    assert ("depot_basti", "MED-1") not in sim._pending_restocks
 
 
 def test_restock_flag_not_duplicated():
     cfg, svc, sim = _mk()
-    svc.store.execute("UPDATE inventory SET count=6 WHERE sku='FOOD-1'")
-    sim._consume_kit("FOOD-1")
-    sim._consume_kit("FOOD-1")
+    svc.store.execute(
+        "UPDATE inventory SET count=4 WHERE partner_id='depot_east' AND sku='FOOD-1'")
+    sim._consume_kit("FOOD-1", "depot_east")
+    sim._consume_kit("FOOD-1", "depot_east")
     needed = [e for e in svc.feed if e["kind"] == "restock_needed" and e["sku"] == "FOOD-1"]
     assert len(needed) == 1
 
