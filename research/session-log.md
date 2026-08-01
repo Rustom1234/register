@@ -266,8 +266,23 @@ three-way parallel workflow + serial integration:
   verified again post-integration (0 console errors, 0 false safety
   alerts, 5 organic kit pickups in the seeded session).
 
+**Iteration round (2026-08-02, "find issues and iterate"):** four real
+defects found and fixed solo: (1) pywebpush missing from pyproject —
+`make install` on the founder's Mac would silently disable real push AND
+fail a test; now a dependency, plus package-data for the geojson/static.
+(2) Service worker registered from /static/sw.js could only ever scope
+/static/ — now served at /sw.js (root scope verified live:
+`http://127.0.0.1:8877/`). (3) Deep-linked riders (?id=) never got a
+notification-permission prompt (no user gesture) — first tap now
+triggers it. (4) Depot pins were hand-guessed coords floating off-road
+(East depot 212 m into empty canvas) — snapped onto the street graph at
+boot; test updated to use snapped positions. Also probed routing for
+silent straight-line fallbacks: 0 in 600 random routes across all three
+modes. Doc counts refreshed (167 tests). All 167 pass; supervisor
+re-verified live, zero console errors.
+
 ---
-**Last updated:** 2026-08-01, after Phases 2-6 shipped. Before
+**Last updated:** 2026-08-02, after the find-issues iteration. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render
 as real bent paths, ETA shows correctly, all 4 pages load with zero

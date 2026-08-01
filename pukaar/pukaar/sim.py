@@ -86,6 +86,15 @@ class Sim:
         except FileNotFoundError:
             self.graph = None
         self.mesh = routing.RoadMesh(cfg.zone_lat, cfg.zone_lng, cfg.zone_radius_m)
+        # Depot pins snapped onto the street network so the box sits ON a
+        # road, not in a courtyard — placeholder coords are hand-guessed.
+        self.depot_list: list[tuple[str, str, float, float]] = []
+        for depot_id, name, lat, lng in DEPOT_SEED:
+            if self.graph is not None:
+                snap = self.graph._snap(lat, lng, routing.SPEEDS_KMH["walk"])
+                if snap is not None:
+                    lat, lng = snap.lat, snap.lng
+            self.depot_list.append((depot_id, name, lat, lng))
         self.sim_now = 8 * 3600.0          # 08:00 sim time, day 0
         self.running = True
         self.speed = cfg.sim_speed
@@ -153,7 +162,7 @@ class Sim:
         road-distance(rider -> depot) + road-distance(depot -> case).
         Returns (depot_tuple, leg1, leg2) or None when every depot is dry."""
         best = None
-        for depot in DEPOT_SEED:
+        for depot in self.depot_list:
             if self._depot_stock(depot[0], sku) <= 0:
                 continue
             leg1 = self._route_to(r, depot[2], depot[3])
@@ -169,7 +178,7 @@ class Sim:
         for row in rows:
             by_depot.setdefault(row["partner_id"], {})[row["sku"]] = row["count"]
         out = []
-        for depot_id, name, lat, lng in DEPOT_SEED:
+        for depot_id, name, lat, lng in self.depot_list:
             stock = by_depot.get(depot_id, {})
             low = [s for s, n in stock.items() if n <= 3]
             out.append({"id": depot_id, "name": name, "lat": lat, "lng": lng,
@@ -479,7 +488,7 @@ class Sim:
 
     # ------------------------------------------------- inventory & restock --
     def _depot_name(self, depot_id: str | None) -> str:
-        return next((d[1] for d in DEPOT_SEED if d[0] == depot_id), depot_id or "?")
+        return next((d[1] for d in self.depot_list if d[0] == depot_id), depot_id or "?")
 
     def _consume_kit(self, sku: str, depot_id: str | None = None) -> None:
         depot_id = depot_id or DEPOT_SEED[0][0]   # stockout fallback: book it somewhere honest

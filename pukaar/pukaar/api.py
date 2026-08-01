@@ -319,6 +319,12 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     def supervisor_app():
         return FileResponse(STATIC / "supervisor.html")
 
+    @app.get("/sw.js")
+    def service_worker():
+        # Served at the root so its scope covers /responder — a worker
+        # registered from /static/ could only ever control /static/.
+        return FileResponse(STATIC / "sw.js", media_type="text/javascript")
+
     @app.get("/data/demo_zone.geojson")
     def zone_geojson():
         # The basemap and the router read the same file — the streets you

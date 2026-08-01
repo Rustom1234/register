@@ -51,6 +51,10 @@ document.addEventListener("pointerdown", () => {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     audioCtx.resume();
   } catch { /* ignore */ }
+  // Deep-linked riders (?id=...) went on duty without a click; their first
+  // tap is the user gesture that lets us ask for notification permission.
+  const m = me();
+  if (m && m.manual) enableNotifications();
 }, { once: true });
 
 async function api(path, body) {
@@ -352,7 +356,7 @@ $("duty-off").addEventListener("click", async () => {
 // Installable app: register the service worker (harmless if unsupported).
 let swReg = null;
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/static/sw.js")
+  navigator.serviceWorker.register("/sw.js")
     .then((r) => { swReg = r; })
     .catch(() => { /* http or old browser — the page still works */ });
 }

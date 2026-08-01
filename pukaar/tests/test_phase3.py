@@ -55,11 +55,11 @@ def test_accept_routes_via_a_depot_and_picks_up():
     assert r is not None, "no acceptance within the budget"
     # the rider either already passed the depot or still carries the plan
     assert r["depot_id"] is not None
-    depot = next(d for d in DEPOT_SEED if d[0] == r["depot_id"])
+    depot = next(d for d in sim.depot_list if d[0] == r["depot_id"])
     if not r["picked_up"]:
-        # the planned route physically passes through the depot's snap point:
-        # some waypoint lies within 60 m of the depot
-        assert any(geo.haversine_m(w[0], w[1], depot[2], depot[3]) < 60
+        # the planned route physically passes through the depot's snapped
+        # street position: some waypoint lies within 25 m of it
+        assert any(geo.haversine_m(w[0], w[1], depot[2], depot[3]) < 25
                    for w in r["route"]), "route does not pass the chosen depot"
     # driving long enough must produce the pickup feed event
     _run(sim, 3600)
