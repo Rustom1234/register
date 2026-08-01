@@ -182,9 +182,26 @@ The phased plan lives in **`research/product-plan.md`** (written for a
 non-technical reader): 1 map-becomes-real, 2 rider mobile app +
 notifications + safety, 3 kit depot network, 4 real chat line
 (WhatsApp via Meta verification; Telegram as instant free equivalent),
-5 website, 6 cost sheet. Founder decisions still open: depot list,
-Meta verification willingness, domain name, rider hardware, name on
-site.
+5 website, 6 cost sheet.
+
+**Founder decisions, answered (2026-08-01):** depots = placeholders for
+now · Meta verification = not now, maybe later (so Phase 4 leads with
+the Telegram/web-chat path) · domain = temp/free service for now ·
+rider hardware = Android AND iPhone (PWA push must cover installed-PWA
+iOS) · site byline = "Rustom Dubash, founder" confirmed.
+
+**Phase 1 build started (2026-08-01):** MapLibre GL vendored onto main
+from the experiment worktree. Three-way parallel build launched
+(workflow `phase1-map-build`): (a) `tools/make_demo_zone.py` +
+`pukaar/data/demo_zone.geojson` — a Nizamuddin-inspired named street
+network (representative, NOT surveyed; sandbox blocks OSM) plus
+`tools/fetch_real_roads.py` for real OSM on the founder's machine;
+(b) `routing.py` v2 — RoadGraph over that geojson, walk/cycle/scooter
+speed profiles, scooter banned from footways, A* with snap-to-edge;
+(c) `static/basemap.js` — Google-style day/night MapLibre style over
+the local geojson with self-hosted glyph PBFs. Integration (sim modes,
+API, all four pages onto the new map) happens serially after they
+land.
 
 ---
 **Last updated:** 2026-07-31, after writing the v1 product plan. Before
