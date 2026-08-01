@@ -168,9 +168,28 @@ approach above is the worked-around answer already in the repo.
 4. This file (`research/session-log.md`) for what's done / open / flagged
 5. GitHub link: https://github.com/Rustom1234/register/tree/claude/street-aid-research-4xqdpu
 
+## v1 direction (set by the founder, 2026-07-31)
+
+After an NGO-director-perspective review, the founder set nine
+priorities: English-perfect first · rider push notifications · cost
+breakdown document · a flawless public website (high priority) ·
+Google-quality map + real-road routing ("as close to Google Maps as
+possible without the paid API") · rider side as a mobile-style app ·
+a real WhatsApp number or equivalent chat line · kit depots optimised
+across NGO locations · safety + tracking throughout.
+
+The phased plan lives in **`research/product-plan.md`** (written for a
+non-technical reader): 1 map-becomes-real, 2 rider mobile app +
+notifications + safety, 3 kit depot network, 4 real chat line
+(WhatsApp via Meta verification; Telegram as instant free equivalent),
+5 website, 6 cost sheet. Founder decisions still open: depot list,
+Meta verification willingness, domain name, rider hardware, name on
+site.
+
 ---
-**Last updated:** 2026-07-31, after the routing/ETA engine and the
-witness/supervisor interface split. All 111 tests pass; verified live
-with Playwright (route lines render as real bent paths, ETA shows
-correctly, all 4 pages load with zero console errors, a real message
-typed on /witness flows through to a real case in the backend).
+**Last updated:** 2026-07-31, after writing the v1 product plan. Before
+that: routing/ETA engine and the witness/supervisor interface split —
+all 111 tests pass; verified live with Playwright (route lines render
+as real bent paths, ETA shows correctly, all 4 pages load with zero
+console errors, a real message typed on /witness flows through to a
+real case in the backend).
