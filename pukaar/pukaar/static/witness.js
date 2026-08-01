@@ -22,17 +22,36 @@ function escapeHtml(s) {
 }
 
 // ------------------------------------------------------------------ map --
+// Same Google-style local basemap the supervisor sees — day theme, since a
+// witness is a member of the public, not an ops room.
 function initMap(zone) {
   try {
-    map = L.map("map", { zoomControl: true }).setView([zone.lat, zone.lng], 15);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    }).addTo(map);
-    L.circle([zone.lat, zone.lng], {
-      radius: zone.radius_m, color: "#898781", weight: 1.2, dashArray: "6 7", fill: false, opacity: 0.7,
-    }).addTo(map);
-    map.on("click", (e) => placeWitnessPin(e.latlng.lat, e.latlng.lng));
+    map = new maplibregl.Map({
+      container: "map",
+      style: WaysideBasemap.buildStyle("/data/demo_zone.geojson", "day"),
+      center: [zone.lng, zone.lat],
+      zoom: 14.6,
+      attributionControl: { compact: true, customAttribution: "demo geometry — representative, not surveyed" },
+    });
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+    map.on("style.load", () => {
+      // NB: "zone" is the basemap's street-data source — the ring is "zonering"
+      if (map.getSource("zonering")) return;
+      const pts = [];
+      for (let i = 0; i <= 72; i++) {
+        const a = (i / 72) * 2 * Math.PI;
+        pts.push([
+          zone.lng + (zone.radius_m * Math.sin(a)) / (111320 * Math.cos(zone.lat * Math.PI / 180)),
+          zone.lat + (zone.radius_m * Math.cos(a)) / 111320,
+        ]);
+      }
+      map.addSource("zonering", { type: "geojson",
+        data: { type: "Feature", geometry: { type: "LineString", coordinates: pts } } });
+      map.addLayer({ id: "zone-line", type: "line", source: "zonering",
+        paint: { "line-color": "#6b6a66", "line-opacity": 0.7, "line-width": 1.2,
+                 "line-dasharray": [2, 2.4] } });
+    });
+    map.on("click", (e) => placeWitnessPin(e.lngLat.lat, e.lngLat.lng));
   } catch {
     $("map").innerHTML = '<div style="display:grid;place-items:center;height:100%;color:#898781">map unavailable — you can still type a landmark</div>';
     map = "failed";
@@ -42,11 +61,12 @@ function initMap(zone) {
 function placeWitnessPin(lat, lng) {
   if (map === "failed") return;
   if (!witnessPin) {
-    witnessPin = L.marker([lat, lng], {
-      draggable: true,
-      icon: L.divIcon({ className: "", html: '<div class="witness-pin">📍</div>', iconAnchor: [11, 22] }),
-    }).addTo(map);
-  } else witnessPin.setLatLng([lat, lng]);
+    const el = document.createElement("div");
+    el.className = "witness-pin";
+    el.textContent = "📍";
+    witnessPin = new maplibregl.Marker({ element: el, draggable: true, anchor: "bottom" })
+      .setLngLat([lng, lat]).addTo(map);
+  } else witnessPin.setLngLat([lng, lat]);
 }
 
 // ---------------------------------------------------------------- phone --
@@ -120,7 +140,7 @@ function wire() {
   $("msg-in").addEventListener("keydown", (e) => { if (e.key === "Enter") sendText(); });
   $("btn-loc").addEventListener("click", () => {
     let lat, lng;
-    if (witnessPin) ({ lat, lng } = witnessPin.getLatLng());
+    if (witnessPin) ({ lat, lng } = witnessPin.getLngLat());
     else if (state) {
       const z = state.zone;
       lat = z.lat + (Math.random() - 0.5) * 0.012; lng = z.lng + (Math.random() - 0.5) * 0.012;

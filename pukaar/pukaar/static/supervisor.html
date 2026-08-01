@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pukaar — Supervisor</title>
-<link rel="stylesheet" href="/static/vendor/leaflet.css">
+<link rel="stylesheet" href="/static/vendor/maplibre-gl.css">
 <link rel="stylesheet" href="/static/app.css">
 </head>
 <body class="no-left">
@@ -71,6 +71,7 @@
       <span><i class="dot p1-dot"></i>P1 urgent</span>
       <button id="cells-toggle" title="Show the 90-day aggregate cells — the only location data that survives the retention purge"
               aria-pressed="false">▦ 90-day cells</button>
+      <button id="theme-toggle" title="Switch between the day street map and the night ops map">🌙 night map</button>
     </div>
   </section>
 
@@ -101,7 +102,8 @@
   <span>backend: <b id="foot-backend">…</b> · witness reports and agent inferences are HMAC provenance-tagged; responder observations are provenance-labelled in the audit log</span>
 </footer>
 
-<script src="/static/vendor/leaflet.js"></script>
+<script src="/static/vendor/maplibre-gl.js"></script>
+<script src="/static/basemap.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

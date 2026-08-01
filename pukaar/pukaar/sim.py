@@ -19,9 +19,14 @@ from .db import new_id
 from .service import PukaarService
 
 RESPONDER_SEED = [
-    ("Meena", True), ("Arjun", False), ("Fatima", True),
-    ("Ravi", False), ("Sunita", False), ("Imran", False),
+    ("Meena", True, "walk"), ("Arjun", False, "cycle"), ("Fatima", True, "walk"),
+    ("Ravi", False, "scooter"), ("Sunita", False, "cycle"), ("Imran", False, "scooter"),
 ]
+
+# Movement pace per travel mode, metres per sim-second. The router prices
+# edges per road class; movement uses the mode's flat urban average so the
+# dot's arrival matches the ETA we display (remaining metres / this speed).
+MODE_SPEED_MPS = {"walk": 1.4, "cycle": 3.3, "scooter": 5.6}
 
 OUTCOME_WEIGHTS = [("served", 0.72), ("escalated", 0.08), ("declined", 0.08), ("not_found", 0.12)]
 
@@ -57,6 +62,13 @@ class Sim:
         self.svc = svc
         self.cfg = cfg
         self.rng = random.Random(seed)
+        # Real road graph when the demo-zone GeoJSON is present (the normal
+        # case — it ships with the package); the old synthetic mesh only as
+        # a last-resort fallback so the demo can never fail to boot.
+        try:
+            self.graph: routing.RoadGraph | None = routing.RoadGraph()
+        except FileNotFoundError:
+            self.graph = None
         self.mesh = routing.RoadMesh(cfg.zone_lat, cfg.zone_lng, cfg.zone_radius_m)
         self.sim_now = 8 * 3600.0          # 08:00 sim time, day 0
         self.running = True
@@ -80,7 +92,7 @@ class Sim:
             self.svc.store.execute(
                 "INSERT OR REPLACE INTO inventory (partner_id, sku, count, restock_threshold) "
                 "VALUES ('partner_1', ?, ?, 6)", (sku, count))
-        for i, (name, medical) in enumerate(RESPONDER_SEED):
+        for i, (name, medical, mode) in enumerate(RESPONDER_SEED):
             rid = f"resp_{i+1}"
             self.svc.store.insert("responders", {
                 "id": rid, "partner_id": "partner_1", "display_name": name,
@@ -89,12 +101,19 @@ class Sim:
             lat, lng = self._random_point(0.85)
             self._resp[rid] = {
                 "id": rid, "name": name, "medical": medical, "lat": lat, "lng": lng,
-                "speed": self.rng.uniform(3.5, 5.5),          # m per sim-second (~cycle)
+                "mode": mode, "speed": MODE_SPEED_MPS[mode],   # m per sim-second
                 "accept_p": self.rng.uniform(0.55, 0.85),      # GoodSAM band, generous end
                 "state": "idle", "order_id": None, "target": None,
                 "dwell_until": None, "route": None, "route_idx": 0,
             }
             self.svc.positions[rid] = (lat, lng)
+
+    def _route_to(self, r: dict, tlat: float, tlng: float) -> list[tuple[float, float]]:
+        """Waypoints for r to reach (tlat, tlng) by its travel mode, over
+        the real road graph when available."""
+        if self.graph is not None:
+            return self.graph.route(r["lat"], r["lng"], tlat, tlng, mode=r["mode"])[0]
+        return self.mesh.route(r["lat"], r["lng"], tlat, tlng)[0]
 
     def _random_point(self, radius_frac: float = 1.0) -> tuple[float, float]:
         r = self.cfg.zone_radius_m * radius_frac * (self.rng.random() ** 0.5)
@@ -276,7 +295,7 @@ class Sim:
         if not case or case["lat"] is None:
             return
         target = (case["lat"], case["lng"])
-        waypoints, _ = self.mesh.route(r["lat"], r["lng"], *target)
+        waypoints = self._route_to(r, *target)
         r["state"], r["order_id"], r["target"] = "enroute", order_id, target
         # waypoints[0] is the responder's own current position — start at [1]
         r["route"], r["route_idx"] = waypoints, 1
@@ -312,10 +331,10 @@ class Sim:
             elif r["state"] == "onsite":
                 if r["id"] not in self.manual and self.sim_now >= (r["dwell_until"] or 0):
                     self._close_order(r)
-            else:  # idle drift — still mesh-routed, just slower and ambient
+            else:  # idle drift — still road-routed, just slower and ambient
                 if r["target"] is None or self.rng.random() < 0.005:
                     r["target"] = self._random_point()
-                    r["route"], r["route_idx"] = self.mesh.route(r["lat"], r["lng"], *r["target"])[0], 1
+                    r["route"], r["route_idx"] = self._route_to(r, *r["target"]), 1
                 self._advance_route(r, r["speed"] * 0.4 * dt)
             self.svc.positions[r["id"]] = (r["lat"], r["lng"])
 
@@ -423,7 +442,7 @@ class Sim:
             dist_m = round(routing.route_remaining_m(r["route"], r["route_idx"], r["lat"], r["lng"]))
             eta_s = round(dist_m / r["speed"]) if r["speed"] > 0 else None
         return {
-            "id": r["id"], "name": r["name"], "medical": r["medical"],
+            "id": r["id"], "name": r["name"], "medical": r["medical"], "mode": r["mode"],
             "lat": r["lat"], "lng": r["lng"], "state": r["state"], "order_id": r["order_id"],
             "manual": r["id"] in self.manual, "route": route_out, "eta_s": eta_s, "dist_m": dist_m,
         }

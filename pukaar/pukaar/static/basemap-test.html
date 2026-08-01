@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wayside basemap — eyeball test</title>
+  <link rel="stylesheet" href="vendor/maplibre-gl.css">
+  <style>
+    html, body { margin: 0; height: 100%; background: #0b0c10; }
+    #map { position: absolute; inset: 0; }
+    #bar {
+      position: absolute; top: 10px; left: 10px; z-index: 10;
+      display: flex; gap: 8px; align-items: center;
+      font: 13px/1.4 system-ui, sans-serif;
+    }
+    #bar button {
+      padding: 6px 14px; border: 1px solid #888; border-radius: 6px;
+      background: #ffffff; color: #222; cursor: pointer; font: inherit;
+    }
+    #bar span {
+      background: rgba(255,255,255,0.85); color: #222;
+      padding: 4px 8px; border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="bar">
+    <button id="flip" type="button">Switch to night</button>
+    <span id="which">theme: day</span>
+  </div>
+
+  <script src="vendor/maplibre-gl.js"></script>
+  <script src="basemap.js"></script>
+  <script>
+    "use strict";
+
+    // Hand-written sample geometry exercising every kind/class of the
+    // demo_zone.geojson schema. Coordinates are [lng, lat]; intersecting
+    // roads share exact vertices.
+    var C_LNG = 77.2507, C_LAT = 28.5933; // demo-zone center (Nizamuddin)
+
+    var sample = {
+      "type": "FeatureCollection",
+      "note": "Inline sample for basemap eyeballing only.",
+      "features": [
+        // --- roads -------------------------------------------------
+        { "type": "Feature",
+          "properties": { "kind": "road", "class": "primary", "name": "Mathura Road" },
+          "geometry": { "type": "LineString", "coordinates":
+            [[77.2507, 28.5850], [77.2507, 28.5933], [77.2500, 28.6010]] } },
+        { "type": "Feature",
+          "properties": { "kind": "road", "class": "secondary", "name": "Lodhi Road" },
+          "geometry": { "type": "LineString", "coordinates":
+            [[77.2400, 28.5933], [77.2507, 28.5933], [77.2610, 28.5942]] } },
+        { "type": "Feature",
+          "properties": { "kind": "road", "class": "residential", "name": "Nizamuddin East Road" },
+          "geometry": { "type": "LineString", "coordinates":
+            [[77.2507, 28.5933], [77.2560, 28.5900], [77.2582, 28.5893]] } },
+        { "type": "Feature",
+          "properties": { "kind": "road", "class": "residential" },
+          "geometry": { "type": "LineString", "coordinates":
+            [[77.2560, 28.5900], [77.2554, 28.5861]] } },
+        { "type": "Feature",
+          "properties": { "kind": "road", "class": "lane", "name": "Ghalib Lane" },
+          "geometry": { "type": "LineString", "coordinates":
+            [[77.2507, 28.5850], [77.2538, 28.5854], [77.2554, 28.5861]] } },
+        { "type": "Feature",
+          "properties": { "kind": "road", "class": "lane" },
+          "geometry": { "type": "LineString", "coordinates":
+            [[77.2538, 28.5854], [77.2544, 28.5882]] } },
+        { "type": "Feature",
+          "properties": { "kind": "road", "class": "footway", "name": "Nursery Path" },
+          "geometry": { "type": "LineString", "coordinates":
+            [[77.2500, 28.6010], [77.2468, 28.5992], [77.2444, 28.5981]] } },
+        { "type": "Feature",
+          "properties": { "kind": "road", "class": "footway" },
+          "geometry": { "type": "LineString", "coordinates":
+            [[77.2507, 28.5933], [77.2488, 28.5951]] } },
+
+        // --- areas -------------------------------------------------
+        { "type": "Feature",
+          "properties": { "kind": "park", "name": "Sunder Nursery" },
+          "geometry": { "type": "Polygon", "coordinates": [[
+            [77.2410, 28.5955], [77.2465, 28.5958], [77.2470, 28.6000],
+            [77.2418, 28.6003], [77.2410, 28.5955] ]] } },
+        { "type": "Feature",
+          "properties": { "kind": "water", "name": "Barapullah Drain" },
+          "geometry": { "type": "Polygon", "coordinates": [[
+            [77.2590, 28.5860], [77.2610, 28.5862], [77.2618, 28.5990],
+            [77.2598, 28.5992], [77.2590, 28.5860] ]] } },
+        { "type": "Feature",
+          "properties": { "kind": "rail" },
+          "geometry": { "type": "Polygon", "coordinates": [[
+            [77.2420, 28.5840], [77.2570, 28.5828], [77.2572, 28.5838],
+            [77.2422, 28.5850], [77.2420, 28.5840] ]] } },
+        { "type": "Feature",
+          "properties": { "kind": "campus", "name": "Tomb Complex Grounds" },
+          "geometry": { "type": "Polygon", "coordinates": [[
+            [77.2520, 28.5952], [77.2575, 28.5955], [77.2572, 28.5995],
+            [77.2518, 28.5992], [77.2520, 28.5952] ]] } },
+
+        // --- landmarks --------------------------------------------
+        { "type": "Feature",
+          "properties": { "kind": "landmark", "name": "Hazrat Nizamuddin Railway Station", "icon": "rail" },
+          "geometry": { "type": "Point", "coordinates": [77.2495, 28.5843] } },
+        { "type": "Feature",
+          "properties": { "kind": "landmark", "name": "Humayun's Tomb", "icon": "monument" },
+          "geometry": { "type": "Point", "coordinates": [77.2547, 28.5972] } },
+        { "type": "Feature",
+          "properties": { "kind": "landmark", "name": "Nizamuddin Dargah", "icon": "mosque" },
+          "geometry": { "type": "Point", "coordinates": [77.2440, 28.5915] } },
+        { "type": "Feature",
+          "properties": { "kind": "landmark", "name": "Sunder Nursery Gate", "icon": "park" },
+          "geometry": { "type": "Point", "coordinates": [77.2440, 28.5978] } },
+        { "type": "Feature",
+          "properties": { "kind": "landmark", "name": "Community Clinic", "icon": "hospital" },
+          "geometry": { "type": "Point", "coordinates": [77.2560, 28.5900] } },
+        { "type": "Feature",
+          "properties": { "kind": "landmark", "name": "Bazaar Chowk", "icon": "market" },
+          "geometry": { "type": "Point", "coordinates": [77.2538, 28.5854] } }
+      ]
+    };
+
+    // Object URL so buildStyle() gets a URL, exactly as in the real app.
+    var dataUrl = URL.createObjectURL(
+      new Blob([JSON.stringify(sample)], { type: "application/geo+json" })
+    );
+
+    var theme = "day";
+    var map = new maplibregl.Map({
+      container: "map",
+      style: WaysideBasemap.buildStyle(dataUrl, theme),
+      center: [C_LNG, C_LAT],
+      zoom: 14.5,
+      attributionControl: false
+    });
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
+
+    document.getElementById("flip").addEventListener("click", function () {
+      theme = theme === "day" ? "night" : "day";
+      map.setStyle(WaysideBasemap.buildStyle(dataUrl, theme));
+      document.getElementById("which").textContent = "theme: " + theme;
+      this.textContent = theme === "day" ? "Switch to night" : "Switch to day";
+    });
+  </script>
+</body>
+</html>

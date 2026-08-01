@@ -1,0 +1,68 @@
+{
+  "type": "FeatureCollection",
+  "note": "Hand-written mini zone for routing tests — a primary ring, a diagonal footway shortcut across it, a residential cross-street, plus spurs. NOT real geometry. All intersections share exact vertices.",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {"kind": "road", "class": "primary", "name": "Ring Road"},
+      "geometry": {"type": "LineString", "coordinates": [
+        [77.250000, 28.590000],
+        [77.254000, 28.590000],
+        [77.254000, 28.592000],
+        [77.254000, 28.594000],
+        [77.250000, 28.594000],
+        [77.250000, 28.592000],
+        [77.250000, 28.590000]
+      ]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "road", "class": "footway"},
+      "geometry": {"type": "LineString", "coordinates": [
+        [77.250000, 28.590000],
+        [77.252000, 28.592000],
+        [77.254000, 28.594000]
+      ]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "road", "class": "residential", "name": "Nursery Cross"},
+      "geometry": {"type": "LineString", "coordinates": [
+        [77.250000, 28.592000],
+        [77.252000, 28.592000],
+        [77.254000, 28.592000]
+      ]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "road", "class": "secondary"},
+      "geometry": {"type": "LineString", "coordinates": [
+        [77.254000, 28.590000],
+        [77.256000, 28.590000]
+      ]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "road", "class": "lane"},
+      "geometry": {"type": "LineString", "coordinates": [
+        [77.250000, 28.594000],
+        [77.248000, 28.594000]
+      ]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "park", "name": "Test Green"},
+      "geometry": {"type": "Polygon", "coordinates": [[
+        [77.250500, 28.590500],
+        [77.251500, 28.590500],
+        [77.251500, 28.591500],
+        [77.250500, 28.590500]
+      ]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "landmark", "name": "Test Station", "icon": "rail"},
+      "geometry": {"type": "Point", "coordinates": [77.256000, 28.594000]}
+    }
+  ]
+}

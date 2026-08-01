@@ -282,6 +282,17 @@ body.no-left #layout { grid-template-columns: 1fr 380px; }
 .resp-marker.enroute { background: #fff; box-shadow: 0 0 0 3px var(--medical); }
 .resp-marker.onsite { box-shadow: 0 0 0 3px var(--good); }
 .witness-pin { font-size: 22px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
+/* Google-style always-visible marker labels: mode + name (+ ETA enroute) */
+.resp-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.resp-tag {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap;
+  color: #33322e; background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 999px; padding: 1px 7px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+/* maplibre chrome, harmonized with both map themes */
+.maplibregl-ctrl-group { background: rgba(255, 255, 255, 0.92); border-radius: 8px; }
+.maplibregl-ctrl-attrib { font-size: 9.5px; opacity: 0.75; }
 
 /* ------------------------------------------------------------------ feed */
 .feed { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; min-height: 120px; }

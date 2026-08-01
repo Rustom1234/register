@@ -299,5 +299,12 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     def supervisor_app():
         return FileResponse(STATIC / "supervisor.html")
 
+    @app.get("/data/demo_zone.geojson")
+    def zone_geojson():
+        # The basemap and the router read the same file — the streets you
+        # see are exactly the streets riders are routed on.
+        return FileResponse(STATIC.parent / "data" / "demo_zone.geojson",
+                            media_type="application/geo+json")
+
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
     return app

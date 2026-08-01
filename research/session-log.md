@@ -190,18 +190,39 @@ the Telegram/web-chat path) · domain = temp/free service for now ·
 rider hardware = Android AND iPhone (PWA push must cover installed-PWA
 iOS) · site byline = "Rustom Dubash, founder" confirmed.
 
-**Phase 1 build started (2026-08-01):** MapLibre GL vendored onto main
-from the experiment worktree. Three-way parallel build launched
-(workflow `phase1-map-build`): (a) `tools/make_demo_zone.py` +
-`pukaar/data/demo_zone.geojson` — a Nizamuddin-inspired named street
-network (representative, NOT surveyed; sandbox blocks OSM) plus
-`tools/fetch_real_roads.py` for real OSM on the founder's machine;
-(b) `routing.py` v2 — RoadGraph over that geojson, walk/cycle/scooter
-speed profiles, scooter banned from footways, A* with snap-to-edge;
-(c) `static/basemap.js` — Google-style day/night MapLibre style over
-the local geojson with self-hosted glyph PBFs. Integration (sim modes,
-API, all four pages onto the new map) happens serially after they
-land.
+**Phase 1 SHIPPED (2026-08-01):** the map became real. Built via a
+three-way parallel workflow + serial integration:
+- `pukaar/data/demo_zone.geojson` — 206-segment Nizamuddin-inspired
+  named street network (Mathura Road, Lodhi Road, the dargah basti
+  galis, Nizamuddin East block grid, rail corridor + station, Humayun's
+  Tomb / Sunder Nursery parks, 7 landmarks). Representative geometry,
+  NOT surveyed (sandbox blocks OSM); `tools/make_demo_zone.py`
+  regenerates it byte-for-byte; `tools/fetch_real_roads.py` swaps in
+  real OSM on the founder's machine. 13 validation tests incl. both
+  connectivity invariants.
+- `routing.py` v2 — RoadGraph over that geojson: walk/cycle/scooter
+  speed profiles per road class, scooter banned from footways, A* on
+  travel time, snap-to-nearest-legal-EDGE (mid-block entry, no
+  teleporting to intersections). Old RoadMesh kept as fallback. 11
+  tests.
+- `static/basemap.js` — Google-style day + night MapLibre styles built
+  from the same local geojson (white/amber roads, green parks, road
+  names along lines, landmark labels) with self-hosted glyph PBFs
+  under `static/vendor/glyphs/` (Klokantech Noto Sans Regular ranges,
+  dir renamed to "Noto Sans Regular" — transparent to MapLibre).
+- Integration: responders now have travel modes (Meena/Fatima walk,
+  Arjun/Sunita cycle, Ravi/Imran scooter; MODE_SPEED_MPS), sim routes
+  via RoadGraph, `/data/demo_zone.geojson` served by the API, all
+  THREE map surfaces (control room `/`, `/supervisor`, `/witness`)
+  ported Leaflet→MapLibre GL onto the new basemap, always-visible
+  marker labels (mode glyph + name + live ETA), day/night
+  `#theme-toggle` in the legend (localStorage-persisted), 90-day
+  cells as a fill layer.
+- **Bug caught live:** the basemap's geojson source is named "zone" and
+  the overlay zone-ring reused the id, clobbering all streets — overlay
+  sources renamed `zonering`. Playwright-verified all three pages, day
+  + night, zero console errors; route lines visibly follow streets
+  with turns and ETA labels ("Sunita · 6m"). 139 tests pass.
 
 ---
 **Last updated:** 2026-07-31, after writing the v1 product plan. Before
