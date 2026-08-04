@@ -182,8 +182,8 @@ function offerCard(a, order, c) {
       <span>wave ${order.wave || 1}</span>${order.clinical_flag ? "<span>🩺 clinical flag</span>" : ""}</div>
     <div class="ttl" aria-label="time left to accept"><i style="width:${(left / ttl) * 100}%"></i></div>
     <div class="btnrow">
-      <button class="big" data-acc="${a.id}">ACCEPT · ${Math.ceil(left / 60)} min left</button>
-      <button class="big decline" data-dec="${a.id}">Pass</button>
+      <button class="big" data-acc="${a.id}">ACCEPT · लो<span class="hn">${Math.ceil(left / 60)} min left</span></button>
+      <button class="big decline" data-dec="${a.id}">Pass<span class="hn">छोड़ें</span></button>
     </div>
   </div>`;
 }
@@ -203,7 +203,10 @@ function renderOffers(offers) {
       const bar = card.querySelector(".ttl i");
       if (bar) bar.style.width = `${(left / ttl) * 100}%`;
       const acc = card.querySelector("[data-acc]");
-      if (acc && !acc.disabled) acc.textContent = `ACCEPT · ${Math.ceil(left / 60)} min left`;
+      // only refresh the countdown sub-label — textContent would wipe the
+      // Hindi span baked into the button
+      const accHn = acc && acc.querySelector(".hn");
+      if (acc && !acc.disabled && accHn) accHn.textContent = `${Math.ceil(left / 60)} min left`;
     }
     return;
   }
@@ -287,7 +290,7 @@ function renderActive(order) {
   const instr = J(order.instruction_ids, [])
     .map((i) => `<li>${state.instructions[i] || i}</li>`).join("");
   $("scr-active").innerHTML = `
-    <div class="banner ${onsite ? "onsite" : "enroute"}">${onsite ? "AT THE PIN" : "EN ROUTE"}</div>
+    <div class="banner ${onsite ? "onsite" : "enroute"}">${onsite ? "AT THE PIN · पहुँच गए" : "EN ROUTE · रास्ते में"}</div>
     <div class="card">
       <h2>Case ${order.case_id.slice(-4).toUpperCase()} · ${order.priority}</h2>
       <div class="digipin">${c ? c.digipin || "—" : "—"}</div>
@@ -298,11 +301,11 @@ function renderActive(order) {
            <div class="bar"><i style="width:${pct}%"></i></div>
            ${stepsHtml(steps, stepI)}
            ${pickupPending
-             ? `<p class="hint">📦 <b>Collect the kit at ${m.depot}</b> — it's on your route, the detour is already in your ETA.</p>`
-             : (m && m.depot ? `<p class="hint">✅ Kit collected at ${m.depot}.</p>` : "")}
+             ? `<p class="hint">📦 <b>Collect the kit at ${m.depot}</b> · <span class="hn">पहले ${m.depot} से किट लें</span> — it's on your route, the detour is already in your ETA.</p>`
+             : (m && m.depot ? `<p class="hint">✅ Kit collected at ${m.depot} · <span class="hn">किट मिल गई</span></p>` : "")}
            <p class="hint">Arrival registers automatically at the pin — or tap below
            when you're there.</p>
-           <button class="big arrived" data-arrived="${order.id}">📍 I've arrived</button>`}
+           <button class="big arrived" data-arrived="${order.id}">📍 I've arrived<span class="hn">पहुँच गया</span></button>`}
     </div>
     <div class="card">
       <h2>${CAT_ICON[c && c.category] || ""} ${kit.name} (${order.sku})</h2>
@@ -312,10 +315,10 @@ function renderActive(order) {
     ${instr ? `<div class="card"><h2>On arrival</h2><ol class="instr">${instr}</ol></div>` : ""}
     ${onsite ? `
     <div class="outgrid">
-      <button class="big served" data-out="served">🟢 Help given</button>
-      <button class="big escal" data-out="escalated">🩺 Call medical</button>
-      <button class="big plain" data-out="not_found">Not found</button>
-      <button class="big plain" data-out="declined">Declined help</button>
+      <button class="big served" data-out="served">🟢 Help given<span class="hn">मदद दे दी</span></button>
+      <button class="big escal" data-out="escalated">🩺 Call medical<span class="hn">डॉक्टर बुलाओ</span></button>
+      <button class="big plain" data-out="not_found">Not found<span class="hn">नहीं मिला</span></button>
+      <button class="big plain" data-out="declined">Declined help<span class="hn">मना किया</span></button>
     </div>` : ""}`;
   $("scr-active").querySelectorAll("[data-out]").forEach((b) =>
     b.addEventListener("click", async () => {
@@ -353,7 +356,7 @@ function render() {
   $("clock").textContent = state.sim.clock;
   const m = me();
   const onDuty = !!(m && m.manual);
-  $("duty-pill").textContent = onDuty ? `on duty · ${m.name}` : "off duty";
+  $("duty-pill").textContent = onDuty ? `on duty · ड्यूटी पर · ${m.name}` : "off duty · ड्यूटी बंद";
   $("duty-pill").classList.toggle("on", onDuty);
   $("sos-btn").hidden = !onDuty;
   if (!onDuty) { renderPick(); return; }

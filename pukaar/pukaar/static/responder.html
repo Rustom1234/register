@@ -73,6 +73,8 @@ select { width: 100%; background: var(--surface); color: var(--ink);
 .big { width: 100%; padding: 15px; border: 0; border-radius: 12px; font-weight: 700;
        font-size: 16px; cursor: pointer; color: #fff; background: var(--good); }
 .big.off { background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }
+.hn { display: block; font-weight: 500; font-size: 0.82em; opacity: 0.72; margin-top: 1px; }
+.hint .hn, p .hn { display: inline; }
 button:focus-visible, select:focus-visible { outline: 2px solid var(--medical); outline-offset: 2px; }
 
 /* offers */
@@ -187,18 +189,18 @@ footer { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--mut
   <main>
     <!-- off duty: identity + go on duty -->
     <section id="scr-pick" class="card">
-      <h2>Who are you?</h2>
+      <h2>Who are you? · आप कौन हैं?</h2>
       <p class="hint">Pick your responder identity. The sim keeps playing everyone
       else — offers, movement and arrival stay real. <a href="/">Control room →</a></p>
       <select id="pick" aria-label="Choose responder"></select>
-      <button id="duty-btn" class="big">Go on duty</button>
+      <button id="duty-btn" class="big">Go on duty<span class="hn">ड्यूटी शुरू करें</span></button>
     </section>
 
     <!-- on duty, idle -->
     <section id="scr-idle" hidden>
       <div class="card">
         <h2>On duty</h2>
-        <p id="idle-line" class="hint"><span class="livedot" aria-hidden="true"></span>Waiting for calls near you…</p>
+        <p id="idle-line" class="hint"><span class="livedot" aria-hidden="true"></span>Waiting for calls near you… · <span class="hn">आस-पास की कॉल का इंतज़ार…</span></p>
         <div class="kitchips" id="kits" aria-label="Kits in stock"></div>
         <p class="hint" id="me-stats"></p>
       </div>
@@ -206,7 +208,7 @@ footer { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--mut
         <h2>Recent activity</h2>
         <ul id="idle-feed" class="afeed"><li class="af-empty">no activity yet — the line is quiet</li></ul>
       </div>
-      <button id="duty-off" class="big off">Go off duty</button>
+      <button id="duty-off" class="big off">Go off duty<span class="hn">ड्यूटी बंद</span></button>
     </section>
 
     <!-- incoming offers -->
@@ -225,6 +227,6 @@ footer { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--mut
   </footer>
 </div>
 <div id="toast" role="status">✓ recorded</div>
-<script src="/static/responder.js?v=20260804k"></script>
+<script src="/static/responder.js?v=20260804l"></script>
 </body>
 </html>
