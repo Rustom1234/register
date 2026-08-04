@@ -28,16 +28,21 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => { /* http/old browser */ });
 }
 
-function netNote(msg) {
+function netNote(msg, ok = false) {
   let n = $("net-note");
   if (!n) {
     n = document.createElement("div");
     n.id = "net-note";
     n.style.cssText = "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);" +
-      "background:#2a1215;border:1px solid #d03b3b;color:#ff9d99;border-radius:999px;" +
+      "border-radius:999px;" +
       "padding:10px 18px;font-size:13px;font-weight:600;z-index:99;max-width:90vw;text-align:center";
     document.body.appendChild(n);
   }
+  // colors per call, not per create: the one toast carries bad news and good —
+  // ok swaps the red trio for its green twin (r/g channels mirrored)
+  n.style.background = ok ? "#122a15" : "#2a1215";
+  n.style.border = ok ? "1px solid #3bd03b" : "1px solid #d03b3b";
+  n.style.color = ok ? "#9dff99" : "#ff9d99";
   n.textContent = msg;
   n.hidden = false;
   clearTimeout(netNote._t);
@@ -150,6 +155,69 @@ function renderPhone() {
   }
 }
 
+// --------------------------------------------------------------- outbox --
+// No-signal sends queue here and auto-flush on reconnect: a witness who
+// walks off believing the report went through must not be silently wrong.
+const OUTBOX_KEY = "pukaar_witness_outbox";
+const OUTBOX_MAX = 10;
+// never "button" — a button reply answers a bot prompt that may have moved on
+const OUTBOX_KINDS = ["text", "location", "photo", "voice"];
+
+// restore defensively: localStorage is user-writable, so validate the shape
+// and drop malformed entries rather than letting one bad value brick sends
+let outbox = (() => {
+  try {
+    const raw = JSON.parse(localStorage.getItem(OUTBOX_KEY) || "[]");
+    return (Array.isArray(raw) ? raw : []).filter((e) =>
+      e && OUTBOX_KINDS.includes(e.kind) && e.extra && typeof e.extra === "object"
+    ).slice(-OUTBOX_MAX);
+  } catch { return []; }
+})();
+
+function saveOutbox() {
+  try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(outbox)); } catch { /* private mode/quota */ }
+}
+
+function queueOutbound(kind, extra) {
+  if (!OUTBOX_KINDS.includes(kind)) return false;
+  outbox.push({ kind, extra, ts: Date.now() });
+  while (outbox.length > OUTBOX_MAX) outbox.shift(); // cap: the oldest report is the stalest
+  saveOutbox();
+  return true;
+}
+
+let flushBusy = false; // "online" + poll recovery can fire together — one flush at a time
+async function flushOutbox() {
+  if (flushBusy || !outbox.length) return;
+  flushBusy = true;
+  let sent = 0;
+  try {
+    // strictly in order; a failure keeps the remainder (head included) for the
+    // next trigger — never re-queued to the tail, which would reorder reports
+    while (outbox.length) {
+      const e = outbox[0];
+      try {
+        const res = await fetch("/api/wa/inbound", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: activeConv, kind: e.kind, ...e.extra }),
+        });
+        await res.json();
+      } catch { break; } // still (or again) offline
+      outbox.shift(); // drop only after a confirmed send
+      sent++;
+    }
+  } finally {
+    saveOutbox();
+    flushBusy = false;
+  }
+  if (sent) {
+    netNote(`✓ ${sent} saved message${sent === 1 ? "" : "s"} sent.`, true);
+    refresh();
+  }
+}
+
+window.addEventListener("online", () => flushOutbox());
+
 let sendBusy = false; // one in-flight report at a time — Enter-mash safe
 
 async function sendInbound(kind, extra = {}) {
@@ -167,8 +235,13 @@ async function sendInbound(kind, extra = {}) {
     });
     await res.json();
   } catch {
-    // no signal: say so plainly — a silent failure looks like a sent report
-    netNote("⚠ No signal — your message didn't send. Try again when you're connected.");
+    // no signal: queue it — "try again" loses reports from witnesses who walk
+    // away; button taps stay unqueued, so they keep the plain failure note
+    if (queueOutbound(kind, extra)) {
+      netNote("⚠ No signal — saved. It will send by itself when you're back online.");
+    } else {
+      netNote("⚠ No signal — your message didn't send. Try again when you're connected.");
+    }
   } finally {
     sendBusy = false;
     if (btn) btn.disabled = false;
@@ -254,8 +327,10 @@ async function refresh() {
   try {
     const res = await fetch("/api/state");
     state = await res.json();
+    const backOnline = pollFails > 0; // poll just recovered from a dead spell
     pollFails = 0;
     connBanner(false);
+    if (backOnline) flushOutbox();
   } catch {
     // Offline boot (service-worker shell): the page must still be USABLE —
     // a veil that waits for a poll that can never succeed is a dead app.
@@ -270,5 +345,7 @@ async function refresh() {
   liftVeil();
 }
 
+// boot: reports queued on an earlier no-signal visit go out straight away
+if (outbox.length && navigator.onLine) flushOutbox();
 refresh();
 setInterval(refresh, 1000);
