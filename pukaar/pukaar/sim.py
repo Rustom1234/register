@@ -168,7 +168,7 @@ class Sim:
                 "mode": mode, "speed": MODE_SPEED_MPS[mode],   # m per sim-second
                 "accept_p": self.rng.uniform(0.55, 0.85),      # GoodSAM band, generous end
                 "state": "idle", "order_id": None, "target": None,
-                "dwell_until": None, "route": None, "route_idx": 0,
+                "dwell_until": None, "route": None, "route_idx": 0, "steps": None,
                 "depot_id": None, "depot_name": None, "pickup_idx": None, "picked_up": True,
             }
             self.svc.positions[rid] = (lat, lng)
@@ -184,9 +184,53 @@ class Sim:
             return self.graph.route(alat, alng, blat, blng, mode=mode)[0]
         return self.mesh.route(alat, alng, blat, blng)[0]
 
+    def _route_named(self, mode: str, alat: float, alng: float, blat: float,
+                     blng: float) -> tuple[list[tuple[float, float]], list[str]]:
+        """(waypoints, per-waypoint street names) — all "" on the synthetic
+        mesh fallback, whose streets have no names to give."""
+        if self.graph is not None:
+            wp, _m, _s, names = self.graph.route_named(alat, alng, blat, blng, mode=mode)
+            return wp, names
+        wp = self.mesh.route(alat, alng, blat, blng)[0]
+        return wp, [""] * len(wp)
+
     @staticmethod
     def _polyline_m(pts: list[tuple[float, float]]) -> float:
         return sum(geo.haversine_m(*a, *b) for a, b in zip(pts, pts[1:]))
+
+    @staticmethod
+    def _collapse_steps(waypoints: list[tuple[float, float]], names: list[str],
+                        max_steps: int = 8) -> list[dict]:
+        """Named waypoints -> compact turn-by-turn text: consecutive legs on
+        the same street merge into one {street, m}; unnamed stretches (and
+        the door-to-road approaches) read as "gali". Then keep absorbing the
+        shortest step into its neighbor while any step is a <25 m connector
+        stub or the list exceeds max_steps — approximate on purpose, this is
+        a phone glanceable, not a survey. Metres are conserved throughout."""
+        steps: list[dict] = []
+        for prev, cur, nm in zip(waypoints, waypoints[1:], names[1:]):
+            street = nm or "gali"
+            d = geo.haversine_m(*prev, *cur)
+            if steps and steps[-1]["street"] == street:
+                steps[-1]["m"] += d
+            else:
+                steps.append({"street": street, "m": d})
+        while len(steps) > 1:
+            i = min(range(len(steps)), key=lambda k: steps[k]["m"])
+            if steps[i]["m"] >= 25.0 and len(steps) <= max_steps:
+                break
+            j = i - 1 if i > 0 else 1
+            steps[j]["m"] += steps.pop(i)["m"]
+            merged: list[dict] = []       # absorbing can leave same-street twins
+            for st in steps:
+                if merged and merged[-1]["street"] == st["street"]:
+                    merged[-1]["m"] += st["m"]
+                else:
+                    merged.append(st)
+            steps = merged
+        for st in steps:
+            st["m"] = round(st["m"])
+        return steps
 
     # ------------------------------------------------------------- depots --
     def _depot_stock(self, depot_id: str, sku: str) -> int:
@@ -396,7 +440,7 @@ class Sim:
                             r["order_id"],
                             "served" if order["status"] == "escalated" else "not_found")
                     r["state"], r["order_id"], r["target"] = "idle", None, None
-                    r["route"], r["route_idx"] = None, 0
+                    r["route"], r["route_idx"], r["steps"] = None, 0, None
                     r["depot_id"], r["depot_name"] = None, None
                     r["pickup_idx"], r["picked_up"] = None, True
             else:
@@ -469,16 +513,16 @@ class Sim:
             # Re-attach (restart, manual re-accept): the kit is already
             # reserved at a depot — route via THAT depot, don't re-reserve.
             depot = next((d for d in self.depot_list if d[0] == already[0]), None)
-            pick = None
-            if depot is not None:
-                leg1 = self._route_to(r, depot[2], depot[3])
-                leg2 = self._route_between(r["mode"], depot[2], depot[3], *target)
-                pick = (depot, leg1, leg2)
+            pick = (depot,) if depot is not None else None
         else:
             pick = self._choose_depot(r, order["sku"], target) if order else None
         if pick:
-            depot, leg1, leg2 = pick
-            waypoints = leg1 + leg2[1:]
+            depot = pick[0]
+            # Route the winning legs NAMED (A* is deterministic, so these are
+            # the very polylines _choose_depot costed); names feed r["steps"].
+            leg1, nm1 = self._route_named(r["mode"], r["lat"], r["lng"], depot[2], depot[3])
+            leg2, nm2 = self._route_named(r["mode"], depot[2], depot[3], *target)
+            waypoints, names = leg1 + leg2[1:], nm1 + nm2[1:]
             r["depot_id"], r["depot_name"] = depot[0], depot[1]
             r["pickup_idx"], r["picked_up"] = max(1, len(leg1) - 1), False
             if not already and order:
@@ -489,7 +533,7 @@ class Sim:
                 self._reservations[order_id] = (depot[0], order["sku"])
                 self._save_ledger()
         else:
-            waypoints = self._route_to(r, *target)
+            waypoints, names = self._route_named(r["mode"], r["lat"], r["lng"], *target)
             r["depot_id"], r["depot_name"] = None, None
             r["pickup_idx"], r["picked_up"] = None, True
             if order:
@@ -499,6 +543,10 @@ class Sim:
         r["state"], r["order_id"], r["target"] = "enroute", order_id, target
         # waypoints[0] is the responder's own current position — start at [1]
         r["route"], r["route_idx"] = waypoints, 1
+        # Rider-facing turn-by-turn: compact named steps, plus the route's
+        # total metres so the snapshot can place the current step cheaply.
+        r["steps"] = self._collapse_steps(waypoints, names)
+        r["_route_m"] = self._polyline_m(waypoints)
         # fresh safety clock: idle dwell before this job must not count as
         # "hasn't moved while en route"
         r["_last_pos"], r["_last_move_ts"] = None, self.sim_now
@@ -561,7 +609,7 @@ class Sim:
                     self.svc.dispatch.arrived(r["order_id"])
                     r["state"] = "onsite"
                     r["dwell_until"] = self.sim_now + self.rng.uniform(120, 300)
-                    r["route"], r["route_idx"] = None, 0
+                    r["route"], r["route_idx"], r["steps"] = None, 0, None
             elif r["state"] == "onsite":
                 if r["id"] not in self.manual and self.sim_now >= (r["dwell_until"] or 0):
                     self._close_order(r)
@@ -576,7 +624,7 @@ class Sim:
         order = self.svc.store.one("SELECT * FROM orders WHERE id=?", (r["order_id"],))
         if not order:
             r["state"], r["order_id"], r["target"] = "idle", None, None
-            r["route"], r["route_idx"] = None, 0
+            r["route"], r["route_idx"], r["steps"] = None, 0, None
             return
         if order["id"] in self.golden:
             outcome = "escalated"                # the arc the video needs, every time
@@ -598,7 +646,7 @@ class Sim:
                 due = 600 if order["id"] in self.golden else self.rng.uniform(600, 1500)
                 self._pending_escalations[r["order_id"]] = self.sim_now + due
         r["state"], r["order_id"], r["target"] = "idle", None, None
-        r["route"], r["route_idx"] = None, 0
+        r["route"], r["route_idx"], r["steps"] = None, 0, None
         r["depot_id"], r["depot_name"], r["pickup_idx"], r["picked_up"] = None, None, None, True
 
     def settle_kit(self, order_id: str, outcome: str) -> None:
@@ -711,16 +759,29 @@ class Sim:
         }
 
     def _responder_view(self, r: dict) -> dict:
-        route_out, eta_s, dist_m = None, None, None
+        route_out, eta_s, dist_m, step_i = None, None, None, None
+        steps = r.get("steps")
         if r["state"] == "enroute" and r.get("route"):
             route_out = [[lat, lng] for lat, lng in r["route"][r["route_idx"]:]]
             dist_m = round(routing.route_remaining_m(r["route"], r["route_idx"], r["lat"], r["lng"]))
             eta_s = round(dist_m / r["speed"]) if r["speed"] > 0 else None
+            if steps:
+                # Current step ≈ where (total - remaining) lands on the
+                # cumulative step metres — cheap, and plenty for a highlight
+                # that refreshes every poll anyway.
+                covered = max(0.0, r.get("_route_m", 0.0) - dist_m)
+                step_i, acc = len(steps) - 1, 0.0
+                for i, st in enumerate(steps):
+                    acc += st["m"]
+                    if covered < acc:
+                        step_i = i
+                        break
         return {
             "id": r["id"], "name": r["name"], "medical": r["medical"], "mode": r["mode"],
             "lat": r["lat"], "lng": r["lng"], "state": r["state"], "order_id": r["order_id"],
             "manual": r["id"] in self.manual, "route": route_out, "eta_s": eta_s, "dist_m": dist_m,
             "depot": r.get("depot_name"), "picked_up": bool(r.get("picked_up", True)),
+            "steps": steps, "step_i": step_i,
         }
 
     def _clock_str(self) -> str:

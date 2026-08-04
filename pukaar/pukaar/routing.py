@@ -84,8 +84,10 @@ class RoadGraph:
         self.nodes: dict[tuple[float, float], tuple[float, float]] = {}
         # adjacency: node -> [(neighbor, length_m, road_class), ...]
         self.adj: dict[tuple[float, float], list[tuple[tuple[float, float], float, str]]] = {}
-        # flat edge list for snapping: (a_key, b_key, length_m, road_class)
-        self.edges: list[tuple[tuple[float, float], tuple[float, float], float, str]] = []
+        # flat edge list for snapping: (a_key, b_key, length_m, road_class, name)
+        self.edges: list[tuple[tuple[float, float], tuple[float, float], float, str, str]] = []
+        # unordered node pair -> street name, for turn-by-turn reconstruction
+        self._edge_name: dict[tuple[tuple[float, float], tuple[float, float]], str] = {}
         self._build(data)
 
     # ------------------------------------------------------------- build --
@@ -96,6 +98,7 @@ class RoadGraph:
             if props.get("kind") != "road":
                 continue  # parks / water / landmarks are map dressing, not routable
             cls = props.get("class", "residential")
+            name = props.get("name") or ""   # "" = unnamed gali / footway
             coords = feat.get("geometry", {}).get("coordinates", [])
             for (lng1, lat1), (lng2, lat2) in zip(coords, coords[1:]):
                 a, b = _key(lat1, lng1), _key(lat2, lng2)
@@ -112,7 +115,8 @@ class RoadGraph:
                         self.adj[n] = []
                 self.adj[a].append((b, d, cls))
                 self.adj[b].append((a, d, cls))
-                self.edges.append((a, b, d, cls))
+                self.edges.append((a, b, d, cls, name))
+                self._edge_name[pair] = name
 
     # -------------------------------------------------------------- snap --
     def _snap(self, lat: float, lng: float, mode_speeds: dict[str, float]) -> _Snap | None:
@@ -123,7 +127,7 @@ class RoadGraph:
         to the segment. Returns None when the mode has no legal edges."""
         m_lng = _M_PER_DEG_LAT * max(0.2, math.cos(math.radians(lat)))
         best: _Snap | None = None
-        for i, (a, b, length, cls) in enumerate(self.edges):
+        for i, (a, b, length, cls, _name) in enumerate(self.edges):
             if cls not in mode_speeds:
                 continue
             ax, ay = (a[1] - lng) * m_lng, (a[0] - lat) * _M_PER_DEG_LAT
@@ -155,6 +159,16 @@ class RoadGraph:
         flat speed (sim.responders), so displayed ETAs always match actual
         arrival. Do not surface duration_s as an ETA without also moving
         riders at per-class speeds, or the two will drift up to ~75%."""
+        wp, dist_m, dur_s, _names = self.route_named(lat1, lng1, lat2, lng2, mode=mode)
+        return wp, dist_m, dur_s
+
+    def route_named(self, lat1: float, lng1: float, lat2: float, lng2: float,
+                    mode: str = "scooter"
+                    ) -> tuple[list[tuple[float, float]], float, float, list[str]]:
+        """route() plus per-waypoint street names: names[i] is the name of
+        the edge that LEADS INTO waypoints[i] — "" for the first waypoint
+        and for the off-road door-to-road approach legs — so callers can
+        collapse runs of equal names into turn-by-turn direction steps."""
         speeds = SPEEDS_KMH.get(mode)
         if speeds is None:
             raise ValueError(f"unknown travel mode {mode!r} (want one of {sorted(SPEEDS_KMH)})")
@@ -162,37 +176,55 @@ class RoadGraph:
         s = self._snap(lat1, lng1, speeds)
         g = self._snap(lat2, lng2, speeds)
         if s is None or g is None:
-            return self._direct(lat1, lng1, lat2, lng2, speeds)
+            wp, d, t = self._direct(lat1, lng1, lat2, lng2, speeds)
+            return wp, d, t, [""] * len(wp)
 
         path = self._astar(s, g, speeds)
         if path is None:  # disconnected for this mode — never strand the demo
-            return self._direct(lat1, lng1, lat2, lng2, speeds)
+            wp, d, t = self._direct(lat1, lng1, lat2, lng2, speeds)
+            return wp, d, t, [""] * len(wp)
 
         node_seq, road_m, road_s = path
+        start_name = self.edges[s.edge_i][4]
+        goal_name = self.edges[g.edge_i][4]
+
+        def hop_name(u, v) -> str:
+            # Hops out of the snapped start (or into the snapped goal) run
+            # along the snapped edge itself; everything else is a real edge.
+            if u == _START:
+                return start_name
+            if v == _GOAL:
+                return goal_name
+            return self._edge_name.get((min(u, v), max(u, v)), "")
+
         coords: list[tuple[float, float]] = []
-        for n in node_seq:
+        lead: list[str] = []   # lead[k]: name of the leg arriving at coords[k]
+        for j, n in enumerate(node_seq):
             if n == _START:
                 coords.append((s.lat, s.lng))
-            elif n == _GOAL:
-                coords.append((g.lat, g.lng))
+                lead.append("")   # arrived here from the door — approach leg
             else:
-                coords.append(n)
+                coords.append((g.lat, g.lng) if n == _GOAL else n)
+                lead.append(hop_name(node_seq[j - 1], n))
 
         approach_mps = _APPROACH_KMH / 3.6
         total_m = s.approach_m + road_m + g.approach_m
         total_s = s.approach_m / approach_mps + road_s + g.approach_m / approach_mps
 
         waypoints = [(lat1, lng1)]
-        for c in coords:
+        names = [""]
+        for c, nm in zip(coords, lead):
             last = waypoints[-1]
             if abs(c[0] - last[0]) > 1e-9 or abs(c[1] - last[1]) > 1e-9:
                 waypoints.append(c)
+                names.append(nm)
         last = waypoints[-1]
         if abs(last[0] - lat2) < 1e-9 and abs(last[1] - lng2) < 1e-9 and len(waypoints) > 1:
             waypoints[-1] = (lat2, lng2)  # exact end, not the snapped float twin
         else:
             waypoints.append((lat2, lng2))
-        return waypoints, total_m, total_s
+            names.append("")              # road-to-door approach leg
+        return waypoints, total_m, total_s, names
 
     def _direct(self, lat1, lng1, lat2, lng2, speeds) -> tuple[list[tuple[float, float]], float, float]:
         """Straight-line fallback for degenerate cases (no legal edges, or

@@ -101,6 +101,20 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--medical); 
 .dist small { font-size: 14px; color: var(--muted); font-weight: 600; }
 .bar { height: 6px; border-radius: 3px; background: var(--line); margin: 10px 0 2px; overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--medical); transition: width 0.9s linear; }
+/* turn-by-turn: nav-app text mode under the distance readout — current leg
+   lit, finished legs dimmed, so a glance says "where am I on the way". */
+ol.steps { list-style: none; margin: 10px 0 2px; padding: 0; }
+ol.steps li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+              padding: 6px 2px 6px 18px; position: relative; font-size: 13px;
+              color: var(--ink-2); border-top: 1px solid var(--line); }
+ol.steps li:first-child { border-top: 0; }
+ol.steps li::before { content: ""; position: absolute; left: 4px; top: 50%; width: 6px; height: 6px;
+                      margin-top: -3px; border-radius: 50%; background: var(--muted); }
+ol.steps li.now { color: var(--ink); font-weight: 700; }
+ol.steps li.now::before { background: var(--medical); box-shadow: 0 0 0 3px rgba(57, 135, 229, 0.25); }
+ol.steps li.done { color: var(--muted); opacity: 0.55; }
+ol.steps li.done::before { background: var(--good); box-shadow: none; }
+ol.steps .st-m { color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
 ul.check { list-style: none; margin: 8px 0 0; padding: 0; }
 ul.check li { padding: 7px 0 7px 26px; position: relative; border-top: 1px solid var(--line);
               color: var(--ink-2); font-size: 14px; }
@@ -210,6 +224,6 @@ footer { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--mut
   </footer>
 </div>
 <div id="toast" role="status">✓ recorded</div>
-<script src="/static/responder.js?v=20260804e"></script>
+<script src="/static/responder.js?v=20260804f"></script>
 </body>
 </html>

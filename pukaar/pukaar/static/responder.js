@@ -214,6 +214,17 @@ function renderOffers(offers) {
   show("scr-offers");
 }
 
+// Turn-by-turn text mode ("Ghalib Road · 240 m"): the sim serves the
+// collapsed steps + current index, so this is pure presentation. Absent
+// steps (legacy order, no road graph) render nothing — never a broken box.
+function stepsHtml(steps, stepI) {
+  if (!steps || !steps.length) return "";
+  const fmtM = (v) => (v >= 1000 ? `${(v / 1000).toFixed(1)} km` : `${v} m`);
+  return `<ol class="steps">` + steps.map((s, i) =>
+    `<li class="${i < stepI ? "done" : i === stepI ? "now" : ""}">` +
+    `<span class="st-n">${s.street}</span><span class="st-m">${fmtM(s.m)}</span></li>`).join("") + `</ol>`;
+}
+
 let activeKey = "";
 function renderActive(order) {
   const m = me();
@@ -223,6 +234,8 @@ function renderActive(order) {
   // control room map is actually animating along).
   const dist = m && m.dist_m != null ? m.dist_m : null;
   const eta = m && m.eta_s != null ? m.eta_s : null;
+  const steps = (m && m.steps) || null;
+  const stepI = m && m.step_i != null ? m.step_i : -1;
   if (order.status === "accepted" && dist != null && !startDist.has(order.id)) {
     startDist.set(order.id, Math.max(dist, 1));
   }
@@ -230,15 +243,21 @@ function renderActive(order) {
     ? Math.max(0, Math.min(100, 100 - (dist / startDist.get(order.id)) * 100)) : 0;
   const onsite = order.status === "onsite";
   const pickupPending = m && m.depot && !m.picked_up && !onsite;
-  const key = `${order.id}:${order.status}:${pickupPending}`;
+  // Steps land a tick after a human-tapped accept (the sim reconciles on
+  // its next tick) — keying on their count rebuilds once they arrive.
+  const key = `${order.id}:${order.status}:${pickupPending}:${steps ? steps.length : 0}`;
   if (key === activeKey && !$("scr-active").hidden) {
-    // Same order & phase: move the distance readout and progress bar in
-    // place; never rebuild the DOM under the outcome buttons.
+    // Same order & phase: move the distance readout, progress bar and step
+    // highlight in place; never rebuild the DOM under the outcome buttons.
     if (!onsite) {
       const d = $("scr-active").querySelector(".dist");
       if (d) d.innerHTML = `${fmtDur(eta)}<small> away · ${dist != null ? Math.round(dist) : "—"} m by road</small>`;
       const bar = $("scr-active").querySelector(".bar i");
       if (bar) bar.style.width = `${pct}%`;
+      $("scr-active").querySelectorAll(".steps li").forEach((li, i) => {
+        li.classList.toggle("done", i < stepI);
+        li.classList.toggle("now", i === stepI);
+      });
     }
     return;
   }
@@ -258,6 +277,7 @@ function renderActive(order) {
            the witness gets the closure message automatically.</p>`
         : `<div class="dist">${fmtDur(eta)}<small> away · ${dist != null ? Math.round(dist) : "—"} m by road</small></div>
            <div class="bar"><i style="width:${pct}%"></i></div>
+           ${stepsHtml(steps, stepI)}
            ${pickupPending
              ? `<p class="hint">📦 <b>Collect the kit at ${m.depot}</b> — it's on your route, the detour is already in your ETA.</p>`
              : (m && m.depot ? `<p class="hint">✅ Kit collected at ${m.depot}.</p>` : "")}
