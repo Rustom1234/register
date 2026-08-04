@@ -351,8 +351,13 @@ research. Log of each round: `research/loop-log.md`.
   retro-link when the pin completes the case (gap caught by live E2E).
   Offline uploads honestly refused. **200 tests.** Commit `7e53f9ee6`.
 
+- **Round 10 (closed):** demo recorder rebuilt (coordinate-based clicks
+  beat 1 Hz keyed re-renders; captions de-GoodSAM'd, counts honest,
+  Wayside close) and **docs/wayside-demo.webm** recorded (~3.5 min),
+  delivered to the founder, committed. Commits `d5c8a332d`/`bd0b58c0f`.
+
 ---
-**Last updated:** 2026-08-04, after loop Round 9. Before that: the
+**Last updated:** 2026-08-04, after loop Round 10. Before that: the
 find-issues iteration of 2026-08-02. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render

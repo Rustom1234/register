@@ -415,3 +415,35 @@ Cache 20260804j. Commit `7e53f9ee6`.
 **R10 queue:** record_demo.py repair + Wayside re-record, supervisor
 shift-summary export, Hindi/Devanagari pass on rider strings, Fly.io
 deploy checklist, adversarial sweep of the photo path.
+
+---
+
+## Round 10 — CLOSED (2026-08-04)
+
+**Theme: the demo video lives again.** Two real bugs in the recorder,
+diagnosed the hard way (three takes):
+
+1. Retrying locator actions was NOT enough — at 30× sim speed the keyed
+   panels rebuild their DOM nodes every second, so Playwright's "wait
+   for element to be stable" can never settle, ever. glide_click now
+   measures getBoundingClientRect straight from the DOM (layout position
+   is stable even while nodes are replaced) and drives the mouse to
+   coordinates. This is the durable pattern for driving any 1 Hz-keyed
+   UI from Playwright.
+2. Captions carried three pitch violations: a GoodSAM name-drop (the
+   founder's standing rule — lead with the mechanism, never a niche
+   brand), a stale "103 tests" claim, and a PUKAAR closing card. Now:
+   "like real emergency dispatch", "200 tests", and the Wayside
+   wordmark.
+
+Output: **docs/wayside-demo.webm** (~3.5 min, 19.9 MB, self-narrating) —
+witness report → dispatch → golden run → dedup → 112 gate → the
+responder phone accepting ON CAMERA with turn-by-turn steps → privacy
+purge → metrics. Delivered to the founder and committed (replacing the
+old pukaar-demo.webm).
+
+Commits `d5c8a332d`, `bd0b58c0f`, + this one. Suite unchanged at 200.
+
+**R11 queue (carried from R10):** supervisor shift-summary export,
+Hindi/Devanagari pass on rider-app strings, Fly.io deploy checklist,
+adversarial sweep of the photo path.
