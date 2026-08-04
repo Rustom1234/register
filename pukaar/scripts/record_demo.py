@@ -59,28 +59,34 @@ def main():
                 page.wait_for_timeout(hold)
 
         def glide_click(selector=None, xy=None, settle=350):
-            # The UI re-renders keyed panels at 1 Hz — a node can detach
-            # between locating and clicking. Re-resolve and retry instead
-            # of dying mid-recording.
-            for attempt in range(3):
+            # Keyed panels rebuild their nodes at 1 Hz, so Playwright locator
+            # actions ("wait for element to be stable") can NEVER settle on
+            # them mid-sim. Measure the current rect straight from the DOM —
+            # the layout position is stable even while nodes are replaced —
+            # and drive the mouse to coordinates.
+            if selector:
                 try:
-                    if selector:
-                        el = page.locator(selector).first
-                        el.scroll_into_view_if_needed(timeout=4000)
-                        box = el.bounding_box()
-                        if box is None:
-                            raise RuntimeError("no box")
-                        x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
-                    else:
-                        x, y = xy
-                    page.mouse.move(x, y, steps=22)
-                    page.wait_for_timeout(settle)
-                    page.mouse.click(x, y)
-                    return
+                    page.locator(selector).first.scroll_into_view_if_needed(timeout=2000)
                 except Exception:
-                    if attempt == 2:
-                        raise
-                    page.wait_for_timeout(400)
+                    pass  # best-effort; panels here rarely need scrolling
+                box = None
+                for _ in range(10):
+                    box = page.evaluate(
+                        "sel => { const el = document.querySelector(sel);"
+                        "if (!el) return null; const r = el.getBoundingClientRect();"
+                        "return (r.width && r.height) ? {x: r.x + r.width/2, y: r.y + r.height/2} : null; }",
+                        selector)
+                    if box:
+                        break
+                    page.wait_for_timeout(300)
+                if not box:
+                    raise RuntimeError(f"no visible element for {selector}")
+                x, y = box["x"], box["y"]
+            else:
+                x, y = xy
+            page.mouse.move(x, y, steps=22)
+            page.wait_for_timeout(settle)
+            page.mouse.click(x, y)
 
         page.goto("http://localhost:8877/", wait_until="domcontentloaded")
         page.wait_for_timeout(3500)
