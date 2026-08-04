@@ -171,6 +171,13 @@
     max-width: 52em;
   }
   .shots figcaption strong { color: var(--ink); font-weight: 600; }
+  .shots .prose {
+    max-width: 52em;
+    color: var(--ink-soft);
+    font-size: 1rem;
+  }
+  .shots .prose + .prose { margin-top: 0.85rem; }
+  .shots .prose strong { color: var(--ink); font-weight: 600; }
   .shots .aside {
     margin-top: 2.5rem;
     font-size: 0.9rem;
@@ -270,11 +277,11 @@
         </div>
         <div>
           <h3>Locations do not linger</h3>
-          <p>The moment a case closes, its exact location is <strong>wiped from the system</strong>. There is no map of where vulnerable people sleep.</p>
+          <p>No case stays open beyond <strong>72 hours</strong>, and exact pins are <strong>deleted on schedule</strong>. There is no map of where vulnerable people sleep.</p>
         </div>
         <div>
           <h3>Ninety days, then a blur</h3>
-          <p>After 90 days, all that remains is a <strong>coarse heat-cell</strong> — enough to show a city where need clusters, useless for finding any one person.</p>
+          <p>After 90 days, all that remains is a <strong>coarse heat-cell</strong> — enough to show a city where need clusters, useless for finding any one person. All of it is <strong>enforced by code, not policy</strong>: the retention job runs in the product itself.</p>
         </div>
       </div>
     </div>
@@ -288,7 +295,7 @@
           <div class="small">Not a pitch deck — a running system, end to end</div>
         </div>
         <div>
-          <div class="big">139 tests</div>
+          <div class="big">189 tests</div>
           <div class="small">Automated, passing, run on every change</div>
         </div>
         <div>
@@ -303,6 +310,8 @@
     <div class="wrap">
       <span class="kicker">The product</span>
       <h2>Built, not imagined.</h2>
+      <p class="prose">Streets do not come with good signal, so Wayside does not assume any. The reporting page and the responder app open and work with <strong>no connection at all</strong> — each keeps a copy on the phone itself, the reporting page down to its full street map — and a report that cannot get through shows an honest <strong>“no signal”</strong> state instead of pretending it was sent.</p>
+      <p class="prose">Underneath is real dispatch engineering, tested rather than promised: the kit ledger survives a server restart mid-delivery without losing or inventing stock; a dispatch can only ever close once, even when two people act in the same instant; offers reach responders by push notification and the first to accept wins the job; and street routing is computed per travel mode in about <strong>half a millisecond</strong> per route — measured, not estimated. <strong>189 automated tests</strong> hold it all in place.</p>
 
       <figure>
         <img src="assets/witness.webp" alt="The witness view: a chat panel beside a street map of Nizamuddin, Delhi, inviting the witness to drop a pin and send one message." width="1600" height="1000">
@@ -328,6 +337,7 @@
       <span class="kicker">Partners</span>
       <h2>Wayside works because someone answers.</h2>
       <p>We are looking for NGO and municipal partners with responders on the ground. <strong>We bring the system, the dispatch line, and the training; you bring the people who come when word is sent.</strong></p>
+      <p>The kits are already costed, item by item, from street-price research (Aug 2026): about <strong>₹172</strong> for a medical kit, <strong>₹50</strong> for a food kit, and <strong>₹173</strong> for a monsoon kit, at wholesale. Roughly <strong>₹6,900</strong> seeds all three depots, and a full first year of stock — replenishment and contingency included — comes to about <strong>₹36,500</strong>.</p>
       <a class="btn" href="mailto:rustommdubash@gmail.com?subject=Wayside%20partnership">Partner with us</a>
     </div>
   </section>
