@@ -336,3 +336,47 @@ Cache 20260804g. Commit `f0bd6dc7c` + this log. Suite 194.
 **R8 queue:** depot restock push to coordinator, witness real photo
 upload, shift-summary export, Hindi/Devanagari pass on rider strings,
 fresh adversarial sweep of rounds 5-7 code.
+
+---
+
+## Round 8 — CLOSED (2026-08-04)
+
+**Theme: sweep the sweepers.** Rounds 5-7 shipped a lot of builder-written
+code; a 16-agent adversarial sweep (5 finders × per-finding skeptics)
+confirmed **11 of 11** claims — the parallel-build rounds were fast but
+not clean, which is exactly why this loop alternates build and audit.
+
+### Feature (partial commit `4be60fbed`)
+- **Coordinator supply strip**: dry SKUs ("MED-1 dry at Station-side
+  Partner Shop — riders go direct without a kit") and couriers en route
+  with countdowns, in the coordinator panel; sim.restocks_view() via
+  /api/state; keyed with 30s countdown buckets.
+
+### Sweep fixes (commit `a9cbb86bf`)
+- **Rider offline honesty (the P2 that mattered)**: 'I've arrived'
+  showed a false success BEFORE the request was sent, and every offline
+  tap died as an unhandled rejection with a dead button. api() now
+  absorbs failure; buttons recover; success is claimed only after the
+  server confirms; the offline shell can't clobber the saved identity.
+- **Outbox thread pinning**: queued reports carry their conversation id
+  from queue time — verified live that a report queued under thread A
+  delivers to A even after a deep-link switch to B.
+- **Idempotent sends**: client_id per logical message, reused on retry;
+  API dedupes (phone, cid) for 1h, recording only after successful
+  filing (a 429'd retry is not swallowed). Pinned by test.
+- **Order preserved mid-flush**: new messages queue behind older saved
+  ones instead of jumping the line.
+- **Offline-boot witness map**: zone cached on first healthy poll; the
+  precached MapLibre + street data finally renders in airplane mode.
+- **XSS + overflow in turn-by-turn**: street names escaped (OSM import
+  delivers arbitrary strings), long names wrap.
+- **Rename stragglers**: Devanagari replies said पुकार still — now
+  वेसाइड; demo-recorder captions; export filename.
+
+Suite **196** (restocks view + idempotency pins). All 9 live checks
+green. Cache 20260804i.
+
+**R9 queue:** witness real photo-upload path, supervisor shift-summary
+export, Hindi/Devanagari pass on rider-app strings, deploy dry-run
+(Dockerfile → Fly.io checklist for the founder), demo video re-record
+with Wayside branding.

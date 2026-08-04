@@ -337,8 +337,16 @@ research. Log of each round: `research/loop-log.md`.
   tour artifact published, 3-minute demo script written
   (research/demo-script.md). **194 tests.** Commit `f0bd6dc7c`.
 
+- **Round 8 (closed):** coordinator supply strip (dry SKUs + courier
+  countdowns), then a 16-agent sweep of rounds 5-7 code confirmed 11/11
+  findings, all fixed: honest offline taps in the rider app (false
+  "arrived" success killed), thread-pinned + idempotent witness outbox,
+  offline-boot map, turn-by-turn XSS/overflow, Devanagari rename
+  stragglers (पुकार→वेसाइड). **196 tests.** Commits `4be60fbed` +
+  `a9cbb86bf`.
+
 ---
-**Last updated:** 2026-08-04, after loop Round 7. Before that: the
+**Last updated:** 2026-08-04, after loop Round 8. Before that: the
 find-issues iteration of 2026-08-02. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render
