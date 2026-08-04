@@ -322,8 +322,17 @@ research. Log of each round: `research/loop-log.md`.
   invariants proven under forced stockout (120 reports vs 57 kits),
   #case-XXXX deep links. **189 tests.** Commit `cd50c5445`.
 
+- **Round 6 (closed):** three builder agents in parallel — rider
+  turn-by-turn street directions (nav-app UI, verified via live accept),
+  witness queued-send (offline reports auto-flush on reconnect, E2E
+  verified), site refresh with true R3-R5 proof points. Cache reconciled
+  to 20260804f after a builder-side partial bump that would have broken
+  offline. Loop heartbeat moved server-side (send_later Routine) after
+  in-session wakeups kept getting superseded. **194 tests.** Commits
+  `28e8b5883` + `20bf7c971` + `35ddfc2bf`.
+
 ---
-**Last updated:** 2026-08-04, after loop Round 5. Before that: the
+**Last updated:** 2026-08-04, after loop Round 6. Before that: the
 find-issues iteration of 2026-08-02. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render

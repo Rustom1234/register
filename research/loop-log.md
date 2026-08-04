@@ -260,3 +260,47 @@ revisit only if founder wants), rider-side turn-by-turn text directions,
 witness queued-send (retry the failed report automatically when signal
 returns), depot restock notification via push, site/ pitch page refresh
 with the R3-R5 features (offline + kit costs are demo-worthy).
+
+---
+
+## Round 6 — CLOSED (2026-08-04)
+
+**Theme: parallel build — three agents, three features, one integration.**
+(Also fixed the loop's own cadence: in-session wakeups kept getting
+superseded, so the heartbeat now lives server-side via a scheduled
+message that fires into the session as a real turn.)
+
+1. **Rider turn-by-turn directions** (commit `35ddfc2bf`): the road
+   graph's street names flow through A* (`route_named`, 3-tuple `route()`
+   contract preserved + pinned), sim collapses legs into ≤8 honest steps
+   ("Musafir Khana Road · 68 m", "gali" for unnamed lanes), clears on
+   every close path, and the responder app renders them nav-app style —
+   done legs dimmed, current leg glowing. Verified by accepting a live
+   offer in Playwright as Meena: 4 steps, real names, highlight moves.
+2. **Witness queued-send** (`28e8b5883`): a report that fails offline
+   queues in localStorage (cap 10, text/location/photo/voice only —
+   never stale button replies) and auto-flushes in order on the 'online'
+   event, on the first healthy poll, or on page load. Verified E2E:
+   offline send → "saved, will send by itself" → reconnect → green
+   "✓ 1 saved message sent." → message confirmed in the backend thread.
+   No report a witness types is ever lost.
+3. **Site refresh** (`20bf7c971`): the public page now carries the true
+   proof points — offline apps, 189→194 tests, restart-safe ledger,
+   half-a-millisecond routing, itemized kit costs (₹172/₹50/₹173,
+   ₹36,500 year-one) — and FIXES an old overclaim (pins delete "on
+   schedule", not "the moment a case closes").
+
+Integration caught one real hazard: the turn-by-turn builder bumped only
+responder.html's cache-buster, which would have broken BOTH offline
+shells (SW precaches exact URLs). Reconciled everything to 20260804f and
+re-verified airplane-mode on both apps. A container restart mid-verify
+also cost a server reboot — and exposed that my verify script fetched
+from an un-navigated page (fixed).
+
+Suite **194**. All 9 live checks green. Commits `28e8b5883`,
+`20bf7c971`, `35ddfc2bf`.
+
+**R7 candidates:** depot restock push to the coordinator surface, witness
+photo-upload real file path (currently described-photo hints), supervisor
+shift-summary export, Hindi/Devanagari pass over responder app strings,
+demo video script for the founder.
