@@ -309,8 +309,15 @@ research. Log of each round: `research/loop-log.md`.
   ⚠ Awaiting founder word: PUKAAR→Wayside product-chrome rename
   (confirmed as the top UX finding; one word and I'll sweep it).
 
+- **Round 4 (closed):** deferred-queue clearance — 72h case expiry
+  enforced in retention (audit-logged, legacy tests rewritten to the new
+  contract), provenance macs re-verifiable from stored rows (bool→0/1
+  canonicalization), all 8 cross-thread dict iterations snapshotted,
+  golden run stages clear of dedup cells + honest failure. **188
+  tests.** Commit `7bdc8610a`.
+
 ---
-**Last updated:** 2026-08-04, after loop Round 3. Before that: the
+**Last updated:** 2026-08-04, after loop Round 4. Before that: the
 find-issues iteration of 2026-08-02. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render

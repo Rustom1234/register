@@ -186,3 +186,40 @@ health trim, push lifecycle). Full Playwright re-verify: overflow clean
 at 390/1600 on all four surfaces, tile strip 39px, offline shell serves
 under airplane mode with cache `wayside-20260804c`, witness mobile is
 map-first, keyed dropdowns survive polls. Buster → 20260804c.
+
+---
+
+## Round 4 — CLOSED (2026-08-04)
+
+**Theme: clear the deferred queue.** The four audit findings parked in
+Round 3, landed and pinned:
+
+1. **72h case contract enforced** (was P3-4): `expires_at` was written,
+   never read. `purge()` now closes non-escalated cases past contract
+   (audit-logged), releases dangling orders, and the existing clocks
+   (pin 7d, aggregate 90d) take over. Rewrote two legacy tests whose
+   premise ("open case at 90 days keeps its pin") the new contract makes
+   impossible by construction.
+2. **Provenance re-verifiability** (P3-3): sign() canonicalizes bools to
+   the stored 0/1 before hashing — an auditor holding only the DB can
+   now re-verify every order mac. Pinned: bool/int sign identically,
+   stored row re-verifies, distinct ints stay distinct.
+3. **Thread-safe iteration** (P3-2): all 8 shared-dict iteration sites
+   snapshot with list() — sim thread vs API-worker RuntimeError class
+   closed for conversations, pending escalations, pending restocks, and
+   the report renderer.
+4. **Golden-run honesty** (P3-1): stages its pin clear of open dedup
+   cells via the same query the service merges with; when a merge still
+   swallows the report it says so instead of claiming success.
+
+Suite **188** (4 new pins). Live sanity: all 4 surfaces load clean.
+Commit `7bdc8610a`.
+
+**Still open by choice:** PUKAAR→Wayside chrome rename (founder's word
+pending — one message and it happens); manual-rider movement semantics
+(SOS covers humans; logged as design note, not a defect).
+
+**R5 candidates:** witness-page offline behavior (SW covers /responder
+only), supervisor case-detail deep links, a night-theme pass on the
+witness map, load test at 10× report volume, CI workflow file
+(pytest on push — suite is fully offline by design).
