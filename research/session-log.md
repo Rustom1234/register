@@ -356,8 +356,14 @@ research. Log of each round: `research/loop-log.md`.
   Wayside close) and **docs/wayside-demo.webm** recorded (~3.5 min),
   delivered to the founder, committed. Commits `d5c8a332d`/`bd0b58c0f`.
 
+- **Round 11 (closed):** shift-handover report (svc.shift_summary →
+  printable /shift + JSON /api/shift, window-scoped, staff-gated, live
+  verified + screenshotted) and research/deploy-app.md (founder's
+  Fly.io/Render private-URL checklist; Dockerfile documents
+  PUKAAR_MEDIA_DIR volume). **202 tests.** Commit `5488d2e0e`.
+
 ---
-**Last updated:** 2026-08-04, after loop Round 10. Before that: the
+**Last updated:** 2026-08-04, after loop Round 11. Before that: the
 find-issues iteration of 2026-08-02. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render

@@ -447,3 +447,34 @@ Commits `d5c8a332d`, `bd0b58c0f`, + this one. Suite unchanged at 200.
 **R11 queue (carried from R10):** supervisor shift-summary export,
 Hindi/Devanagari pass on rider-app strings, Fly.io deploy checklist,
 adversarial sweep of the photo path.
+
+---
+
+## Round 11 — CLOSED (2026-08-04)
+
+**Theme: two founder-facing deliverables.**
+
+1. **Shift handover report** — the coordinator's end-of-day export.
+   svc.shift_summary(now, hours) scopes everything to cases opened in
+   the window (default 12h, clamped 1-72) and rolls up, in plain
+   language: reports received, people served, clinical escalations,
+   still-open-hand-to-next-shift, median accept time, kit movement
+   (delivered / returned unused / restocks), stock on hand + low SKUs.
+   Two staff-gated surfaces — printable HTML at /shift (new supervisor
+   toolbar button, check-circle icon) and JSON at /api/shift. Verified
+   live against the seeded world (7 reports, 3 served, SEAS-M low),
+   screenshotted; 3 tests pin window scoping, gating, hours clamp.
+2. **App deploy checklist** (research/deploy-app.md) — founder-runnable
+   guide to a private URL for the LIVE APP (not the static site):
+   Fly.io Mumbai ~$3-6/mo with exact secrets + volume + the
+   /login?token= judge link, Render/Railway as no-card fallbacks, a
+   pre-show 5-point sanity check. Dockerfile now documents
+   PUKAAR_MEDIA_DIR on the persistent volume (photos would vanish on
+   redeploy). This unblocks the private URL the founder wanted to see.
+
+Suite **202**. Cache 20260804k. Commit `5488d2e0e`.
+
+**R12 queue:** Hindi/Devanagari pass on rider-app strings, adversarial
+sweep of the photo path + shift export, deploy a real instance if the
+founder green-lights the Fly card, GitHub Actions pages workflow for the
+marketing site.
