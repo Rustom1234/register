@@ -298,8 +298,19 @@ research. Log of each round: `research/loop-log.md`.
   busy state on both phone panels, designed empty states for feed/cases,
   cache-buster → 20260804a. **175 tests.** Commit `5bb201b1d`.
 
+- **Round 3 (closed):** the "burn it" round — 58-agent adversarial
+  audit (12 finder dimensions, per-finding skeptics, 3.57M tokens)
+  confirmed 45 findings; 30 fixed in one serial pass including both
+  P1s (kit-ledger corruption across restarts; real-browser push dead on
+  arrival from a pywebpush key-format mismatch). Features: offline
+  rider PWA shell, mobile KPI chip strip, routing perf measured at 5×
+  (0.5ms p50 — no optimization needed). research/kit-costs.md sourced.
+  **184 tests.** Commits `583f96779` + `91bae8bdb`.
+  ⚠ Awaiting founder word: PUKAAR→Wayside product-chrome rename
+  (confirmed as the top UX finding; one word and I'll sweep it).
+
 ---
-**Last updated:** 2026-08-04, after loop Round 2. Before that: the
+**Last updated:** 2026-08-04, after loop Round 3. Before that: the
 find-issues iteration of 2026-08-02. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render
