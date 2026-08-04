@@ -500,6 +500,19 @@ function showDetail(caseId) {
     followGolden = false; updateFollowBtn();
     map.panTo([c.lng, c.lat]);
   }
+  // shareable link: a coordinator can paste /supervisor#case-8F77 in chat
+  history.replaceState(null, "", "#case-" + caseId.slice(-4).toUpperCase());
+}
+
+let deepLinked = false;
+function applyCaseDeepLink() {
+  if (deepLinked || !state) return;
+  deepLinked = true;
+  const m = (location.hash || "").match(/^#case-([A-Za-z0-9]{3,12})$/);
+  if (!m) return;
+  const suf = m[1].toLowerCase();
+  const c = state.cases.find((x) => x.id.toLowerCase().endsWith(suf));
+  if (c) showDetail(c.id);
 }
 
 function renderDetail() {
@@ -912,7 +925,10 @@ function wire() {
     await fetch("/api/sim", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "speed", value: +e.target.value }) });
   });
   document.getElementById("btn-purge").addEventListener("click", async () => { await fetch("/api/purge", { method: "POST" }); refresh(); });
-  document.getElementById("detail-close").addEventListener("click", () => { selectedCase = null; renderDetail(); });
+  document.getElementById("detail-close").addEventListener("click", () => {
+    selectedCase = null; renderDetail();
+    history.replaceState(null, "", location.pathname);
+  });
   document.getElementById("btn-sound").addEventListener("click", () => {
     soundOn = !soundOn;
     if (soundOn && !audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1003,6 +1019,7 @@ async function refresh() {
     state.prov_ephemeral ? "demo HMAC key (ephemeral) — set PUKAAR_HMAC_KEY for persistent provenance" : "persistent HMAC provenance key";
   syncMap(); renderTiles(); renderFeed(); renderCases(); renderPhone(); renderDetail();
   renderRespPanel(); renderCoord(); drawCells(); playNewFeedSounds();
+  applyCaseDeepLink();
   const veil = document.getElementById("boot-veil");
   if (veil && !veil.classList.contains("gone")) {
     veil.classList.add("gone");

@@ -21,6 +21,29 @@ let map, witnessPin = null;
 const localLog = [];
 let typingUntil = 0;
 
+// Offline shell: the same root service worker the rider app uses precaches
+// this page — a witness with no signal sees the app (and an honest "didn't
+// send"), not the browser's error page.
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => { /* http/old browser */ });
+}
+
+function netNote(msg) {
+  let n = $("net-note");
+  if (!n) {
+    n = document.createElement("div");
+    n.id = "net-note";
+    n.style.cssText = "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);" +
+      "background:#2a1215;border:1px solid #d03b3b;color:#ff9d99;border-radius:999px;" +
+      "padding:10px 18px;font-size:13px;font-weight:600;z-index:99;max-width:90vw;text-align:center";
+    document.body.appendChild(n);
+  }
+  n.textContent = msg;
+  n.hidden = false;
+  clearTimeout(netNote._t);
+  netNote._t = setTimeout(() => { n.hidden = true; }, 4000);
+}
+
 function escapeHtml(s) {
   return (s || "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 }
@@ -143,6 +166,9 @@ async function sendInbound(kind, extra = {}) {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
     });
     await res.json();
+  } catch {
+    // no signal: say so plainly — a silent failure looks like a sent report
+    netNote("⚠ No signal — your message didn't send. Try again when you're connected.");
   } finally {
     sendBusy = false;
     if (btn) btn.disabled = false;
@@ -190,7 +216,13 @@ function wire() {
   $("btn-voice").addEventListener("click", () => sendInbound("voice", { text: VOICE_SAMPLES[voiceIdx++ % VOICE_SAMPLES.length] }));
   document.querySelectorAll(".scenarios button").forEach((b) =>
     b.addEventListener("click", async () => {
-      const res = await (await fetch(`/api/scenario/${b.dataset.sc}`, { method: "POST" })).json();
+      let res;
+      try {
+        res = await (await fetch(`/api/scenario/${b.dataset.sc}`, { method: "POST" })).json();
+      } catch {
+        netNote("⚠ No signal — scenarios need a connection.");
+        return;
+      }
       // Jump this view to the scenario's thread — a demo button that plays
       // its story in a conversation you can't see is a dead end.
       if (res.phone) activeConv = res.phone;
@@ -210,6 +242,14 @@ function connBanner(show) {
   if (b) b.hidden = !show;
 }
 
+function liftVeil() {
+  const veil = $("boot-veil");
+  if (veil && !veil.classList.contains("gone")) {
+    veil.classList.add("gone");
+    setTimeout(() => veil.remove(), 450);
+  }
+}
+
 async function refresh() {
   try {
     const res = await fetch("/api/state");
@@ -217,17 +257,17 @@ async function refresh() {
     pollFails = 0;
     connBanner(false);
   } catch {
+    // Offline boot (service-worker shell): the page must still be USABLE —
+    // a veil that waits for a poll that can never succeed is a dead app.
+    // Lift it, wire the inputs, and let the send path say "no signal".
+    if (!wired) { wire(); wired = true; renderPhone(); liftVeil(); }
     if (++pollFails >= 2) connBanner(true);
     return;
   }
   if (!wired) { wire(); wired = true; }
   if (!map) initMap(state.zone);
   renderPhone();
-  const veil = $("boot-veil");
-  if (veil && !veil.classList.contains("gone")) {
-    veil.classList.add("gone");
-    setTimeout(() => veil.remove(), 450);
-  }
+  liftVeil();
 }
 
 refresh();

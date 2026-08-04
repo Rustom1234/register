@@ -5,13 +5,22 @@
    worse than a spinner — but the shell itself never 404s offline. */
 "use strict";
 
-const CACHE = "wayside-20260804c";
+const CACHE = "wayside-20260804e";
 const SHELL = [
   "/responder",
-  "/static/responder.js?v=20260804c",
+  "/static/responder.js?v=20260804e",
   "/static/manifest.webmanifest",
   "/static/icons/icon-192.png",
   "/static/icons/icon-512.png",
+  // witness shell: a reporter with no signal still gets the page (with an
+  // honest "didn't send" state) instead of the browser's dinosaur
+  "/witness",
+  "/static/witness.js?v=20260804e",
+  "/static/app.css?v=20260804e",
+  "/static/basemap.js?v=20260804e",
+  "/static/vendor/maplibre-gl.js?v=20260804e",
+  "/static/vendor/maplibre-gl.css?v=20260804e",
+  "/data/demo_zone.geojson",
 ];
 
 self.addEventListener("install", (e) => {
@@ -40,18 +49,35 @@ self.addEventListener("fetch", (e) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;        // live data: network only
 
-  // Rider app navigation: freshest when online, shell when not.
-  if (req.mode === "navigate" && url.pathname.startsWith("/responder")) {
+  // App navigations (rider + witness): freshest when online, shell when not.
+  const navShell = url.pathname.startsWith("/responder") ? "/responder"
+    : url.pathname.startsWith("/witness") ? "/witness" : null;
+  if (req.mode === "navigate" && navShell) {
     e.respondWith(
       fetch(req)
         .then((res) => {
           if (res.ok) {
             const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put("/responder", copy));
+            caches.open(CACHE).then((c) => c.put(navShell, copy));
           }
           return res;
         })
-        .catch(() => caches.match("/responder"))
+        .catch(() => caches.match(navShell))
+    );
+    return;
+  }
+
+  // The basemap's street data: fresh when online, cached offline (it is
+  // also part of the precached shell so the witness map works airplane-mode).
+  if (url.pathname === "/data/demo_zone.geojson") {
+    e.respondWith(
+      fetch(req).then((res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+        }
+        return res;
+      }).catch(() => caches.match(req))
     );
     return;
   }

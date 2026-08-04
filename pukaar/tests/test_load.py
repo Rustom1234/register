@@ -61,3 +61,54 @@ def test_300_cases_stay_within_budget():
     # the system is actually working through the backlog, not seizing up
     served = svc.store.query("SELECT COUNT(*) n FROM outcomes")[0]["n"]
     assert served >= 20, f"only {served} outcomes after sustained ticking"
+
+
+def test_kit_economy_invariants_under_stockout_pressure():
+    """120 reports against 57 seeded kits: the depot economy MUST go into
+    stockout — the invariants have to hold exactly there, where round-3's
+    audit found the ledger leaks (double-consume, orphaned reservations)."""
+    cfg = Config()
+    cfg.backend = "mock"
+    holder = {}
+    svc = PukaarService(cfg, Store(":memory:"), now_fn=lambda: holder["sim"].sim_now)
+    sim = Sim(svc, cfg, seed=1234)
+    holder["sim"] = sim
+    sim._random_report_at = float("inf")
+    sim.speed = 30.0
+
+    for i in range(120):
+        phone = f"+91-eco-{i:04d}"
+        svc.wa_inbound(phone, "text", text="aadmi ghayal hai, patti se khoon aa raha hai")
+        lat = 28.5933 + ((i % 12) - 6) * 3e-3
+        lng = 77.2507 + ((i // 12) - 5) * 3e-3
+        svc.wa_inbound(phone, "location", lat=lat, lng=lng)
+        svc.wa_inbound(phone, "button", text="fresh:10")
+        if i % 5 == 0:
+            sim.tick(1.0)
+    for _ in range(400):                        # ~3.3 sim-hours of dispatch
+        sim.tick(1.0)
+
+    # 1. stock is physical: never negative, even through stockout + restock
+    for d in sim.depots():
+        for sku, n in d["stock"].items():
+            assert n >= 0, f"negative stock {sku}@{d['id']}: {n}"
+
+    # 2. the ledger maps ONLY to orders still being served — every closed,
+    #    cancelled, escalated or restarted order must have settled
+    for oid in list(sim._reservations):
+        o = svc.store.one("SELECT status FROM orders WHERE id=?", (oid,))
+        assert o and o["status"] in ("accepted", "onsite"), \
+            f"reservation for {oid} in status {o and o['status']} — ledger leak"
+
+    # 3. no offered order is a black hole: someone can still answer it
+    for o in svc.store.query("SELECT * FROM orders WHERE status='offered'"):
+        live = svc.store.query(
+            "SELECT * FROM assignments WHERE order_id=? AND responded_at IS NULL",
+            (o["id"],))
+        assert live, f"order {o['id']} offered with nobody left to answer"
+
+    # 4. stockout was actually exercised (the test must bite where it claims)
+    flags = [e for e in svc.feed if e["kind"] in ("restock_needed", "coordinator_flag")]
+    outs = svc.store.query("SELECT COUNT(*) n FROM outcomes")[0]["n"]
+    assert outs >= 15, f"only {outs} outcomes — dispatch stalled under pressure"
+    assert flags or outs >= 40, "economy never even approached stockout — weak test"

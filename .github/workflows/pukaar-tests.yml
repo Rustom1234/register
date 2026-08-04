@@ -1,5 +1,8 @@
 name: pukaar-tests
 
+# Key-free by design (see CLAUDE.md): the suite passes fully offline on the
+# MockBackend — no ANTHROPIC_API_KEY, no secrets, ever.
+
 on:
   push:
     paths:
@@ -12,6 +15,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
     defaults:
       run:
         working-directory: pukaar
@@ -19,6 +25,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - run: pip install -e ".[dev]"
-      - run: python -m pytest -q
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Frontend syntax gate
+        run: |
+          for f in pukaar/static/*.js; do node --check "$f"; done
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Test (offline, MockBackend)
+        run: python -m pytest -q
