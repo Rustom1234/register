@@ -126,7 +126,8 @@ class PukaarService:
     # ---------------------------------------------------------- inbound --
     def wa_inbound(self, phone: str, kind: str, text: str | None = None,
                    lat: float | None = None, lng: float | None = None,
-                   photo_hint: str | None = None) -> list[BotMsg]:
+                   photo_hint: str | None = None,
+                   media_ref: str | None = None) -> list[BotMsg]:
         phone_hash = hashlib.sha256(f"pukaar:{phone}".encode()).hexdigest()[:12]
         conv = self.conversations.setdefault(phone, Conversation(phone_hash=phone_hash))
 
@@ -198,13 +199,21 @@ class PukaarService:
             self._handle_recheck_reply(conv, reply)
         if conv.state["stage"] == "emergency_redirect":
             self.emit("emergency_redirect", {"phone_hash": phone_hash})
-            self._record_report(conv, kind, shown, case_id=None)
+            self._record_report(conv, kind, shown, case_id=None, media_ref=media_ref)
             conv.state["stage"] = "need_location"  # allow a normal report after
         elif conv.state.get("ready_case"):
             case_payload = conv.state.pop("ready_case")
             case = self._create_or_merge_case(case_payload, conv)
             conv.state["case_id"] = case["id"]
-            self._record_report(conv, kind, shown, case_id=case["id"])
+            self._record_report(conv, kind, shown, case_id=case["id"], media_ref=media_ref)
+            # Retro-link this witness's pre-case media: photos usually arrive
+            # BEFORE the pin completes the case — without this they'd stay
+            # orphaned and invisible to the ops room (and to retention's
+            # case-close deletion) forever.
+            self.store.execute(
+                "UPDATE reports SET case_id=? WHERE reporter_hash=? AND case_id IS NULL "
+                "AND media_ref IS NOT NULL AND received_at > ?",
+                (case["id"], conv.phone_hash, self.now() - 3600))
             if self.dispatch.in_dispatch_window():
                 replies.append(BotMsg(strings.fmt("S-EXPECT", lang, case_id=case["id"][-4:].upper()),
                                       string_id="S-EXPECT"))
@@ -213,18 +222,22 @@ class PukaarService:
                 replies.append(BotMsg(strings.fmt("S-EXPECT-NIGHT", lang, case_id=case["id"][-4:].upper()),
                                       string_id="S-EXPECT-NIGHT"))
         else:
-            self._record_report(conv, kind, shown, case_id=conv.state.get("case_id"))
+            self._record_report(conv, kind, shown, case_id=conv.state.get("case_id"), media_ref=media_ref)
 
         for r in replies:
             conv.remember("bot", "text", r.text, r.buttons, ts=self.now())
         self._save_conversation(phone, conv)
         return replies
 
-    def _record_report(self, conv: Conversation, kind: str, body: str | None, case_id: str | None) -> None:
+    def _record_report(self, conv: Conversation, kind: str, body: str | None,
+                       case_id: str | None, media_ref: str | None = None) -> None:
         payload = {"kind": kind, "body": body or "", "case_id": case_id}
+        # media_ref: a real uploaded filename when the witness sent an actual
+        # photo; the historical "media" placeholder for described photos.
         self.store.insert("reports", {
             "id": new_id("rep"), "case_id": case_id, "reporter_hash": conv.phone_hash,
-            "lang": "hi-en", "body": body, "media_ref": "media" if kind == "photo" else None,
+            "lang": "hi-en", "body": body,
+            "media_ref": media_ref or ("media" if kind == "photo" else None),
             "media_purged": 0, "received_at": self.now(), "provenance": "witness",
             "hmac": self.prov.sign("witness", payload),
         })

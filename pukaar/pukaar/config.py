@@ -51,6 +51,8 @@ class Config:
 
     # Retention (build plan §4): sim-time TTLs, enforced by the purge job
     media_ttl_s: int = 72 * 3600
+    # uploaded witness photos live here until the retention job deletes them
+    media_dir: str = field(default_factory=lambda: _env("PUKAAR_MEDIA_DIR", "pukaar-media"))
     latlng_ttl_s: int = 7 * 24 * 3600
     case_row_ttl_s: int = 90 * 24 * 3600
     conversation_ttl_s: int = 30 * 24 * 3600   # idle chats forgotten at 30d

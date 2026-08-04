@@ -139,3 +139,7 @@ dist
 
 # setuptools build artifacts
 pukaar/build/
+
+# uploaded witness photos (retention-managed runtime data, never committed)
+pukaar-media/
+pukaar/pukaar-media/

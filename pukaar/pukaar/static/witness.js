@@ -307,6 +307,43 @@ function wire() {
   $("btn-photo").addEventListener("click", () => { photoMenu.hidden = !photoMenu.hidden; });
   photoMenu.querySelectorAll("button[data-hint]").forEach((b) =>
     b.addEventListener("click", () => { photoMenu.hidden = true; sendInbound("photo", { photo_hint: b.dataset.hint }); }));
+  // Real upload from the phone's gallery/camera. Files can't ride the
+  // localStorage outbox, so offline gets an honest "connect first" note
+  // instead of a fake queue.
+  $("pm-upload").addEventListener("click", () => { $("pm-file").click(); });
+  $("pm-file").addEventListener("change", async () => {
+    const f = $("pm-file").files[0];
+    photoMenu.hidden = true;
+    if (!f) return;
+    if (!navigator.onLine) {
+      netNote("⚠ No signal — photos need a connection. Describe what you see in the chat instead.");
+      $("pm-file").value = "";
+      return;
+    }
+    if (f.size > 3 * 1024 * 1024) {
+      netNote("⚠ That photo is over 3 MB — most phones can pick a smaller size.");
+      $("pm-file").value = "";
+      return;
+    }
+    localEcho("📷 photo (uploading…)", "photo");
+    typingUntil = Date.now() + 1500;
+    renderPhone();
+    const fd = new FormData();
+    fd.append("phone", activeConv);
+    fd.append("file", f);
+    try {
+      const res = await fetch("/api/wa/photo", { method: "POST", body: fd });
+      if (!res.ok) {
+        const detail = (await res.json().catch(() => ({}))).detail || "upload failed";
+        netNote(`⚠ ${detail}`);
+      }
+    } catch {
+      netNote("⚠ No signal — the photo didn't send. Try again when you're connected.");
+    } finally {
+      $("pm-file").value = "";
+      setTimeout(() => { typingUntil = 0; refresh(); }, 700);
+    }
+  });
   const VOICE_SAMPLES = [
     "station ke bahar ek amma leti hain, uth nahi paa rahi hain",
     "flyover ke neeche aadmi ke pair se khoon aa raha hai, patti gandi ho gayi hai",

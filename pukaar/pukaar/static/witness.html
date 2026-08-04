@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Wayside — Report someone who needs help</title>
 <link rel="icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/vendor/maplibre-gl.css?v=20260804i">
-<link rel="stylesheet" href="/static/app.css?v=20260804i">
+<link rel="stylesheet" href="/static/vendor/maplibre-gl.css?v=20260804j">
+<link rel="stylesheet" href="/static/app.css?v=20260804j">
 <style>
   /* Standalone witness view: the phone is the point, not a sidebar item. */
   body { display: flex; flex-direction: column; min-height: 100vh; }
@@ -64,11 +64,14 @@
       <div class="phone-msgs" id="msgs"></div>
       <div class="quick" id="quick"></div>
       <div id="photo-menu" class="photo-menu" hidden>
-        <div class="pm-title">Send a photo (described — no faces needed)</div>
+        <div class="pm-title">Send a photo (no faces needed)</div>
+        <button id="pm-upload">📁 Upload a photo from this phone</button>
+        <div class="pm-title">…or describe one (demo)</div>
         <button data-hint="street photo: person with a bandaged foot, blood visible, serious infected wound">🩹 Wound + soaked bandage</button>
         <button data-hint="street photo: family with small children sitting in rain under a plastic sheet, everything wet">🌧️ Family in the rain</button>
         <button data-hint="street photo: elderly person lying on the pavement next to an empty food plate">🍚 Elder + empty plate</button>
         <button data-hint="street photo: person sitting by the road, situation unclear">📷 Unclear scene</button>
+        <input id="pm-file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
       </div>
       <div class="phone-input">
         <button id="btn-loc" title="share the map pin as location" aria-label="Share location pin">📍</button>
@@ -99,8 +102,8 @@
   <span>Only your number (hashed), the pin, and what you send are kept — nothing else. Photos are deleted when the case closes.</span>
 </footer>
 
-<script src="/static/vendor/maplibre-gl.js?v=20260804i"></script>
-<script src="/static/basemap.js?v=20260804i"></script>
-<script src="/static/witness.js?v=20260804i"></script>
+<script src="/static/vendor/maplibre-gl.js?v=20260804j"></script>
+<script src="/static/basemap.js?v=20260804j"></script>
+<script src="/static/witness.js?v=20260804j"></script>
 </body>
 </html>

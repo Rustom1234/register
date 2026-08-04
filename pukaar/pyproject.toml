@@ -11,6 +11,8 @@ dependencies = [
     # runtime transport for the WhatsApp Cloud API + Telegram bridge (the
     # dev extra alone left a clean prod install crashing at first send)
     "httpx>=0.27",
+    # multipart parsing for the witness photo upload endpoint
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]

@@ -14,6 +14,8 @@ runs it on a timer and exposes a demo button.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from .config import Config
 from .db import Store
 
@@ -42,10 +44,19 @@ def purge(store: Store, cfg: Config, now: float) -> dict:
 
     closed = "(SELECT closed_at FROM cases WHERE cases.id = reports.case_id)"
     rows = store.query(
-        f"SELECT id FROM reports WHERE media_ref IS NOT NULL AND media_purged=0 AND "
+        f"SELECT id, media_ref FROM reports WHERE media_ref IS NOT NULL AND media_purged=0 AND "
         f"(received_at < ? OR COALESCE({closed}, 1e18) < ?)",
         (now - cfg.media_ttl_s, now))
+    media_dir = Path(cfg.media_dir)
     for r in rows:
+        # a real uploaded file is deleted from DISK, not just de-referenced —
+        # "photos are deleted when the case closes" must be literally true
+        ref = r["media_ref"]
+        if ref and ref != "media" and "/" not in ref and "\\" not in ref:
+            try:
+                (media_dir / ref).unlink(missing_ok=True)
+            except OSError:
+                pass  # a locked file must not wedge the whole purge
         store.update("reports", r["id"], {"media_ref": None, "media_purged": 1})
     stats["media"] = len(rows)
 

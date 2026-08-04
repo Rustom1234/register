@@ -13,7 +13,7 @@ import time
 from collections import deque
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -102,8 +102,8 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     # witness-facing webhooks and the health probe: a hosted control room
     # must never expose live witness chats, pins, or exports to the open
     # internet. /login?token=... sets the cookie so all pages just work.
-    OPEN_PATHS = {"/health", "/api/wa/inbound", "/webhook", "/login",
-                  "/favicon.ico"}
+    OPEN_PATHS = {"/health", "/api/wa/inbound", "/api/wa/photo", "/webhook",
+                  "/login", "/favicon.ico"}
 
     @app.middleware("http")
     async def staff_gate(request: Request, call_next):
@@ -133,6 +133,15 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         resp.set_cookie("wayside_staff", token, httponly=True, samesite="lax",
                         secure=https, max_age=60 * 60 * 24 * 30)
         return resp
+
+    def _case_media() -> dict[str, list[str]]:
+        # real uploaded photos per case ("media" placeholder = described photo)
+        out: dict[str, list[str]] = {}
+        for r in svc.store.query(
+                "SELECT case_id, media_ref FROM reports WHERE media_ref IS NOT NULL "
+                "AND media_ref != 'media' AND media_purged = 0 AND case_id IS NOT NULL"):
+            out.setdefault(r["case_id"], []).append(r["media_ref"])
+        return out
 
     def _cells() -> list[dict]:
         # 90-day aggregate cells with map bounds — the only location data
@@ -190,6 +199,51 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             seen_cids[cid_key] = time.monotonic()
         return {"replies": [{"text": r.text, "buttons": r.buttons, "id": r.string_id} for r in replies]}
 
+    # A real photo from a real phone. Open (witnesses can't log in), but
+    # tightly bounded: image types only, 3 MB cap, same global flood window.
+    MEDIA_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+    MEDIA_DIR = pathlib.Path(cfg.media_dir)
+    MEDIA_NAME_RE = re.compile(r"^[A-Za-z0-9_\-]{1,48}\.(jpg|png|webp)$")
+
+    @app.post("/api/wa/photo")
+    async def wa_photo(phone: str = Form(...), caption: str = Form(""),
+                       file: UploadFile = File(...)):
+        if not PHONE_RE.match(phone):
+            raise HTTPException(422, "malformed phone id")
+        ext = MEDIA_TYPES.get((file.content_type or "").lower())
+        if not ext:
+            raise HTTPException(415, "photos only (jpeg / png / webp)")
+        now = time.monotonic()
+        while inbound_times and now - inbound_times[0] > 10:
+            inbound_times.popleft()
+        if len(inbound_times) >= 30:
+            raise HTTPException(429, "line is busy — please try again in a moment")
+        inbound_times.append(now)
+        data = await file.read()
+        if len(data) > 3 * 1024 * 1024:
+            raise HTTPException(413, "photo too large — 3 MB max")
+        if not data:
+            raise HTTPException(422, "empty file")
+        MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+        from .db import new_id
+        ref = f"{new_id('med')}.{ext}"
+        (MEDIA_DIR / ref).write_bytes(data)
+        hint = (caption or "").strip()[:200] or "photo uploaded by the witness (unreviewed)"
+        replies = svc.wa_inbound(phone, "photo", photo_hint=hint, media_ref=ref)
+        return {"stored": ref,
+                "replies": [{"text": r.text, "buttons": r.buttons, "id": r.string_id} for r in replies]}
+
+    @app.get("/api/media/{name}")
+    def media(name: str):
+        # staff-gated by the middleware (not in OPEN_PATHS): witnesses upload,
+        # only the ops room views. Strict name check kills traversal.
+        if not MEDIA_NAME_RE.match(name):
+            raise HTTPException(404, "no such media")
+        p = MEDIA_DIR / name
+        if not p.is_file():
+            raise HTTPException(404, "no such media (purged or never existed)")
+        return FileResponse(p)
+
     # ------------------------------------------------------------- state --
     @app.get("/api/state")
     def state():
@@ -207,6 +261,7 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             "sim": sim.snapshot(),
             "depots": sim.depots(),
             "restocks": sim.restocks_view(),
+            "media": _case_media(),
             "cases": cases,
             "orders": orders,
             "assignments": svc.store.query(

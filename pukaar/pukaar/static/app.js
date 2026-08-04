@@ -526,11 +526,19 @@ function renderDetail() {
   const asgs = state.assignments.filter((a) => order && a.order_id === order.id);
   const respName = (id) => (state.sim.responders.find((r) => r.id === id) || { name: id || "—" }).name;
 
+  // real uploaded photos (deleted from disk by the retention job when the
+  // case closes — the link is honest about its lifespan)
+  const media = (state.media && state.media[c.id]) || [];
+  const mediaRow = media.length
+    ? `<div>photos</div><div>${media.map((m, i) =>
+        `<a href="/api/media/${encodeURIComponent(m)}" target="_blank">📷 photo ${i + 1}</a>`).join(" · ")}
+        <span style="color:var(--muted)">(deleted at case close)</span></div>`
+    : "";
   const kv = `<div class="kv">
     <div>category</div><div>${CAT_ICON[c.category] || ""} ${c.category || "—"} ${c.urgency === "high" ? "· <b style='color:var(--critical)'>P1 ⚠</b>" : ""}</div>
     <div>DIGIPIN</div><div>${c.digipin || "—"}</div>
     <div>witnesses</div><div>${c.merged_witnesses}${c.merged_witnesses > 1 ? " (deduped)" : ""}</div>
-    <div>detail</div><div>${escapeHtml((c.detail || c.landmark_text || "—").slice(0, 70))}</div>
+    <div>detail</div><div>${escapeHtml((c.detail || c.landmark_text || "—").slice(0, 70))}</div>${mediaRow}
     <div>kit</div><div>${order ? order.sku : "—"}${order && order.clinical_flag ? " · 🩺 clinical flag" : ""}</div>
     <div>provenance</div><div>witness ✓ / agent_inferred ✓ (HMAC)</div>
   </div>`;
