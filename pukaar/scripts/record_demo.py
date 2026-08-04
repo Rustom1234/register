@@ -72,7 +72,7 @@ def main():
 
         page.goto("http://localhost:8877/", wait_until="domcontentloaded")
         page.wait_for_timeout(3500)
-        cap("PUKAAR — a live street-aid control room · Nizamuddin, Delhi (simulated city, real pipeline)", 3800)
+        cap("WAYSIDE — a live street-aid control room · Nizamuddin, Delhi (simulated city, real pipeline)", 3800)
 
         # ---- witness reports in English
         cap("A witness sees someone in need and messages the aid line — in English…")
@@ -194,7 +194,7 @@ def main():
         # ---- metrics
         page.goto("http://localhost:8877/static/metrics.html", wait_until="domcontentloaded")
         page.wait_for_timeout(1200)
-        cap("Pre-registered kill criteria, evaluated live — if Pukaar stops earning its numbers, it says so", 5000)
+        cap("Pre-registered kill criteria, evaluated live — if Wayside stops earning its numbers, it says so", 5000)
 
         # ---- close
         page.goto("http://localhost:8877/", wait_until="domcontentloaded")

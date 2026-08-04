@@ -98,3 +98,23 @@ def test_restocks_exposed_to_coordinator_state():
     assert view and view[0]["sku"] == "MED-1"
     assert view[0]["depot"] == sim.depot_list[0][1]   # display name, not id
     assert view[0]["due_s"] >= 0
+
+
+def test_inbound_client_id_dedupes_redelivery():
+    from fastapi.testclient import TestClient
+
+    from pukaar.api import build_app
+    cfg = Config()
+    cfg.backend = "mock"
+    client = TestClient(build_app(cfg))
+    client.__enter__()
+    body = {"phone": "+91-IDP1", "kind": "text",
+            "text": "aadmi ghayal hai, patti se khoon", "client_id": "abc123"}
+    r1 = client.post("/api/wa/inbound", json=body)
+    assert r1.status_code == 200 and r1.json()["replies"]
+    r2 = client.post("/api/wa/inbound", json=body)   # outbox redelivery
+    assert r2.status_code == 200 and r2.json()["replies"] == []
+    # same witness, NEW message id -> processed normally
+    r3 = client.post("/api/wa/inbound", json={**body, "client_id": "def456",
+                                              "text": "abhi bhi wahin hai"})
+    assert r3.json()["replies"]

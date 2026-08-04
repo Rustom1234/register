@@ -178,9 +178,18 @@ function saveOutbox() {
   try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(outbox)); } catch { /* private mode/quota */ }
 }
 
-function queueOutbound(kind, extra) {
+// One id per LOGICAL message, minted when the witness hits send and reused
+// on every retry — the server drops duplicates, so a send whose response
+// got lost can't double-file the report.
+function newCid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function queueOutbound(kind, extra, cid) {
   if (!OUTBOX_KINDS.includes(kind)) return false;
-  outbox.push({ kind, extra, ts: Date.now() });
+  // phone captured NOW: a deep link can switch activeConv before the flush
+  // runs, and a deferred report must land in the thread it was written in
+  outbox.push({ kind, extra, ts: Date.now(), phone: activeConv, cid });
   while (outbox.length > OUTBOX_MAX) outbox.shift(); // cap: the oldest report is the stalest
   saveOutbox();
   return true;
@@ -199,7 +208,8 @@ async function flushOutbox() {
       try {
         const res = await fetch("/api/wa/inbound", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: activeConv, kind: e.kind, ...e.extra }),
+          body: JSON.stringify({ phone: e.phone || activeConv, kind: e.kind,
+                                 client_id: e.cid, ...e.extra }),
         });
         await res.json();
       } catch { break; } // still (or again) offline
@@ -221,11 +231,22 @@ window.addEventListener("online", () => flushOutbox());
 let sendBusy = false; // one in-flight report at a time — Enter-mash safe
 
 async function sendInbound(kind, extra = {}) {
-  const body = { phone: activeConv, kind, ...extra };
   if (kind === "text" || kind === "button") localEcho(extra.text, kind);
   else if (kind === "voice") localEcho("🎤 " + extra.text, "voice");
   typingUntil = Date.now() + 900;
   renderPhone();
+  // Order beats latency: while queued reports are waiting (or mid-flush), a
+  // new queueable message joins the BACK of the line — sending it direct
+  // would deliver it before older reports and garble the intake thread.
+  if ((outbox.length || flushBusy) && OUTBOX_KINDS.includes(kind)) {
+    queueOutbound(kind, extra, newCid());
+    netNote("⚠ Queued behind your earlier saved messages — sending in order.");
+    flushOutbox();
+    setTimeout(() => { typingUntil = 0; refresh(); }, 700);
+    return;
+  }
+  const cid = newCid();
+  const body = { phone: activeConv, kind, client_id: cid, ...extra };
   const btn = $("btn-send");
   sendBusy = true;
   if (btn) btn.disabled = true;
@@ -236,8 +257,10 @@ async function sendInbound(kind, extra = {}) {
     await res.json();
   } catch {
     // no signal: queue it — "try again" loses reports from witnesses who walk
-    // away; button taps stay unqueued, so they keep the plain failure note
-    if (queueOutbound(kind, extra)) {
+    // away; button taps stay unqueued, so they keep the plain failure note.
+    // Same cid: if the send actually landed and only the response was lost,
+    // the server drops the redelivery instead of double-filing the report.
+    if (queueOutbound(kind, extra, cid)) {
       netNote("⚠ No signal — saved. It will send by itself when you're back online.");
     } else {
       netNote("⚠ No signal — your message didn't send. Try again when you're connected.");
@@ -273,7 +296,11 @@ function wire() {
       const z = state.zone;
       lat = z.lat + (Math.random() - 0.5) * 0.012; lng = z.lng + (Math.random() - 0.5) * 0.012;
       if (map && map !== "failed") placeWitnessPin(lat, lng);
-    } else return;
+    } else {
+      // offline boot with no cached zone: don't dead-end silently
+      netNote("⚠ No signal — tap the map to drop a pin, or describe a landmark in the chat.");
+      return;
+    }
     sendInbound("location", { lat, lng });
   });
   const photoMenu = $("photo-menu");
@@ -334,13 +361,28 @@ async function refresh() {
   } catch {
     // Offline boot (service-worker shell): the page must still be USABLE —
     // a veil that waits for a poll that can never succeed is a dead app.
-    // Lift it, wire the inputs, and let the send path say "no signal".
-    if (!wired) { wire(); wired = true; renderPhone(); liftVeil(); }
+    // Lift it, wire the inputs, init the map from the cached zone (the SW
+    // precached MapLibre + street data for exactly this), and let the send
+    // path say "no signal".
+    if (!wired) {
+      wire(); wired = true;
+      if (!map) {
+        try {
+          const z = JSON.parse(localStorage.getItem("pukaar_witness_zone") || "null");
+          if (z && z.lat != null) initMap(z);
+        } catch { /* no cached zone yet — map stays blank, chat still works */ }
+      }
+      renderPhone(); liftVeil();
+    }
     if (++pollFails >= 2) connBanner(true);
     return;
   }
   if (!wired) { wire(); wired = true; }
-  if (!map) initMap(state.zone);
+  if (!map) {
+    initMap(state.zone);
+    // remember the zone so an offline BOOT can still draw the street map
+    try { localStorage.setItem("pukaar_witness_zone", JSON.stringify(state.zone)); } catch { /* quota */ }
+  }
   renderPhone();
   liftVeil();
 }

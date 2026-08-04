@@ -37,6 +37,10 @@ class Inbound(BaseModel):
     lat: float | None = None
     lng: float | None = None
     photo_hint: str | None = None
+    # Idempotency: the witness app mints one id per logical message and
+    # reuses it on retries — a send whose RESPONSE was lost must not file
+    # the report twice when the outbox redelivers it.
+    client_id: str | None = None
 
 
 class SimCtl(BaseModel):
@@ -149,11 +153,22 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     # budget (the gate's fixed reply is cheap and a life is not).
     PHONE_RE = re.compile(r"^[+0-9A-Za-z:_\-]{3,32}$")
     inbound_times: deque = deque()
+    seen_cids: dict[tuple[str, str], float] = {}   # (phone, client_id) -> monotonic
 
     @app.post("/api/wa/inbound")
     def wa_inbound(msg: Inbound):
         if not PHONE_RE.match(msg.phone):
             raise HTTPException(422, "malformed phone id")
+        cid_key = None
+        if msg.client_id:
+            now_m = time.monotonic()
+            for k in [k for k, t in seen_cids.items() if now_m - t > 3600]:
+                seen_cids.pop(k, None)
+            cid_key = (msg.phone, msg.client_id[:64])
+            if cid_key in seen_cids:
+                # duplicate delivery of an already-filed message: succeed
+                # quietly with no replies, so the client stops retrying
+                return {"replies": []}
         for v in (msg.lat, msg.lng):
             if v is not None and not math.isfinite(v):
                 raise HTTPException(422, "coordinates must be finite numbers")
@@ -169,6 +184,10 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             inbound_times.append(now)
         replies = svc.wa_inbound(msg.phone, msg.kind, text=msg.text, lat=msg.lat,
                                  lng=msg.lng, photo_hint=msg.photo_hint)
+        # Record the cid only AFTER the message is actually filed — a retry
+        # of a 429'd or errored send must not be swallowed as a "duplicate".
+        if cid_key:
+            seen_cids[cid_key] = time.monotonic()
         return {"replies": [{"text": r.text, "buttons": r.buttons, "id": r.string_id} for r in replies]}
 
     # ------------------------------------------------------------- state --

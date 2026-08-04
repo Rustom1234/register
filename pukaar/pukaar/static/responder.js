@@ -65,12 +65,22 @@ function armNotifyTap() {
 document.addEventListener("pointerdown", armNotifyTap);
 
 async function api(path, body) {
-  const r = await fetch(path, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return r.json();
+  // Never throws: the offline shell means every button here can be tapped
+  // with zero signal, and an unhandled rejection = a silently eaten tap.
+  try {
+    const r = await fetch(path, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return r.json();
+  } catch {
+    return { ok: false, offline: true };
+  }
+}
+
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 }
 
 function me() {
@@ -204,12 +214,18 @@ function renderOffers(offers) {
     b.addEventListener("click", async () => {
       b.disabled = true;
       const res = await api("/api/responder", { action: "accept", assignment_id: b.dataset.acc });
+      if (res.offline) {
+        b.disabled = false;
+        toast("⚠ no signal — try again");
+        return;
+      }
       toast(res.ok ? "✓ accepted — head to the pin" : "offer already taken");
     }));
   scr.querySelectorAll("[data-dec]").forEach((b) =>
-    b.addEventListener("click", () => {
+    b.addEventListener("click", async () => {
       b.disabled = true;
-      api("/api/responder", { action: "decline", assignment_id: b.dataset.dec });
+      const res = await api("/api/responder", { action: "decline", assignment_id: b.dataset.dec });
+      if (res.offline) { b.disabled = false; toast("⚠ no signal — try again"); }
     }));
   show("scr-offers");
 }
@@ -220,9 +236,12 @@ function renderOffers(offers) {
 function stepsHtml(steps, stepI) {
   if (!steps || !steps.length) return "";
   const fmtM = (v) => (v >= 1000 ? `${(v / 1000).toFixed(1)} km` : `${v} m`);
+  // street names are data, not markup: today they come from our own
+  // geojson, but tools/fetch_real_roads.py imports OSM names verbatim —
+  // an innerHTML sink must never trust them
   return `<ol class="steps">` + steps.map((s, i) =>
     `<li class="${i < stepI ? "done" : i === stepI ? "now" : ""}">` +
-    `<span class="st-n">${s.street}</span><span class="st-m">${fmtM(s.m)}</span></li>`).join("") + `</ol>`;
+    `<span class="st-n">${escapeHtml(s.street)}</span><span class="st-m">${fmtM(s.m)}</span></li>`).join("") + `</ol>`;
 }
 
 let activeKey = "";
@@ -303,12 +322,25 @@ function renderActive(order) {
       b.disabled = true;
       const res = await api("/api/responder",
         { action: "outcome", order_id: order.id, outcome: b.dataset.out });
+      if (res.offline) {
+        b.disabled = false;
+        toast("⚠ no signal — outcome not recorded, try again");
+        return;
+      }
       if (res.ok) { toast("✓ outcome recorded"); startDist.delete(order.id); }
     }));
   const arr = $("scr-active").querySelector("[data-arrived]");
   if (arr) arr.addEventListener("click", async () => {
-    arr.disabled = true; arr.textContent = "✓ marked arrived";
+    // success is claimed only AFTER the server says so — a false "✓" to a
+    // rider standing at the pin with no signal is worse than no button
+    arr.disabled = true;
     const res = await api("/api/responder", { action: "arrived", order_id: order.id });
+    if (res.offline) {
+      arr.disabled = false;
+      toast("⚠ no signal — arrival auto-registers at the pin anyway");
+      return;
+    }
+    arr.textContent = "✓ marked arrived";
     if (res.ok) { toast("✓ arrived"); activeKey = ""; }
   });
   show("scr-active");
@@ -367,9 +399,16 @@ async function poll() {
 }
 
 $("duty-btn").addEventListener("click", async () => {
+  // offline shell boot: #pick has no options yet — going "on duty" as ""
+  // would clobber the saved identity in localStorage and then fail anyway
+  if (!$("pick").value) {
+    toast("⚠ no signal — identities load when you're connected");
+    return;
+  }
   myId = $("pick").value;
   localStorage.setItem("pukaar_resp", myId);
-  await api("/api/manual", { responder_id: myId, manual: true });
+  const res = await api("/api/manual", { responder_id: myId, manual: true });
+  if (res.offline) { toast("⚠ no signal — try again when connected"); return; }
   enableNotifications();     // needs the user gesture we just got
   await poll();
 });
