@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pukaar — Report someone who needs help</title>
+<link rel="stylesheet" href="/static/vendor/maplibre-gl.css?v=20260801a">
+<link rel="stylesheet" href="/static/app.css?v=20260801a">
+<style>
+  /* Standalone witness view: the phone is the point, not a sidebar item. */
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+  #wlayout {
+    flex: 1 1 auto; display: grid; grid-template-columns: 380px 1fr;
+    gap: 14px; padding: 14px; min-height: 0;
+  }
+  #wleft { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+  #wleft .phone { flex: 0 0 auto; }
+  #wleft .phone .phone-msgs { height: 46vh; min-height: 260px; }
+  #wmap-col { position: relative; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); }
+  #map { position: absolute; inset: 0; }
+  #wmap-hint {
+    position: absolute; left: 10px; bottom: 10px; z-index: 5;
+    background: rgba(10, 11, 14, 0.85); border: 1px solid var(--line); border-radius: 999px;
+    padding: 6px 12px; font-size: 12px; color: var(--muted);
+  }
+  @media (max-width: 860px) {
+    #wlayout { grid-template-columns: 1fr; }
+    #wmap-col { height: 320px; }
+  }
+</style>
+</head>
+<body>
+<div id="boot-veil">
+  <div style="text-align:center">
+    <div class="bv-mark">🙏</div>
+    <div class="bv-name">PUKAAR</div>
+    <div class="bv-sub">connecting…</div>
+  </div>
+</div>
+<header id="topbar">
+  <div class="brand">
+    <span class="brand-mark">●</span>
+    <div>
+      <div class="brand-name">PUKAAR</div>
+      <div class="brand-sub">See someone who needs help? Send it here.</div>
+    </div>
+  </div>
+</header>
+
+<main id="wlayout">
+  <section id="wleft">
+    <div class="phone" id="phone">
+      <div class="phone-head">
+        <div class="avatar">🙏</div>
+        <div class="ph-id">
+          <div class="ph-name">Pukaar</div>
+          <div class="ph-sub">aid line · <span id="conv-phone">+91-DEMO</span></div>
+        </div>
+      </div>
+      <div class="phone-msgs" id="msgs"></div>
+      <div class="quick" id="quick"></div>
+      <div id="photo-menu" class="photo-menu" hidden>
+        <div class="pm-title">Send a photo (described — no faces needed)</div>
+        <button data-hint="street photo: person with a bandaged foot, blood visible, serious infected wound">🩹 Wound + soaked bandage</button>
+        <button data-hint="street photo: family with small children sitting in rain under a plastic sheet, everything wet">🌧️ Family in the rain</button>
+        <button data-hint="street photo: elderly person lying on the pavement next to an empty food plate">🍚 Elder + empty plate</button>
+        <button data-hint="street photo: person sitting by the road, situation unclear">📷 Unclear scene</button>
+      </div>
+      <div class="phone-input">
+        <button id="btn-loc" title="share the map pin as location" aria-label="Share location pin">📍</button>
+        <button id="btn-photo" title="choose a photo to send (described)" aria-label="Send photo" aria-haspopup="true">📷</button>
+        <button id="btn-voice" title="send a voice note (transcript demo)" aria-label="Send voice note">🎤</button>
+        <input id="msg-in" placeholder="Message…" autocomplete="off">
+        <button id="btn-send" class="send" aria-label="Send message">➤</button>
+      </div>
+      <div class="phone-hint">tap the map to place the 📍 pin · try: “aadmi ghayal hai, khoon…”</div>
+    </div>
+
+    <div class="panel scenarios">
+      <div class="panel-title">Try a scenario</div>
+      <button data-sc="injured_flyover">🦶 Injured man at flyover</button>
+      <button data-sc="family_rain">🌧️ Family in the rain</button>
+      <button data-sc="hungry_elder">🍚 Hungry elder at station</button>
+      <button data-sc="emergency_112" class="danger">🚨 Emergency text (112 gate)</button>
+    </div>
+  </section>
+
+  <section id="wmap-col">
+    <div id="map"></div>
+    <div id="wmap-hint">tap anywhere to drop your pin</div>
+  </section>
+</main>
+
+<footer id="foot">
+  <span>Only your number (hashed), the pin, and what you send are kept — nothing else. Photos are deleted when the case closes.</span>
+</footer>
+
+<script src="/static/vendor/maplibre-gl.js?v=20260801a"></script>
+<script src="/static/basemap.js?v=20260801a"></script>
+<script src="/static/witness.js?v=20260801a"></script>
+</body>
+</html>

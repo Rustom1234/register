@@ -22,21 +22,6 @@ def main() -> None:
         raise SystemExit(
             f"Refusing to bind {host} without PUKAAR_HMAC_KEY. Set a key, or "
             "set PUKAAR_ALLOW_INSECURE=1 for a throwaway demo.")
-    # Going live on WhatsApp without webhook signature verification means
-    # anyone who finds the URL can forge witness messages — refuse the
-    # half-configured state instead of silently accepting it.
-    if os.environ.get("WA_TOKEN") and not os.environ.get("WA_APP_SECRET") \
-            and not os.environ.get("PUKAAR_ALLOW_INSECURE"):
-        raise SystemExit(
-            "WA_TOKEN is set but WA_APP_SECRET is not: outbound WhatsApp would go "
-            "live with webhook signature checks disabled. Set WA_APP_SECRET (Meta "
-            "app dashboard → App settings → Basic), or PUKAAR_ALLOW_INSECURE=1 "
-            "for a throwaway test.")
-
-    if host not in ("127.0.0.1", "localhost", "::1") and not cfg.admin_token:
-        print("WARNING: binding publicly with no PUKAAR_ADMIN_TOKEN — every "
-              "surface, live chat, and export is open to anyone with the URL.")
-
     print(f"Pukaar demo · backend={cfg.resolve_backend()} · http://{host}:{port}")
     app = build_app(cfg)
 
@@ -50,15 +35,8 @@ def main() -> None:
         from .telegram import TelegramBridge
 
         bridge = TelegramBridge(tg_token, app.state.svc)
-        # Fail loud, not silent: a revoked/typo'd token must be visible at
-        # boot, not discovered days later as "nobody's messages arrive".
-        me = bridge.check()
-        if me:
-            threading.Thread(target=bridge.run, daemon=True).start()
-            print(f"Telegram bridge: polling as @{me} (witnesses can message the bot)")
-        else:
-            print("WARNING: PUKAAR_TELEGRAM_TOKEN was rejected by Telegram "
-                  "(bad/revoked token, or no network) — the bridge is NOT running.")
+        threading.Thread(target=bridge.run, daemon=True).start()
+        print("Telegram bridge: polling (witnesses can message the bot)")
 
     uvicorn.run(app, host=host, port=port, log_level="warning")
 

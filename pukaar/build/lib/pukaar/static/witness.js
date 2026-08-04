@@ -165,13 +165,7 @@ function wire() {
   let voiceIdx = 0;
   $("btn-voice").addEventListener("click", () => sendInbound("voice", { text: VOICE_SAMPLES[voiceIdx++ % VOICE_SAMPLES.length] }));
   document.querySelectorAll(".scenarios button").forEach((b) =>
-    b.addEventListener("click", async () => {
-      const res = await (await fetch(`/api/scenario/${b.dataset.sc}`, { method: "POST" })).json();
-      // Jump this view to the scenario's thread — a demo button that plays
-      // its story in a conversation you can't see is a dead end.
-      if (res.phone) activeConv = res.phone;
-      refresh();
-    }));
+    b.addEventListener("click", async () => { await fetch(`/api/scenario/${b.dataset.sc}`, { method: "POST" }); refresh(); }));
 }
 
 // ----------------------------------------------------------------- loop --

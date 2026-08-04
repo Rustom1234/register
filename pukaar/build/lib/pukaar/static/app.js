@@ -362,7 +362,7 @@ function renderTiles() {
     ["served", m.served, m.escalated ? `${m.escalated} escalated 🩺` : "", ""],
     ["acceptance", m.acceptance_pct == null ? "—" : m.acceptance_pct + "%", "of offers", ""],
     ["accept time", fmtDur(m.median_accept_s), m.p90_accept_s ? `p90 ${fmtDur(m.p90_accept_s)}` : "sim-time", ""],
-    ["kits left", kits || "—", low.length ? `⚠ low: ${low.map(kitWord).join(", ")} — restock en route` : "across 3 depots",
+    ["kits left", kits || "—", low.length ? `⚠ low: ${low.map(kitWord).join(", ")} — restock en route` : "partner_1",
      low.length ? " low" : ""],
   ];
   const el = document.getElementById("tiles");
@@ -433,8 +433,6 @@ function feedLine(e) {
       html = `📦 courier delivered +${e.qty} × ${e.sku} to ${e.depot || "depot"}`; cls = "good"; break;
     case "kit_pickup":
       html = `📦 <b>${e.name || respName(e.responder_id)}</b> collected the kit at ${e.depot || "the depot"}`; cls = "good"; break;
-    case "kit_return":
-      html = `📦 unused ${e.sku} returned to ${e.depot || "the depot"}`; break;
     case "recheck_sent":
       html = `🤔 asked the witness of <b>${short(e.case_id)}</b>: still there?`; break;
     case "recheck_confirmed":
@@ -476,7 +474,7 @@ function showDetail(caseId) {
   selectedCase = caseId;
   renderDetail();
   const c = state.cases.find((x) => x.id === caseId);
-  if (c && c.lat != null && map && map !== "failed") map.panTo([c.lng, c.lat]);
+  if (c && c.lat != null && map && map !== "failed") map.panTo([c.lat, c.lng]);
 }
 
 function renderDetail() {
@@ -612,15 +610,7 @@ function renderCoord() {
   const panel = document.getElementById("coord-panel");
   panel.hidden = stuck.length === 0;
   document.getElementById("coord-count").textContent = stuck.length || "";
-  if (!stuck.length) { panel.dataset.key = ""; return; }
-  // Keyed render: rebuilding every poll closes the assign dropdown under
-  // the coordinator's cursor. Only rebuild when the queue itself changes.
-  const key = stuck.map((o) => {
-    const c = state.cases.find((x) => x.id === o.case_id) || {};
-    return `${o.id}:${c.lat == null}`;
-  }).join("|");
-  if (panel.dataset.key === key) return;
-  panel.dataset.key = key;
+  if (!stuck.length) return;
   document.getElementById("coord-body").innerHTML = stuck.map((o) => {
     const c = state.cases.find((x) => x.id === o.case_id) || {};
     const pinless = c.lat == null;
@@ -792,9 +782,8 @@ function wirePhone() {
   });
   document.querySelectorAll(".scenarios button").forEach((b) =>
     b.addEventListener("click", async () => {
-      const res = await (await fetch(`/api/scenario/${b.dataset.sc}`, { method: "POST" })).json();
+      await fetch(`/api/scenario/${b.dataset.sc}`, { method: "POST" });
       if (b.dataset.sc === "golden_run") { followGolden = true; updateFollowBtn(); }
-      if (res.phone) activeConv = res.phone;   // watch the story play, live
       refresh();
     }));
 }

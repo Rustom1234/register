@@ -96,23 +96,12 @@ class Sim:
                     lat, lng = snap.lat, snap.lng
             self.depot_list.append((depot_id, name, lat, lng))
         self.sim_now = 8 * 3600.0          # 08:00 sim time, day 0
-        # PUKAAR_DB persistence: resume the sim clock rather than rewinding
-        # under persisted records (a rewound clock inverts every dedup /
-        # recheck / retention time comparison), and re-arm the in-memory
-        # escalation timers that died with the previous process.
-        stored = svc.store.one("SELECT v FROM push_meta WHERE k='sim_now'")
-        if stored:
-            try:
-                self.sim_now = max(self.sim_now, float(stored["v"]))
-            except (TypeError, ValueError):
-                pass
         self.running = True
         self.speed = cfg.sim_speed
         self.manual: set[str] = set()      # responders a human is playing via the UI
         self.golden: dict[str, str] = {}   # order_id -> chosen responder (scripted clean arc)
         self._restock_flagged: set[tuple[str, str]] = set()          # (depot, sku)
         self._pending_restocks: dict[tuple[str, str], float] = {}    # (depot, sku) -> due
-        self._reservations: dict[str, tuple[str, str]] = {}          # order_id -> (depot, sku)
         self._phone_counter = 0
         self._resp: dict[str, dict] = {}
         self._decides: dict[str, float] = {}   # assignment_id -> decision due (per-offer, not per-responder)
@@ -125,17 +114,11 @@ class Sim:
     # -------------------------------------------------------------- setup --
     def _seed_world(self) -> None:
         # Stock lives at depots (inventory.partner_id carries the depot id).
-        # IGNORE, not REPLACE: a PUKAAR_DB restart must not silently reset
-        # depot stock that real activity has moved.
         for depot_id, stock in DEPOT_STOCK_SEED.items():
             for sku, count in stock.items():
                 self.svc.store.execute(
-                    "INSERT OR IGNORE INTO inventory (partner_id, sku, count, restock_threshold) "
+                    "INSERT OR REPLACE INTO inventory (partner_id, sku, count, restock_threshold) "
                     "VALUES (?, ?, ?, 3)", (depot_id, sku, count))
-        # Re-arm escalation timers for orders persisted mid-escalation — the
-        # previous process's in-memory timers died with it.
-        for row in self.svc.store.query("SELECT id FROM orders WHERE status='escalated'"):
-            self._pending_escalations[row["id"]] = self.sim_now + self.rng.uniform(600, 1500)
         for i, (name, medical, mode) in enumerate(RESPONDER_SEED):
             rid = f"resp_{i+1}"
             self.svc.store.insert("responders", {
@@ -224,9 +207,7 @@ class Sim:
                 ])
             return "3 witnesses reported the same spot"
         steps = SCENARIOS[name]
-        phone = self._next_phone()
-        self._play(phone, steps)
-        self.last_scenario_phone = phone   # lets the UI jump to the thread
+        self._play(self._next_phone(), steps)
         return f"scenario {name} played"
 
     def _golden_run(self) -> str:
@@ -234,13 +215,9 @@ class Sim:
         responder, who accepts wave 1, arrives, escalates to the clinical
         team, and the escalation completes — a guaranteed clean arc through
         the REAL pipeline (only the responder's dice are loaded)."""
-        # Idle + non-manual only: hijacking a rider mid-job would strand
-        # whatever they were doing (an onsite order has no other closer).
-        med = next((r for r in self._resp.values()
-                    if r["medical"] and r["state"] == "idle" and r["id"] not in self.manual),
-                   None)
+        med = next((r for r in self._resp.values() if r["medical"]), None)
         if med is None:
-            return "no idle medical responder — try again in a moment"
+            return "no medical responder available"
         ang = self.rng.uniform(0, 6.28318)
         lat, lng = geo.offset_m(med["lat"], med["lng"],
                                 500 * math.cos(ang), 500 * math.sin(ang))
@@ -299,10 +276,6 @@ class Sim:
         self._responders_move(dt)
         self._complete_escalations()
         self._process_restocks()
-        # clock survives PUKAAR_DB restarts (see __init__)
-        self.svc.store.execute(
-            "INSERT OR REPLACE INTO push_meta (k, v) VALUES ('sim_now', ?)",
-            (str(self.sim_now),))
 
     def _coordinator_plays(self) -> None:
         """The human terminal rung, simulated: every ~90 sim-s the
@@ -337,30 +310,17 @@ class Sim:
 
     def _sync_states(self) -> None:
         """Reconcile kinetic state with order records — covers manual accepts,
-        coordinator manual assigns, manual outcome closes from the UI, and
-        orders recovered after a PUKAAR_DB restart."""
+        coordinator manual assigns, and manual outcome closes from the UI."""
         for r in self._resp.values():
             if r["order_id"]:
                 order = self.svc.store.one("SELECT * FROM orders WHERE id=?", (r["order_id"],))
                 if not order or order["status"] in ("closed", "escalated"):
                     r["state"], r["order_id"], r["target"] = "idle", None, None
                     r["route"], r["route_idx"] = None, 0
-                    r["depot_id"], r["depot_name"] = None, None
-                    r["pickup_idx"], r["picked_up"] = None, True
             else:
-                # 'onsite' included so a restart (or any external hiccup)
-                # never strands a live order forever.
                 order = self.svc.store.one(
-                    "SELECT * FROM orders WHERE responder_id=? "
-                    "AND status IN ('accepted', 'onsite')", (r["id"],))
-                if order and order["status"] == "onsite":
-                    case = self.svc.store.one(
-                        "SELECT * FROM cases WHERE id=?", (order["case_id"],))
-                    if case and case["lat"] is not None:
-                        r["lat"], r["lng"] = case["lat"], case["lng"]
-                    r["state"], r["order_id"] = "onsite", order["id"]
-                    r["dwell_until"] = self.sim_now + self.rng.uniform(120, 300)
-                elif order:
+                    "SELECT * FROM orders WHERE responder_id=? AND status='accepted'", (r["id"],))
+                if order:
                     self._on_accept(r, order["id"])
 
     # ------------------------------------------------- responder behavior --
@@ -388,10 +348,7 @@ class Sim:
                 continue
             if self.sim_now >= due:
                 if golden_resp:
-                    # Loaded dice, real pipeline — but never hijack a live
-                    # job; a decline degrades to needs_coordinator, which
-                    # the coordinator rail already handles.
-                    accepted = r["state"] == "idle"
+                    accepted = True                          # loaded dice, real pipeline
                 else:
                     p = r["accept_p"] * (1.25 if a["priority"] == "P1" else 1.0)
                     busy = r["state"] != "idle"
@@ -412,29 +369,12 @@ class Sim:
         # Kits live at depots: route via the cheapest-detour depot that has
         # this SKU. A network-wide stockout goes direct + flags the
         # coordinator rather than stranding the case.
-        already = self._reservations.get(order_id)
-        if already:
-            # Re-attach (restart, manual re-accept): the kit is already
-            # reserved at a depot — route via THAT depot, don't re-reserve.
-            depot = next((d for d in self.depot_list if d[0] == already[0]), None)
-            pick = None
-            if depot is not None:
-                leg1 = self._route_to(r, depot[2], depot[3])
-                leg2 = self._route_between(r["mode"], depot[2], depot[3], *target)
-                pick = (depot, leg1, leg2)
-        else:
-            pick = self._choose_depot(r, order["sku"], target) if order else None
+        pick = self._choose_depot(r, order["sku"], target) if order else None
         if pick:
             depot, leg1, leg2 = pick
             waypoints = leg1 + leg2[1:]
             r["depot_id"], r["depot_name"] = depot[0], depot[1]
             r["pickup_idx"], r["picked_up"] = max(1, len(leg1) - 1), False
-            if not already and order:
-                # Reserve NOW: stock leaves the ledger at accept, so two
-                # riders can never both be sent for the same last kit. A
-                # not_found/declined outcome returns it (settle_kit).
-                self._consume_kit(order["sku"], depot[0])
-                self._reservations[order_id] = (depot[0], order["sku"])
         else:
             waypoints = self._route_to(r, *target)
             r["depot_id"], r["depot_name"] = None, None
@@ -501,10 +441,7 @@ class Sim:
             self._check_overdue(r)
             if r["state"] == "enroute" and r["target"]:
                 self._advance_route(r, r["speed"] * dt)
-                # No arriving without the kit: if the route happens to pass
-                # near the case BEFORE the depot, keep driving to the depot.
-                if (r.get("picked_up", True)
-                        and geo.haversine_m(r["lat"], r["lng"], *r["target"]) <= self.cfg.arrive_radius_m):
+                if geo.haversine_m(r["lat"], r["lng"], *r["target"]) <= self.cfg.arrive_radius_m:
                     self.svc.dispatch.arrived(r["order_id"])
                     r["state"] = "onsite"
                     r["dwell_until"] = self.sim_now + self.rng.uniform(120, 300)
@@ -539,7 +476,8 @@ class Sim:
                 outcome = "escalated"
         closed = self.svc.dispatch.close(r["order_id"], outcome)
         if closed:
-            self.settle_kit(order["id"], outcome)
+            if outcome in ("served", "escalated"):
+                self._consume_kit(order["sku"], r.get("depot_id"))
             self.svc.notify_outcome(order["case_id"], outcome)
             if outcome == "escalated":
                 due = 600 if order["id"] in self.golden else self.rng.uniform(600, 1500)
@@ -547,19 +485,6 @@ class Sim:
         r["state"], r["order_id"], r["target"] = "idle", None, None
         r["route"], r["route_idx"] = None, 0
         r["depot_id"], r["depot_name"], r["pickup_idx"], r["picked_up"] = None, None, None, True
-
-    def settle_kit(self, order_id: str, outcome: str) -> None:
-        """Settle an order's kit reservation on close — SHARED by the sim's
-        auto-close and every external close path (responder app, supervisor
-        UI). Stock left the depot at accept; a not_found/declined outcome
-        puts it back, a served/escalated one keeps it consumed."""
-        res = self._reservations.pop(order_id, None)
-        if res and outcome in ("not_found", "declined"):
-            depot_id, sku = res
-            self.svc.store.execute(
-                "UPDATE inventory SET count = count + 1 WHERE partner_id=? AND sku=?",
-                (depot_id, sku))
-            self.svc.emit("kit_return", {"sku": sku, "depot": self._depot_name(depot_id)})
 
     # ------------------------------------------------- inventory & restock --
     def _depot_name(self, depot_id: str | None) -> str:

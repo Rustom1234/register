@@ -90,38 +90,6 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     app = FastAPI(title="Pukaar demo", lifespan=lifespan)
     app.state.svc, app.state.sim = svc, sim
 
-    # ---- staff gate (hosted deploys) -----------------------------------
-    # With PUKAAR_ADMIN_TOKEN set, everything is staff-only EXCEPT the
-    # witness-facing webhooks and the health probe: a hosted control room
-    # must never expose live witness chats, pins, or exports to the open
-    # internet. /login?token=... sets the cookie so all pages just work.
-    OPEN_PATHS = {"/health", "/api/wa/inbound", "/webhook", "/login"}
-
-    @app.middleware("http")
-    async def staff_gate(request: Request, call_next):
-        token = cfg.admin_token
-        if token:
-            path = request.url.path
-            if path not in OPEN_PATHS:
-                ok = (request.cookies.get("wayside_staff") == token
-                      or request.headers.get("x-wayside-token") == token)
-                if not ok:
-                    return PlainTextResponse(
-                        "Wayside staff access required. Open /login?token=<your token> once "
-                        "on this device (ask the coordinator for the token).",
-                        status_code=401)
-        return await call_next(request)
-
-    @app.get("/login")
-    def login(token: str = ""):
-        if not cfg.admin_token or token != cfg.admin_token:
-            raise HTTPException(401, "wrong or missing token")
-        from fastapi.responses import RedirectResponse
-        resp = RedirectResponse("/", status_code=302)
-        resp.set_cookie("wayside_staff", token, httponly=True, samesite="lax",
-                        max_age=60 * 60 * 24 * 30)
-        return resp
-
     def _cells() -> list[dict]:
         # 90-day aggregate cells with map bounds — the only location data
         # that survives the purge, rendered as the privacy-story heatmap.
@@ -182,11 +150,7 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     def scenario(name: str):
         if name not in SCENARIOS:
             raise HTTPException(404, f"unknown scenario: {name}")
-        sim.last_scenario_phone = None
-        result = sim.run_scenario(name)
-        # The phone panel jumps to the spawned thread so the story plays
-        # on-screen instead of in a conversation nobody is looking at.
-        return {"result": result, "phone": getattr(sim, "last_scenario_phone", None)}
+        return {"result": sim.run_scenario(name)}
 
     @app.post("/api/sim")
     def sim_ctl(ctl: SimCtl):
@@ -212,9 +176,6 @@ def build_app(cfg: Config | None = None) -> FastAPI:
                 raise HTTPException(400, "outcome must be served|escalated|not_found|declined")
             closed = svc.dispatch.close(act.order_id, act.outcome)
             if closed:
-                # Human closes settle the kit ledger through the same rail
-                # the sim uses — depot stock and restocks stay truthful.
-                sim.settle_kit(act.order_id, act.outcome)
                 svc.notify_outcome(closed["case_id"], act.outcome)
                 if act.outcome == "escalated":
                     sim._pending_escalations[act.order_id] = sim.sim_now + 900

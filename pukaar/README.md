@@ -74,7 +74,18 @@ not code.
 A shot-by-shot recording guide is in [`demo-script.md`](./demo-script.md) —
 or let `python scripts/record_demo.py` record a self-narrating video for you
 (captions + visible cursor) against a `make demo` server. For hosting:
-`make docker-demo` serves the seeded demo on 0.0.0.0:8877 in a container.
+`make docker-demo` serves the seeded demo on 0.0.0.0:8877 in a container
+(pass `-e PUKAAR_ALLOW_INSECURE=1` for a throwaway local run — the image
+no longer bakes it in).
+
+**Hosting for real (an NGO pilot):** set `PUKAAR_HMAC_KEY` (boot refuses a
+public bind without it), `PUKAAR_ADMIN_TOKEN` (staff gate — without it every
+surface, live chat, and export is public; staff open `/login?token=…` once
+per device), and `PUKAAR_DB=/data/pukaar.db` on a mounted volume. Serve
+behind **HTTPS**: the responder app's home-screen install and push
+notifications require a secure origin — on plain HTTP they silently degrade
+to in-page beeps. The witness webhooks (`/api/wa/inbound`, `/webhook`) stay
+open by design; everything else is behind the staff gate.
 
 
 ## Screenshots

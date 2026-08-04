@@ -174,19 +174,6 @@ class TelegramBridge:
         for r in replies:
             self.send_reply(chat_id, r.text, r.buttons)
 
-    def check(self) -> str | None:
-        """Validate the token against getMe. Returns the bot's username on
-        success, None on a rejected token or unreachable network — so boot
-        can fail LOUD instead of the bridge dying silently forever."""
-        try:
-            r = self.client.get(f"{self.base}/getMe")
-            body = r.json()
-            if r.status_code == 200 and body.get("ok"):
-                return (body.get("result") or {}).get("username") or "unknown"
-        except Exception:
-            pass
-        return None
-
     def poll_once(self) -> int:
         """One getUpdates round trip; returns how many updates were handled."""
         r = self.client.get(

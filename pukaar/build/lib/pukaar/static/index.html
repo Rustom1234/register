@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pukaar — Street Aid Control Room</title>
+<link rel="stylesheet" href="/static/vendor/maplibre-gl.css?v=20260801a">
+<link rel="stylesheet" href="/static/app.css?v=20260801a">
+</head>
+<body>
+<div id="boot-veil">
+  <div style="text-align:center">
+    <div class="bv-mark">🙏</div>
+    <div class="bv-name">PUKAAR</div>
+    <div class="bv-sub">connecting to the control room…</div>
+  </div>
+</div>
+<header id="topbar">
+  <div class="brand">
+    <span class="brand-mark">●</span>
+    <div>
+      <div class="brand-name">PUKAAR</div>
+      <div class="brand-sub">Street Aid Control Room · Nizamuddin, Delhi</div>
+    </div>
+  </div>
+  <div class="top-mid">
+    <span id="clock" class="clock">—</span>
+    <div class="sim-ctl">
+      <button id="btn-pause" class="ghost" title="pause / resume" aria-label="Pause or resume simulation">⏸</button>
+      <select id="speed">
+        <option value="3">3×</option>
+        <option value="6" selected>6×</option>
+        <option value="12">12×</option>
+        <option value="30">30×</option>
+      </select>
+    </div>
+  </div>
+  <div class="top-right">
+    <span id="backend-badge" class="badge">…</span>
+    <div class="top-tools">
+      <div class="tgrp" role="group" aria-label="View controls">
+        <button id="btn-follow" class="ghost" title="camera follows the golden run" aria-label="Toggle follow camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></button>
+        <button id="btn-sound" class="ghost" title="event sounds" aria-label="Toggle event sounds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+      </div>
+      <div class="tgrp" role="group" aria-label="Reports and links">
+        <a class="ghost btnlike" href="/static/about.html" target="_blank" title="the Pukaar story (for judges)" aria-label="About Pukaar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></a>
+        <a class="ghost btnlike" href="/report" target="_blank" title="printable session report" aria-label="Printable session report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></a>
+        <a class="ghost btnlike" href="/static/metrics.html" target="_blank" title="metrics & kill criteria" aria-label="Metrics and kill criteria"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="10"/></svg></a>
+      </div>
+      <div class="tgrp" role="group" aria-label="Session data">
+        <button id="btn-export" class="ghost" title="download session log (JSON)" aria-label="Download session log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+        <button id="btn-purge" class="ghost" title="run retention purge now" aria-label="Run retention purge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ic"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="layout">
+  <section id="left">
+    <div class="phone" id="phone">
+      <div class="phone-head">
+        <div class="avatar">🙏</div>
+        <div class="ph-id">
+          <div class="ph-name">Pukaar</div>
+          <div class="ph-sub">aid line · <span id="conv-phone">+91-DEMO</span></div>
+        </div>
+        <button id="btn-script" class="ghost script-btn" title="bot language: auto / EN / Hinglish / Devanagari" aria-label="Cycle bot language">अ</button>
+        <select id="conv-select" title="switch conversation"></select>
+      </div>
+      <div class="phone-msgs" id="msgs"></div>
+      <div class="quick" id="quick"></div>
+      <div id="photo-menu" class="photo-menu" hidden>
+        <div class="pm-title">Send a photo (described — no faces needed)</div>
+        <button data-hint="street photo: person with a bandaged foot, blood visible, serious infected wound">🩹 Wound + soaked bandage</button>
+        <button data-hint="street photo: family with small children sitting in rain under a plastic sheet, everything wet">🌧️ Family in the rain</button>
+        <button data-hint="street photo: elderly person lying on the pavement next to an empty food plate">🍚 Elder + empty plate</button>
+        <button data-hint="street photo: person sitting by the road, situation unclear">📷 Unclear scene</button>
+      </div>
+      <div class="phone-input">
+        <button id="btn-loc" title="share the map pin as location" aria-label="Share location pin">📍</button>
+        <button id="btn-photo" title="choose a photo to send (described)" aria-label="Send photo" aria-haspopup="true">📷</button>
+        <button id="btn-voice" title="send a voice note (transcript demo)" aria-label="Send voice note">🎤</button>
+        <input id="msg-in" placeholder="Message…" autocomplete="off">
+        <button id="btn-send" class="send" aria-label="Send message">➤</button>
+      </div>
+      <div class="phone-hint">tap the map to place the 📍 pin · try: “aadmi ghayal hai, khoon…”</div>
+    </div>
+
+    <div class="panel scenarios">
+      <div class="panel-title">Scenarios</div>
+      <button data-sc="injured_flyover">🦶 Injured man at flyover</button>
+      <button data-sc="family_rain">🌧️ Family in the rain</button>
+      <button data-sc="hungry_elder">🍚 Hungry elder at station</button>
+      <button data-sc="duplicate_burst">👥 3 witnesses, same spot</button>
+      <button data-sc="emergency_112" class="danger">🚨 Emergency text (112 gate)</button>
+      <button data-sc="golden_run" class="golden">🎬 Golden run (clean P1 arc)</button>
+    </div>
+
+    <div class="panel" id="resp-panel">
+      <div class="panel-title">Responder phone
+        <select id="resp-select"></select>
+        <a href="/responder" target="_blank" class="mini-link"
+           title="Open the standalone responder app in its own window">📱 app</a>
+      </div>
+      <label class="takeover"><input type="checkbox" id="resp-manual"> I'm playing this responder</label>
+      <div id="resp-cards"></div>
+    </div>
+  </section>
+
+  <section id="center">
+    <div id="map"></div>
+    <div id="tiles" class="tiles"></div>
+    <div class="legend">
+      <span><i class="dot cat-medical"></i>Medical</span>
+      <span><i class="dot cat-food"></i>Food</span>
+      <span><i class="dot cat-shelter"></i>Shelter</span>
+      <span><i class="dot resp-dot"></i>Responder</span>
+      <span><i class="dot p1-dot"></i>P1 urgent</span>
+      <button id="cells-toggle" title="Show the 90-day aggregate cells — the only location data that survives the retention purge"
+              aria-pressed="false">▦ 90-day cells</button>
+      <button id="theme-toggle" title="Switch between the day street map and the night ops map">🌙 night map</button>
+    </div>
+  </section>
+
+  <section id="right">
+    <div class="panel panel-pop" id="coord-panel" hidden>
+      <div class="panel-title"><span>⚠️ Coordinator queue</span>
+        <span id="coord-count" class="chip"></span></div>
+      <div id="coord-body"></div>
+    </div>
+    <div class="panel" id="detail-panel" hidden>
+      <div class="panel-title">Case <span id="detail-id"></span>
+        <button id="detail-close" class="ghost" aria-label="Close case detail">✕</button></div>
+      <div id="detail-body"></div>
+    </div>
+    <div class="panel grow">
+      <div class="panel-title">Live ops feed</div>
+      <div id="feed" class="feed"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Open cases</div>
+      <div id="cases" class="cases"></div>
+    </div>
+  </section>
+</main>
+
+<footer id="foot">
+  <span id="prov-note"></span>
+  <span>backend: <b id="foot-backend">…</b> · witness reports and agent inferences are HMAC provenance-tagged; responder observations are provenance-labelled in the audit log</span>
+</footer>
+
+<script src="/static/vendor/maplibre-gl.js?v=20260801a"></script>
+<script src="/static/basemap.js?v=20260801a"></script>
+<script src="/static/app.js?v=20260801a"></script>
+</body>
+</html>

@@ -24,10 +24,6 @@ class Config:
 
     db_path: str = field(default_factory=lambda: _env("PUKAAR_DB", "pukaar-demo.db"))
     hmac_key: str = field(default_factory=lambda: _env("PUKAAR_HMAC_KEY", ""))
-    # Staff access token for hosted deploys: when set, every surface and API
-    # except the witness inbound webhooks requires it (cookie via /login, or
-    # the X-Wayside-Token header). Empty = open, for the local demo.
-    admin_token: str = field(default_factory=lambda: _env("PUKAAR_ADMIN_TOKEN", ""))
 
     # Dispatch (times are in *sim seconds*; the sim clock maps them to real time)
     offer_ttl_s: int = 180          # per-wave accept window

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pukaar — Session replay</title>
+<link rel="stylesheet" href="/static/vendor/leaflet.css">
+<link rel="stylesheet" href="/static/app.css">
+<style>
+  #rwrap { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+  #rbar { display: flex; gap: 10px; align-items: center; padding: 9px 14px;
+    border-bottom: 1px solid var(--line); background: var(--surface); }
+  #rbar h1 { font-size: 13px; letter-spacing: 0.14em; margin: 0 8px 0 0; }
+  #rbar a { color: var(--muted); text-decoration: none; font-size: 12.5px; }
+  #scrub { flex: 1; accent-color: #3987e5; }
+  #rclock { font-variant-numeric: tabular-nums; color: var(--ink-2); min-width: 118px; text-align: right; }
+  #rmain { display: grid; grid-template-columns: 1fr 400px; min-height: 0; }
+  #rmap { position: relative;
+    background:
+      repeating-linear-gradient(0deg, transparent 0 79px, rgba(255,255,255,0.028) 79px 80px),
+      repeating-linear-gradient(90deg, transparent 0 79px, rgba(255,255,255,0.028) 79px 80px),
+      radial-gradient(1100px 750px at 50% 42%, #121722 0%, #0a0c10 75%); }
+  #rfeed { border-left: 1px solid var(--line); padding: 10px; overflow-y: auto;
+    display: flex; flex-direction: column-reverse; gap: 4px; background: var(--surface); }
+  .rtiles { position: absolute; top: 10px; left: 10px; z-index: 800; display: flex; gap: 8px; }
+  #drop { display: grid; place-items: center; height: 100%; color: var(--muted);
+    border: 2px dashed var(--line); border-radius: 14px; margin: 24px; font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="rwrap">
+  <div id="rbar">
+    <a href="/">←</a>
+    <h1>PUKAAR · REPLAY</h1>
+    <button id="rload" class="ghost">use live session</button>
+    <input type="file" id="rfile" accept=".json" style="color:var(--muted);font-size:12px">
+    <button id="rplay" class="ghost">▶</button>
+    <select id="rspeed"><option value="30">30×</option><option value="90" selected>90×</option><option value="300">300×</option></select>
+    <input type="range" id="scrub" min="0" max="1000" value="0">
+    <span id="rclock">—</span>
+  </div>
+  <div id="rmain">
+    <div id="rmap"><div id="drop">load a session (⬇ export from the control room) or press “use live session”</div></div>
+    <div id="rfeed"></div>
+  </div>
+</div>
+<script src="/static/vendor/leaflet.js"></script>
+<script src="/static/replay.js"></script>
+</body>
+</html>
