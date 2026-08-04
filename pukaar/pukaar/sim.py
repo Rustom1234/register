@@ -266,6 +266,13 @@ class Sim:
                         "stock": stock, "low": low})
         return out
 
+    def restocks_view(self) -> list[dict]:
+        """Couriers en route, for the coordinator's supply strip — the
+        NGO head must see 'help is coming' next to the low-stock warning."""
+        return [{"depot": self._depot_name(d), "sku": s,
+                 "due_s": max(0, round(t - self.sim_now))}
+                for (d, s), t in list(self._pending_restocks.items())]
+
     def _random_point(self, radius_frac: float = 1.0) -> tuple[float, float]:
         r = self.cfg.zone_radius_m * radius_frac * (self.rng.random() ** 0.5)
         ang = self.rng.uniform(0, 6.28318)

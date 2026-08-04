@@ -670,19 +670,38 @@ function nearestIdle(c) {
 
 function renderCoord() {
   const stuck = state.orders.filter((o) => o.status === "needs_coordinator");
+  // Supply strip: dry SKUs (stock 0) and couriers already on the way —
+  // the NGO head sees the problem AND that help is coming, in one place.
+  const dry = [];
+  (state.depots || []).forEach((d) => {
+    Object.entries(d.stock || {}).forEach(([sku, n]) => {
+      if (n === 0) dry.push({ depot: d.name, sku });
+    });
+  });
+  const restocks = state.restocks || [];
+  const supplyN = dry.length + restocks.length;
   const panel = document.getElementById("coord-panel");
-  panel.hidden = stuck.length === 0;
-  document.getElementById("coord-count").textContent = stuck.length || "";
-  if (!stuck.length) { panel.dataset.key = ""; return; }
+  panel.hidden = stuck.length === 0 && supplyN === 0;
+  document.getElementById("coord-count").textContent = (stuck.length + supplyN) || "";
+  if (stuck.length === 0 && supplyN === 0) { panel.dataset.key = ""; return; }
   // Keyed render: rebuilding every poll closes the assign dropdown under
   // the coordinator's cursor. Only rebuild when the queue itself changes.
+  // Courier countdowns tick in 30s buckets so the strip stays fresh
+  // without per-second DOM churn.
+  const supplyKey = dry.map((x) => `d:${x.depot}:${x.sku}`).join(",") + ";" +
+    restocks.map((r) => `r:${r.depot}:${r.sku}:${Math.ceil(r.due_s / 30)}`).join(",");
   const key = stuck.map((o) => {
     const c = state.cases.find((x) => x.id === o.case_id) || {};
     return `${o.id}:${c.lat == null}`;
-  }).join("|");
+  }).join("|") + "§" + supplyKey;
   if (panel.dataset.key === key) return;
   panel.dataset.key = key;
-  document.getElementById("coord-body").innerHTML = stuck.map((o) => {
+  const supplyHtml =
+    dry.map((x) => `<div class="fi crit"><span class="t">supply</span>
+      <span><b>${escapeHtml(x.sku)}</b> dry at ${escapeHtml(x.depot)} — riders go direct without a kit</span></div>`).join("") +
+    restocks.map((r) => `<div class="fi"><span class="t">supply</span>
+      <span>🚚 courier: <b>+8 ${escapeHtml(r.sku)}</b> → ${escapeHtml(r.depot)} · ~${Math.max(1, Math.ceil(r.due_s / 60))} min</span></div>`).join("");
+  document.getElementById("coord-body").innerHTML = supplyHtml + stuck.map((o) => {
     const c = state.cases.find((x) => x.id === o.case_id) || {};
     const pinless = c.lat == null;
     if (pinless) {

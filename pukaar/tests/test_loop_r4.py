@@ -87,3 +87,14 @@ def test_near_open_case_probe_matches_dedup():
     svc.store.update("cases", svc.store.one("SELECT id FROM cases")["id"],
                      {"status": "closed"})
     assert not sim._near_open_case(lat, lng), "closed cases must not block staging"
+
+
+def test_restocks_exposed_to_coordinator_state():
+    svc, sim = _mk(seed=77)
+    depot_id = sim.depot_list[0][0]
+    for _ in range(20):
+        sim._consume_kit("MED-1", depot_id)
+    view = sim.restocks_view()
+    assert view and view[0]["sku"] == "MED-1"
+    assert view[0]["depot"] == sim.depot_list[0][1]   # display name, not id
+    assert view[0]["due_s"] >= 0

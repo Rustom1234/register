@@ -187,6 +187,7 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             "zone": {"lat": cfg.zone_lat, "lng": cfg.zone_lng, "radius_m": cfg.zone_radius_m},
             "sim": sim.snapshot(),
             "depots": sim.depots(),
+            "restocks": sim.restocks_view(),
             "cases": cases,
             "orders": orders,
             "assignments": svc.store.query(
