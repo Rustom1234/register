@@ -380,3 +380,38 @@ green. Cache 20260804i.
 export, Hindi/Devanagari pass on rider-app strings, deploy dry-run
 (Dockerfile → Fly.io checklist for the founder), demo video re-record
 with Wayside branding.
+
+---
+
+## Round 9 — CLOSED (2026-08-04)
+
+**Theme: photos become real.** The last make-believe in the witness flow
+is gone — photos are now actual files, not described hints.
+
+- **Upload path**: "📁 Upload a photo from this phone" in the witness
+  photo menu → multipart POST /api/wa/photo (open, phone-validated,
+  jpeg/png/webp only, 3 MB cap, global flood window shared with text).
+  Files stored under PUKAAR_MEDIA_DIR with generated names; the report
+  row carries the real media_ref.
+- **Ops room viewing**: /api/state carries a case→photos map; the case
+  detail panel links each photo, staff-gated behind /api/media/{name}
+  (strict name regex — no traversal), labelled "(deleted at case close)".
+- **Retention made literal**: the purge now deletes the FILE from disk,
+  not just the reference — the site's privacy claim is enforced by code
+  and pinned by test.
+- **Real gap caught by verification**: witnesses photograph BEFORE they
+  pin (text → photo → location); pre-case photos stayed orphaned
+  forever. Case creation now retro-links the reporter's recent pre-case
+  media. Live E2E: upload through the real file chooser → case forms →
+  detail link renders → bytes serve staff-side.
+- **Offline honesty**: files can't ride the localStorage outbox — an
+  offline upload says so instead of pretending.
+- Parked: demo video re-record — record_demo.py predates the
+  keyed-render rounds (stale DOM handles); recorder repair queued.
+
+Suite **200** (5 photo-lifecycle pins). python-multipart added to deps.
+Cache 20260804j. Commit `7e53f9ee6`.
+
+**R10 queue:** record_demo.py repair + Wayside re-record, supervisor
+shift-summary export, Hindi/Devanagari pass on rider strings, Fly.io
+deploy checklist, adversarial sweep of the photo path.

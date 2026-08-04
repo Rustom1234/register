@@ -345,8 +345,14 @@ research. Log of each round: `research/loop-log.md`.
   stragglers (पुकार→वेसाइड). **196 tests.** Commits `4be60fbed` +
   `a9cbb86bf`.
 
+- **Round 9 (closed):** real witness photo upload — multipart endpoint
+  (3 MB, image-only, flood-capped), staff-gated viewing in the case
+  detail, retention deletes the bytes from disk, and pre-case photos
+  retro-link when the pin completes the case (gap caught by live E2E).
+  Offline uploads honestly refused. **200 tests.** Commit `7e53f9ee6`.
+
 ---
-**Last updated:** 2026-08-04, after loop Round 8. Before that: the
+**Last updated:** 2026-08-04, after loop Round 9. Before that: the
 find-issues iteration of 2026-08-02. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render

@@ -143,3 +143,4 @@ pukaar/build/
 # uploaded witness photos (retention-managed runtime data, never committed)
 pukaar-media/
 pukaar/pukaar-media/
+pukaar/docs/page@*.webm
