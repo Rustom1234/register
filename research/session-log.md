@@ -331,8 +331,14 @@ research. Log of each round: `research/loop-log.md`.
   in-session wakeups kept getting superseded. **194 tests.** Commits
   `28e8b5883` + `20bf7c971` + `35ddfc2bf`.
 
+- **Round 7 (closed, founder-directed):** the five calls — Wayside
+  rename everywhere (internals untouched), Goonj claim removed + deck
+  rebuilt, Telegram parked (/witness is the demo line), private demo
+  tour artifact published, 3-minute demo script written
+  (research/demo-script.md). **194 tests.** Commit `f0bd6dc7c`.
+
 ---
-**Last updated:** 2026-08-04, after loop Round 6. Before that: the
+**Last updated:** 2026-08-04, after loop Round 7. Before that: the
 find-issues iteration of 2026-08-02. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render

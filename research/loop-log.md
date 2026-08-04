@@ -304,3 +304,35 @@ Suite **194**. All 9 live checks green. Commits `28e8b5883`,
 photo-upload real file path (currently described-photo hints), supervisor
 shift-summary export, Hindi/Devanagari pass over responder app strings,
 demo video script for the founder.
+
+---
+
+## Round 7 — CLOSED (2026-08-04)
+
+**Theme: the founder's five calls, executed.** (Founder-directed round;
+the heartbeat firing closed the books and added the demo script.)
+
+1. **Renamed to Wayside** — every user-visible string across all four
+   surfaces, bot replies (EN + Hinglish), report/about/metrics/replay
+   pages, boot banner. Internal identifiers untouched on purpose
+   (PUKAAR_* env vars, pukaar_* storage keys, module paths, hash salt).
+   One brand-assertion test updated; 194 green after the sweep.
+2. **Goonj claim removed** from the deck's customer slide (founder:
+   "not right") — replaced with the honest Equitech-network line; PPTX
+   rebuilt from source.
+3. **Telegram parked** by founder decision — telegram-setup.md carries
+   the decision note; product-plan points the chat-line demo at the
+   built-in /witness page. Adapter stays dormant.
+4. **Demo tour artifact published** (private link) — all surfaces
+   screenshotted live post-rename, engine-room inventory, numbers, the
+   3-command local recipe:
+   https://claude.ai/code/artifact/5ab77ba7-51bd-4da7-ac11-1eb3c46c82c3
+5. **Demo script** — research/demo-script.md: the 3-minute live pitch
+   walkthrough, beat by beat, with safety nets and a quotable-numbers
+   list (and a do-not-claim list).
+
+Cache 20260804g. Commit `f0bd6dc7c` + this log. Suite 194.
+
+**R8 queue:** depot restock push to coordinator, witness real photo
+upload, shift-summary export, Hindi/Devanagari pass on rider strings,
+fresh adversarial sweep of rounds 5-7 code.
