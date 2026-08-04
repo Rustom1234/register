@@ -408,6 +408,19 @@ body.no-left #layout { grid-template-columns: 1fr 380px; }
   .tiles { flex-wrap: wrap; }
   #foot { flex-wrap: wrap; }
 }
+@media (max-width: 620px) {
+  /* phones: the stacked KPI cards were eating ~40% of a 430px map —
+     collapse to one slim swipeable chip row, Google-Maps style.
+     (Must sit AFTER the ≤1100px block: same specificity, cascade wins.) */
+  .tiles { flex-wrap: nowrap; overflow-x: auto; gap: 6px; pointer-events: auto;
+           scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .tiles::-webkit-scrollbar { display: none; }
+  .tile { min-width: max-content; padding: 5px 10px; border-radius: 9px; }
+  .tile .t-label { font-size: 8.5px; letter-spacing: 0.09em; }
+  .tile .t-value { font-size: 14px; margin-top: 1px; }
+  .tile .t-value.kits { font-size: 11.5px; }
+  .tile .t-sub { display: none; }
+}
 
 /* ------------------------------------------------------------------ foot */
 #foot { flex: 0 0 auto; display: flex; justify-content: space-between; gap: 10px;
