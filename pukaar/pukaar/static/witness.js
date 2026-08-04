@@ -1,4 +1,4 @@
-/* Pukaar witness app — the reporter's own view, standalone from the
+/* Wayside witness app — the reporter's own view, standalone from the
    control room. Same backend the control room's phone panel drives
    (/api/wa/inbound, /api/state) — just scoped to one conversation, the
    way a real person's phone only ever sees their own thread. */
@@ -128,13 +128,13 @@ function renderPhone() {
     const sameConv = msgs.dataset.conv === activeConv;
     const prevCount = sameConv ? +(msgs.dataset.count || 0) : Infinity;
     const greeting = log.length === 0 && !typing
-      ? `<div class="bubble bot"><b>Hello 🙏 This is Pukaar</b> — report someone on the street who needs help. Pick a scenario or type to begin.<span class="b-meta">Pukaar</span></div>`
+      ? `<div class="bubble bot"><b>Hello 🙏 This is Wayside</b> — report someone on the street who needs help. Pick a scenario or type to begin.<span class="b-meta">Wayside</span></div>`
       : "";
     msgs.innerHTML = greeting + log.map((m, i) => {
       const who = m.from === "bot" ? "bot" : "witness";
       const fresh = i >= prevCount ? " fresh" : "";
       const voice = m.kind === "voice" ? ` voice" data-len="${3 + (m.text || "").length % 7}` : "";
-      return `<div class="bubble ${who}${fresh}${voice}">${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Pukaar" : "you"}${bubbleTime(m.ts)}</span></div>`;
+      return `<div class="bubble ${who}${fresh}${voice}">${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Wayside" : "you"}${bubbleTime(m.ts)}</span></div>`;
     }).join("") + (typing ? '<div class="bubble bot typing"><span></span><span></span><span></span></div>' : "");
     msgs.dataset.key = threadKey;
     msgs.dataset.conv = activeConv;

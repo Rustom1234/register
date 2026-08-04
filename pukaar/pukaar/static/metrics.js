@@ -1,4 +1,4 @@
-/* Pukaar metrics page — hand-rolled SVG stacked bars per the dataviz method:
+/* Wayside metrics page — hand-rolled SVG stacked bars per the dataviz method:
    thin marks, 2px surface gaps between segments, direct total labels,
    status colors reserved for outcomes (with icon+label legend), table view. */
 "use strict";

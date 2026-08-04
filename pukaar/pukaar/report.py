@@ -63,7 +63,7 @@ def render_report(svc, sim) -> str:
         lang_counts[lang] = lang_counts.get(lang, 0) + 1
     lang_mix = " · ".join(f"{k} {v}" for k, v in sorted(lang_counts.items())) or "—"
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
-<title>Pukaar — session report</title>
+<title>Wayside — session report</title>
 <style>
   body {{ font-family: system-ui, sans-serif; color: #0b0b0b; background: #fff;
          max-width: 880px; margin: 0 auto; padding: 32px 24px; font-size: 14px; }}
@@ -83,7 +83,7 @@ def render_report(svc, sim) -> str:
            margin-top: 28px; padding-top: 12px; }}
   @media print {{ body {{ padding: 0; }} .noprint {{ display: none; }} }}
 </style></head><body>
-<h1>PUKAAR · SESSION REPORT</h1>
+<h1>WAYSIDE · SESSION REPORT</h1>
 <div class="sub">Nizamuddin pilot zone (demo) · generated {sim._clock_str()} ·
 backend: {svc.backend.name} · <span class="noprint"><a href="/">back to control room</a> ·
 print this page for the handout</span></div>

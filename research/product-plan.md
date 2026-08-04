@@ -67,7 +67,8 @@ Three routes, honestly laid out:
    step-by-step; the code side is already built and waiting for the
    credentials. Free at pilot volume (Meta's free monthly conversation
    tier covers a pilot), then fractions of a rupee per message.
-2. **Telegram bot** (the instant equivalent). A real, public,
+2. **Telegram bot** — PARKED (founder decision 2026-08-04; the built-in
+   `/witness` web page is the demo/test chat line). A real, public,
    free-to-run chat line that can be live in days — same brain, same
    flow, no approval queue. Lets field testing start while Meta's
    verification grinds.

@@ -1,4 +1,4 @@
-/* Pukaar control room — polls /api/state and renders the live world. */
+/* Wayside control room — polls /api/state and renders the live world. */
 "use strict";
 
 const CAT = { medical: "#3987e5", food: "#d95926", shelter: "#199e70" };
@@ -761,13 +761,13 @@ function renderPhone() {
     const prevCount = sameConv ? +(msgs.dataset.count || 0) : Infinity;
     // empty thread opens with the aid-line greeting so the pane never boots hollow
     const greeting = log.length === 0 && !typing
-      ? `<div class="bubble bot"><b>Hello 🙏 This is Pukaar</b> — report someone on the street who needs help. Pick a scenario or type to begin.<span class="b-meta">Pukaar</span></div>`
+      ? `<div class="bubble bot"><b>Hello 🙏 This is Wayside</b> — report someone on the street who needs help. Pick a scenario or type to begin.<span class="b-meta">Wayside</span></div>`
       : "";
     msgs.innerHTML = greeting + log.map((m, i) => {
       const who = m.from === "bot" ? "bot" : "witness";
       const fresh = i >= prevCount ? " fresh" : "";
       const voice = m.kind === "voice" ? ` voice" data-len="${3 + (m.text || "").length % 7}` : "";
-      return `<div class="bubble ${who}${fresh}${voice}">${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Pukaar" : "you"}${bubbleTime(m.ts)}</span></div>`;
+      return `<div class="bubble ${who}${fresh}${voice}">${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Wayside" : "you"}${bubbleTime(m.ts)}</span></div>`;
     }).join("") + (typing
       ? '<div class="bubble bot typing"><span></span><span></span><span></span></div>' : "");
     msgs.dataset.key = threadKey;

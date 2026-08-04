@@ -1,3 +1,10 @@
+> **Parked (founder decision, 2026-08-04):** no Telegram for now. The
+> built-in web reporting page at `/witness` is the demo and test chat
+> line — it drives the identical intake pipeline with zero external
+> accounts. This document stays as the ready-to-go playbook if a real
+> external channel is wanted later (the adapter code is built and tested,
+> dormant without a token).
+
 # Telegram chat line — setup guide
 
 WhatsApp Business verification through Meta is stuck in the approval queue,

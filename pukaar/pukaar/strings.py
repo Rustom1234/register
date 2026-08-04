@@ -17,11 +17,11 @@ SAFETY = {
     "S-112": (
         "⚠️ Yeh emergency lagti hai. Abhi 112 par call karein. "
         "Raat mein shelter/rescue ke liye: 14461 (DUSIB, Delhi). "
-        "Pukaar emergency service nahi hai."
+        "Wayside emergency service nahi hai."
     ),
     # First-contact notice (DPDP Rule 3 style, compact)
     "S-NOTICE": (
-        "Namaste 🙏 Yeh Pukaar hai — aap kisi zarooratmand vyakti ki soochna de "
+        "Namaste 🙏 Yeh Wayside hai — aap kisi zarooratmand vyakti ki soochna de "
         "sakte hain. Hum sirf aapka number (hash), pin aur bheji gayi jaankari "
         "rakhte hain; photo case band hone par delete ho jaati hai. "
         "Rukna ho to STOP likhein."
@@ -167,10 +167,10 @@ SAFETY_EN = {
     "S-112": (
         "⚠️ This looks like an emergency. Please call 112 right now. "
         "For night shelter/rescue in Delhi: 14461 (DUSIB). "
-        "Pukaar is not an emergency service."
+        "Wayside is not an emergency service."
     ),
     "S-NOTICE": (
-        "Hello 🙏 This is Pukaar — you can report a person on the street who "
+        "Hello 🙏 This is Wayside — you can report a person on the street who "
         "needs help. We keep only your number (hashed), the pin, and what you "
         "send; photos are deleted when the case closes. Reply STOP anytime."
     ),

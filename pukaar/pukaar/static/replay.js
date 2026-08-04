@@ -1,4 +1,4 @@
-/* Pukaar session replay — animates an exported session JSON on a map+feed.
+/* Wayside session replay — animates an exported session JSON on a map+feed.
    Made for screen recording: scrub anywhere, play at 30-300x sim speed. */
 "use strict";
 

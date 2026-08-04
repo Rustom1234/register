@@ -1,4 +1,4 @@
-/* Pukaar responder app — the field worker's side of the marketplace.
+/* Wayside responder app — the field worker's side of the marketplace.
    Drives the SAME API the sim uses: /api/state (poll), /api/manual (duty),
    /api/responder (accept / decline / outcome). Movement + arrival stay with
    the sim engine, so accepting here makes "you" drive across the map in the

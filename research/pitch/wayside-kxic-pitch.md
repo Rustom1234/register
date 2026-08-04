@@ -115,7 +115,7 @@ What a responder sees at the pin, and what a coordinator sees behind every case.
 - **Who buys** — NGO street-outreach programs and the CSR funders behind them — India mandates 2% of corporate profit to CSR — plus municipal shelter boards.
 - **Pain solved** — Outreach teams find people too late and blind; donors get activity reports, not verified outcomes; data practices now carry DPDP legal risk.
 - **What they get** — A per-zone service: verified need → delivered kit → coded outcome, with provenance-tagged records and privacy by architecture — audit-ready.
-- **First customer** — One Delhi NGO, one pilot zone — Nizamuddin. Reached through the Equitech network and an existing Goonj relationship. The pitch is a working demo, not a proposal.
+- **First customer** — One Delhi NGO, one pilot zone — Nizamuddin. Reached through the Equitech network; NGO partner conversations start with this working demo. The pitch is a working demo, not a proposal.
 
 *Unit economics to defend in the pilot: ~₹300 kit + delivery ≈ ₹430 per person served — kill line at ₹900.*
 

@@ -45,7 +45,7 @@ def main() -> None:
         print("WARNING: binding publicly with no PUKAAR_ADMIN_TOKEN — every "
               "surface, live chat, and export is open to anyone with the URL.")
 
-    print(f"Pukaar demo · backend={cfg.resolve_backend()} · http://{host}:{port}")
+    print(f"Wayside demo · backend={cfg.resolve_backend()} · http://{host}:{port}")
     app = build_app(cfg)
 
     # Optional Telegram chat line (the WhatsApp-equivalent that needs no

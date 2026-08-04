@@ -27,7 +27,7 @@ def test_about_page_served():
     with _client() as client:
         r = client.get("/static/about.html")
         assert r.status_code == 200
-        assert "Pukaar" in r.text
+        assert "Wayside" in r.text
         assert "Honest limits" in r.text
 
 

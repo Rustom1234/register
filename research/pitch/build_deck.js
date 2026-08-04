@@ -218,7 +218,7 @@ const cust = [
   ["Who buys", "NGO street-outreach programs and the CSR funders behind them — India mandates 2% of corporate profit to CSR — plus municipal shelter boards.", MED],
   ["Pain solved", "Outreach teams find people too late and blind; donors get activity reports, not verified outcomes; data practices now carry DPDP legal risk.", FOOD],
   ["What they get", "A per-zone service: verified need → delivered kit → coded outcome, with provenance-tagged records and privacy by architecture — audit-ready.", SHEL],
-  ["First customer", "One Delhi NGO, one pilot zone — Nizamuddin. Reached through the Equitech network and an existing Goonj relationship. The pitch is a working demo, not a proposal.", GOOD],
+  ["First customer", "One Delhi NGO, one pilot zone — Nizamuddin. Reached through the Equitech network; NGO partner conversations start with this working demo. The pitch is a working demo, not a proposal.", GOOD],
 ];
 cust.forEach(([h, b, c], i) => {
   const col = i % 2, row = Math.floor(i / 2);
