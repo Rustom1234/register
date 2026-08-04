@@ -59,16 +59,28 @@ def main():
                 page.wait_for_timeout(hold)
 
         def glide_click(selector=None, xy=None, settle=350):
-            if selector:
-                el = page.locator(selector).first
-                el.scroll_into_view_if_needed()
-                box = el.bounding_box()
-                x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
-            else:
-                x, y = xy
-            page.mouse.move(x, y, steps=22)
-            page.wait_for_timeout(settle)
-            page.mouse.click(x, y)
+            # The UI re-renders keyed panels at 1 Hz — a node can detach
+            # between locating and clicking. Re-resolve and retry instead
+            # of dying mid-recording.
+            for attempt in range(3):
+                try:
+                    if selector:
+                        el = page.locator(selector).first
+                        el.scroll_into_view_if_needed(timeout=4000)
+                        box = el.bounding_box()
+                        if box is None:
+                            raise RuntimeError("no box")
+                        x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+                    else:
+                        x, y = xy
+                    page.mouse.move(x, y, steps=22)
+                    page.wait_for_timeout(settle)
+                    page.mouse.click(x, y)
+                    return
+                except Exception:
+                    if attempt == 2:
+                        raise
+                    page.wait_for_timeout(400)
 
         page.goto("http://localhost:8877/", wait_until="domcontentloaded")
         page.wait_for_timeout(3500)
@@ -104,7 +116,7 @@ def main():
         glide_click('button[data-sc="golden_run"]')
         page.select_option("#speed", "30")
         page.wait_for_timeout(6500)
-        cap("Parallel offers to the nearest trusted responders — first accept wins (GoodSAM pattern)", 6000)
+        cap("Parallel offers to the nearest trusted responders — first accept wins, like real emergency dispatch", 6000)
         cap("Accepted. En route — dashed line, live trail, clinical flag on board.", 6000)
         cap("On site: wound dressed, kit given, clinical team called in.", 5000)
         cap("And the witness is never left wondering: worker en route → reached → served, live in their chat", 5000)
@@ -199,8 +211,8 @@ def main():
         # ---- close
         page.goto("http://localhost:8877/", wait_until="domcontentloaded")
         page.wait_for_timeout(2000)
-        cap("Witness → verify → deliver → care. 103 tests. No cameras. No database of the poor.", 5200)
-        cap("PUKAAR · पुकार — the call", 3000)
+        cap("Witness → verify → deliver → care. 200 tests. No cameras. No database of the poor.", 5200)
+        cap("WAYSIDE — see it, send word.", 3000)
 
         video = page.video
         ctx.close()
