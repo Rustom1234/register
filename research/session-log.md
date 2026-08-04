@@ -316,8 +316,14 @@ research. Log of each round: `research/loop-log.md`.
   golden run stages clear of dedup cells + honest failure. **188
   tests.** Commit `7bdc8610a`.
 
+- **Round 5 (closed):** pilot-readiness — witness page fully offline
+  (SW shell + veil fix + honest no-signal toast, verified in airplane
+  mode), CI now gates frontend JS syntax + 3.11/3.12 matrix, kit-economy
+  invariants proven under forced stockout (120 reports vs 57 kits),
+  #case-XXXX deep links. **189 tests.** Commit `cd50c5445`.
+
 ---
-**Last updated:** 2026-08-04, after loop Round 4. Before that: the
+**Last updated:** 2026-08-04, after loop Round 5. Before that: the
 find-issues iteration of 2026-08-02. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render

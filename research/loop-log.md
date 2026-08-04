@@ -223,3 +223,40 @@ pending — one message and it happens); manual-rider movement semantics
 only), supervisor case-detail deep links, a night-theme pass on the
 witness map, load test at 10× report volume, CI workflow file
 (pytest on push — suite is fully offline by design).
+
+---
+
+## Round 5 — CLOSED (2026-08-04)
+
+**Theme: pilot-readiness — offline, CI, proof under pressure.**
+
+1. **Witness page works offline.** The root SW precaches the witness
+   shell (page, JS, CSS, vendored MapLibre, basemap, street geojson) and
+   witness.js registers it. Verification caught a real bug in my own
+   feature: the "connecting…" boot veil only lifted on a successful
+   poll, so the offline shell rendered but was UNTOUCHABLE. It now lifts
+   on the failed first poll, inputs wire, and a failed send/scenario
+   shows an honest "⚠ No signal" toast. Verified end-to-end in
+   Playwright airplane mode (screenshot r5_witness_offline.png).
+2. **CI gates the frontend.** pukaar-tests.yml adds `node --check` over
+   all static JS (this exact gate caught real breakage twice this
+   session), a Python 3.11 + 3.12 matrix, and the key-free rule inline.
+3. **Kit economy proven at stockout.** New load test: 120 reports vs 57
+   seeded kits forces the depots dry, then asserts the exact invariants
+   round 3's audit found leaking — stock ≥ 0 everywhere, reservations
+   map only to live accepted/onsite orders, no offered-order black
+   holes, dispatch keeps closing. (The existing 300-case tick-budget
+   test already covered throughput; this one covers correctness under
+   scarcity.)
+4. **Case deep links.** /supervisor#case-8512 opens that case's panel
+   and pans the map; opening writes the hash, closing clears it. A
+   coordinator can now paste a case link in any chat.
+
+Suite **189** (commit message says 190 — mea culpa, off by one).
+Cache/buster 20260804e. Commit `cd50c5445`.
+
+**R6 candidates:** night-theme witness map (deliberate day-theme choice —
+revisit only if founder wants), rider-side turn-by-turn text directions,
+witness queued-send (retry the failed report automatically when signal
+returns), depot restock notification via push, site/ pitch page refresh
+with the R3-R5 features (offline + kit costs are demo-worthy).
