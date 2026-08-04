@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pukaar — Report someone who needs help</title>
 <link rel="icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/vendor/maplibre-gl.css?v=20260804b">
-<link rel="stylesheet" href="/static/app.css?v=20260804b">
+<link rel="stylesheet" href="/static/vendor/maplibre-gl.css?v=20260804c">
+<link rel="stylesheet" href="/static/app.css?v=20260804c">
 <style>
   /* Standalone witness view: the phone is the point, not a sidebar item. */
   body { display: flex; flex-direction: column; min-height: 100vh; }
@@ -26,7 +26,10 @@
   }
   @media (max-width: 860px) {
     #wlayout { grid-template-columns: 1fr; }
-    #wmap-col { height: 320px; }
+    /* map first on phones: the chat hint says "tap the map to place the
+       pin" — burying the map below the chat + scenario stack made that an
+       instruction about something off-screen */
+    #wmap-col { height: 320px; order: -1; }
   }
 </style>
 </head>
@@ -96,8 +99,8 @@
   <span>Only your number (hashed), the pin, and what you send are kept — nothing else. Photos are deleted when the case closes.</span>
 </footer>
 
-<script src="/static/vendor/maplibre-gl.js?v=20260804b"></script>
-<script src="/static/basemap.js?v=20260804b"></script>
-<script src="/static/witness.js?v=20260804b"></script>
+<script src="/static/vendor/maplibre-gl.js?v=20260804c"></script>
+<script src="/static/basemap.js?v=20260804c"></script>
+<script src="/static/witness.js?v=20260804c"></script>
 </body>
 </html>

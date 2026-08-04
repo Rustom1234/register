@@ -28,6 +28,8 @@ class PushService:
         self.store = store
         self._pem: str | None = None
         self._pub: str | None = None
+        self._vapid = None
+        self._fail: dict[str, int] = {}   # endpoint -> consecutive HTTP failures
         if _PUSH_OK:
             self._load_or_create_keys()
 
@@ -44,6 +46,11 @@ class PushService:
             self.store.execute(
                 "INSERT OR REPLACE INTO push_meta (k, v) VALUES ('vapid_pem', ?)", (pem,))
         self._pem = pem
+        # Keep the Vapid OBJECT for sending: pywebpush's string path treats
+        # the value as a file name or a base64 raw key — a multi-line PEM
+        # string hits Vapid.from_string and fails, so every real-browser
+        # push would die at send time. A Vapid01 instance bypasses all of it.
+        self._vapid = vapid
         from cryptography.hazmat.primitives import serialization
         raw = vapid.public_key.public_bytes(
             serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)
@@ -78,20 +85,37 @@ class PushService:
 
     def _send_all(self, subs: list[dict], payload: str) -> None:
         for row in subs:
+            endpoint = row["endpoint"]
             try:
                 webpush(
                     subscription_info=json.loads(row["sub"]),
                     data=payload,
-                    vapid_private_key=self._pem,
+                    vapid_private_key=self._vapid,
                     vapid_claims={"sub": "mailto:demo@wayside.invalid"},
                     timeout=6,
+                    # ttl=0 (the library default) tells the push service to
+                    # drop the message unless the device is reachable RIGHT
+                    # NOW — a rider in a 30-second signal gap would silently
+                    # miss the offer. Five minutes matches the offer window.
+                    ttl=300,
                 )
+                self._fail.pop(endpoint, None)
             except WebPushException as exc:
                 status = getattr(getattr(exc, "response", None), "status_code", None)
-                if status in (404, 410):             # subscription is dead — drop it
+                dead = status in (404, 410)          # subscription is gone
+                if status is not None and not dead:
+                    # Protocol-level rejection (401/403/413…): log it — a
+                    # fully silent failure hid a broken key format for two
+                    # rounds — and prune after 5 consecutive rejections.
+                    n = self._fail[endpoint] = self._fail.get(endpoint, 0) + 1
+                    print(f"[push] endpoint rejected ({status}), strike {n}/5: "
+                          f"{endpoint[:60]}…")
+                    dead = n >= 5
+                if dead:
+                    self._fail.pop(endpoint, None)
                     try:
                         self.store.execute("DELETE FROM push_subs WHERE endpoint=?",
-                                           (row["endpoint"],))
+                                           (endpoint,))
                     except Exception:
                         pass
             except Exception:

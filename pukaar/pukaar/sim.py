@@ -9,6 +9,7 @@ intake pipeline — nothing in the demo bypasses the production code path.
 
 from __future__ import annotations
 
+import json
 import math
 import random
 import time
@@ -113,6 +114,22 @@ class Sim:
         self._restock_flagged: set[tuple[str, str]] = set()          # (depot, sku)
         self._pending_restocks: dict[tuple[str, str], float] = {}    # (depot, sku) -> due
         self._reservations: dict[str, tuple[str, str]] = {}          # order_id -> (depot, sku)
+        # The kit ledger offsets DURABLE inventory rows (stock leaves at
+        # accept), so the ledger must be durable too: a restart mid-delivery
+        # must neither re-consume at re-attach (_on_accept's `already` guard
+        # only works if reservations survive) nor orphan the eventual
+        # settle_kit return, nor forget a courier restock already owed.
+        stored = svc.store.one("SELECT v FROM push_meta WHERE k='kit_ledger'")
+        if stored:
+            try:
+                led = json.loads(stored["v"])
+                self._reservations = {k: (v[0], v[1])
+                                      for k, v in led.get("reservations", {}).items()}
+                self._pending_restocks = {tuple(k.split("|", 1)): float(v)
+                                          for k, v in led.get("restocks", {}).items()}
+                self._restock_flagged = set(self._pending_restocks)
+            except (TypeError, ValueError, KeyError, IndexError):
+                pass
         self._phone_counter = 0
         self._resp: dict[str, dict] = {}
         self._decides: dict[str, float] = {}   # assignment_id -> decision due (per-offer, not per-responder)
@@ -120,6 +137,9 @@ class Sim:
         self._pending_escalations: dict[str, float] = {}
         self._random_report_at = self.sim_now + self.rng.uniform(60, 240)
         self.last_tick_real = time.monotonic()   # /health watchdog signal
+        # Every close path must settle the kit ledger; the witness-recheck
+        # cancel lives in service.py, which can't import sim — hook it here.
+        svc.kit_settler = self.settle_kit
         self._seed_world()
 
     # -------------------------------------------------------------- setup --
@@ -343,6 +363,14 @@ class Sim:
             if r["order_id"]:
                 order = self.svc.store.one("SELECT * FROM orders WHERE id=?", (r["order_id"],))
                 if not order or order["status"] in ("closed", "escalated"):
+                    # Safety rail: every settling close path pops the
+                    # reservation itself — one still present here means the
+                    # order was closed externally without settling, i.e. the
+                    # kit never reached anyone. Put it back on the shelf.
+                    if order and r["order_id"] in self._reservations:
+                        self.settle_kit(
+                            r["order_id"],
+                            "served" if order["status"] == "escalated" else "not_found")
                     r["state"], r["order_id"], r["target"] = "idle", None, None
                     r["route"], r["route_idx"] = None, 0
                     r["depot_id"], r["depot_name"] = None, None
@@ -435,6 +463,7 @@ class Sim:
                 # not_found/declined outcome returns it (settle_kit).
                 self._consume_kit(order["sku"], depot[0])
                 self._reservations[order_id] = (depot[0], order["sku"])
+                self._save_ledger()
         else:
             waypoints = self._route_to(r, *target)
             r["depot_id"], r["depot_name"] = None, None
@@ -554,12 +583,25 @@ class Sim:
         UI). Stock left the depot at accept; a not_found/declined outcome
         puts it back, a served/escalated one keeps it consumed."""
         res = self._reservations.pop(order_id, None)
+        if res:
+            self._save_ledger()
         if res and outcome in ("not_found", "declined"):
             depot_id, sku = res
             self.svc.store.execute(
                 "UPDATE inventory SET count = count + 1 WHERE partner_id=? AND sku=?",
                 (depot_id, sku))
             self.svc.emit("kit_return", {"sku": sku, "depot": self._depot_name(depot_id)})
+
+    def _save_ledger(self) -> None:
+        """Reservations/restocks offset durable inventory rows — persist them
+        beside the sim clock so a PUKAAR_DB restart reconciles (see __init__)."""
+        self.svc.store.execute(
+            "INSERT OR REPLACE INTO push_meta (k, v) VALUES ('kit_ledger', ?)",
+            (json.dumps({
+                "reservations": self._reservations,
+                "restocks": {f"{d}|{s}": due
+                             for (d, s), due in self._pending_restocks.items()},
+            }),))
 
     # ------------------------------------------------- inventory & restock --
     def _depot_name(self, depot_id: str | None) -> str:
@@ -576,6 +618,7 @@ class Sim:
         if row and row["count"] <= (row["restock_threshold"] or 0) and key not in self._restock_flagged:
             self._restock_flagged.add(key)
             self._pending_restocks[key] = self.sim_now + 600   # courier rail: ~10 sim-min
+            self._save_ledger()   # an owed courier must survive a restart
             self.svc.emit("restock_needed", {"sku": sku, "count": row["count"],
                                              "depot": self._depot_name(depot_id)})
 
@@ -590,6 +633,8 @@ class Sim:
             self._restock_flagged.discard(key)
             self.svc.emit("restock_delivered", {"sku": sku, "qty": 8,
                                                 "depot": self._depot_name(depot_id)})
+        if done:
+            self._save_ledger()
 
     def _complete_escalations(self) -> None:
         done = [oid for oid, t in self._pending_escalations.items() if self.sim_now >= t]

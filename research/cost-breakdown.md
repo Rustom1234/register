@@ -104,3 +104,8 @@ why the monthly bill stays small enough for one modest donor to carry
 marked "estimate" are honest planning numbers, not quotes; the pilot's
 job is to replace them with measured ones, published on the same
 dashboard the funders see.*
+
+*Kit contents are itemized separately with source-linked Delhi prices in
+[`kit-costs.md`](kit-costs.md): per-kit ≈ ₹172 MED / ₹50 FOOD / ₹173 SEAS
+at wholesale, one-time depot seeding ≈ ₹6,900, and a year-1 stock budget
+of ≈ ₹36,500 including 15% contingency.*

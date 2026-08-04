@@ -135,6 +135,7 @@ class TelegramBridge:
         self.client = client
         self.offset = 0          # next update_id to ask for
         self.running = True      # flip False to stop run()
+        self._retries: dict[int, int] = {}   # update_id -> failed attempts
 
     # ------------------------------------------------------------- send --
     def send_reply(self, chat_id: Any, text: str,
@@ -156,9 +157,10 @@ class TelegramBridge:
 
     # ---------------------------------------------------------- inbound --
     def handle_update(self, update: dict) -> None:
-        """One update through the pipeline; replies go straight back out."""
-        if isinstance(update, dict) and isinstance(update.get("update_id"), int):
-            self.offset = max(self.offset, update["update_id"] + 1)
+        """One update through the pipeline; replies go straight back out.
+        Offset confirmation lives in poll_once — confirming BEFORE the reply
+        went out meant one transient sendMessage failure silently dropped a
+        witness's message forever."""
         inbound = update_to_inbound(update)
         if inbound is None:
             return
@@ -176,16 +178,25 @@ class TelegramBridge:
 
     def check(self) -> str | None:
         """Validate the token against getMe. Returns the bot's username on
-        success, None on a rejected token or unreachable network — so boot
-        can fail LOUD instead of the bridge dying silently forever."""
+        success, None otherwise (see probe() for the distinction boot needs)."""
+        status, name = self.probe()
+        return name if status == "ok" else None
+
+    def probe(self) -> tuple[str, str | None]:
+        """getMe with a three-way answer: ('ok', username) — token works;
+        ('rejected', None) — Telegram said no, the token is bad/revoked;
+        ('network', None) — couldn't reach Telegram at all. Boot must treat
+        these differently: a DNS blip at container start is not a revoked
+        token, and permanently disabling the bridge over one is a silent
+        outage that looks identical to 'nobody messaged us'."""
         try:
             r = self.client.get(f"{self.base}/getMe")
             body = r.json()
             if r.status_code == 200 and body.get("ok"):
-                return (body.get("result") or {}).get("username") or "unknown"
+                return "ok", (body.get("result") or {}).get("username") or "unknown"
+            return "rejected", None
         except Exception:
-            pass
-        return None
+            return "network", None
 
     def poll_once(self) -> int:
         """One getUpdates round trip; returns how many updates were handled."""
@@ -199,7 +210,25 @@ class TelegramBridge:
         if not isinstance(updates, list):
             return 0
         for u in updates:
-            self.handle_update(u)
+            uid = u.get("update_id") if isinstance(u, dict) else None
+            try:
+                self.handle_update(u)
+            except Exception:
+                # At-least-once: don't confirm — leave offset put so this
+                # update redelivers after run()'s backoff. Bounded so one
+                # poison update can't wedge the line: 3 tries, then skip
+                # loudly. (Malformed updates never raise — they're consumed
+                # and confirmed like any other.)
+                if isinstance(uid, int):
+                    n = self._retries[uid] = self._retries.get(uid, 0) + 1
+                    if n < 3:
+                        raise
+                    print(f"[telegram] giving up on update {uid} after {n} attempts")
+                else:
+                    raise
+            if isinstance(uid, int):
+                self.offset = max(self.offset, uid + 1)
+                self._retries.pop(uid, None)
         return len(updates)
 
     def run(self) -> None:

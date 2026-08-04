@@ -25,10 +25,12 @@ ETA is honest about how they're moving: walking, cycling, or scooter.
 **Plain-language notes:** Google's own map can't be embedded without a
 paid key, so we build the closest thing: the same open street data that
 powers most map apps (OpenStreetMap), restyled to Google's visual
-language, with our own routing engine over the real road network of the
-pilot zone. On your machine it fetches the real Nizamuddin street data
-automatically the first time it runs. Side by side with Google Maps, it
-should read as the same species.
+language, with our own routing engine over the pilot zone's street
+network. The demo ships with representative built-in geometry (206 named
+road segments) so it runs anywhere with zero setup; one command on your
+machine (`tools/fetch_real_roads.py`) swaps in the real Nizamuddin
+streets from OpenStreetMap. Side by side with Google Maps, it should
+read as the same species.
 
 ## Phase 2 — The rider side becomes a real mobile app
 

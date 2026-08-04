@@ -32,6 +32,14 @@ def main() -> None:
             "live with webhook signature checks disabled. Set WA_APP_SECRET (Meta "
             "app dashboard → App settings → Basic), or PUKAAR_ALLOW_INSECURE=1 "
             "for a throwaway test.")
+    # The other half-configured state: token without a phone id means the
+    # webhook happily ACCEPTS witness messages while every reply silently
+    # fails to send — worse than being down, because nobody notices.
+    if os.environ.get("WA_TOKEN") and not os.environ.get("WA_PHONE_ID"):
+        raise SystemExit(
+            "WA_TOKEN is set but WA_PHONE_ID is not: inbound messages would be "
+            "accepted while every outbound reply fails. Set WA_PHONE_ID (Meta "
+            "app dashboard → WhatsApp → API Setup), or unset WA_TOKEN.")
 
     if host not in ("127.0.0.1", "localhost", "::1") and not cfg.admin_token:
         print("WARNING: binding publicly with no PUKAAR_ADMIN_TOKEN — every "
@@ -51,14 +59,20 @@ def main() -> None:
 
         bridge = TelegramBridge(tg_token, app.state.svc)
         # Fail loud, not silent: a revoked/typo'd token must be visible at
-        # boot, not discovered days later as "nobody's messages arrive".
-        me = bridge.check()
-        if me:
-            threading.Thread(target=bridge.run, daemon=True).start()
-            print(f"Telegram bridge: polling as @{me} (witnesses can message the bot)")
-        else:
+        # boot — but a DNS blip at container start is NOT a revoked token,
+        # and the bridge's own backoff loop handles a network that comes up
+        # a few seconds after we do.
+        status, me = bridge.probe()
+        if status == "rejected":
             print("WARNING: PUKAAR_TELEGRAM_TOKEN was rejected by Telegram "
-                  "(bad/revoked token, or no network) — the bridge is NOT running.")
+                  "(bad/revoked token) — the bridge is NOT running.")
+        else:
+            threading.Thread(target=bridge.run, daemon=True).start()
+            if status == "ok":
+                print(f"Telegram bridge: polling as @{me} (witnesses can message the bot)")
+            else:
+                print("Telegram bridge: couldn't reach api.telegram.org at boot — "
+                      "starting anyway; the poll loop retries with backoff.")
 
     uvicorn.run(app, host=host, port=port, log_level="warning")
 

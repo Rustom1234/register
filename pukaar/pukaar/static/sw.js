@@ -5,10 +5,10 @@
    worse than a spinner — but the shell itself never 404s offline. */
 "use strict";
 
-const CACHE = "wayside-20260804b";
+const CACHE = "wayside-20260804c";
 const SHELL = [
   "/responder",
-  "/static/responder.js?v=20260804b",
+  "/static/responder.js?v=20260804c",
   "/static/manifest.webmanifest",
   "/static/icons/icon-192.png",
   "/static/icons/icon-512.png",
@@ -56,16 +56,29 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // Static assets: cache-first, backfill on miss.
+  // Static assets. This worker's scope is the whole origin (registered at
+  // /sw.js so it can control /responder), which means it also intercepts
+  // the control room's and witness page's assets — those must NEVER be
+  // served stale. Only the precached shell is cache-first; everything else
+  // is network-first with the cache as an offline fallback.
   if (url.pathname.startsWith("/static/")) {
+    const inShell = SHELL.includes(url.pathname + url.search) || SHELL.includes(url.pathname);
     e.respondWith(
-      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-        if (res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
-        }
-        return res;
-      }))
+      inShell
+        ? caches.match(req).then((hit) => hit || fetch(req).then((res) => {
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(CACHE).then((c) => c.put(req, copy));
+            }
+            return res;
+          }))
+        : fetch(req).then((res) => {
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(CACHE).then((c) => c.put(req, copy));
+            }
+            return res;
+          }).catch(() => caches.match(req))
     );
   }
 });

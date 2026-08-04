@@ -22,5 +22,5 @@ Origin: seen on the street — a homeless man with a wrapped, bleeding foot; ~�
 **The demo exists.** [`../pukaar/`](../pukaar/) implements the whole loop from the build plan — trilingual WhatsApp-style intake agent, deterministic 112 gate, kit orders with code-enforced caution, GoodSAM-style dispatch, provenance, retention — plus a recordable live control room (`make demo`), a metrics/kill-criteria dashboard, a standalone responder phone app at
 `/responder` (an installable mobile app with push notifications), a
 standalone witness page at `/witness`, a supervisor view at `/supervisor`,
-a kit-depot network, and 167 automated tests (hardened by an adversarial
+a kit-depot network, and 184 automated tests (hardened by an adversarial
 audit). See [`../pukaar/README.md`](../pukaar/README.md) and [`../pukaar/CHANGELOG.md`](../pukaar/CHANGELOG.md).

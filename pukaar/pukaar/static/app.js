@@ -47,6 +47,9 @@ function updateFollowBtn() {
 // ---------------------------------------------------------------- sound --
 function beep(freq, dur = 0.09, delay = 0, vol = 0.045, type = "sine") {
   if (!soundOn || !audioCtx) return;
+  // screen lock / a phone call suspends the context; without a resume the
+  // sounds die forever while the bell icon still says ON
+  if (audioCtx.state !== "running") audioCtx.resume();
   const t = audioCtx.currentTime + delay;
   const o = audioCtx.createOscillator(), g = audioCtx.createGain();
   o.type = type; o.frequency.value = freq;
@@ -98,8 +101,21 @@ function initMap(zone) {
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
   map.on("style.load", ensureOverlays);
-  map.on("click", (e) => placeWitnessPin(e.lngLat.lat, e.lngLat.lng));
-  map.on("dragstart", () => { followGolden = false; updateFollowBtn(); });
+  // Only clicks on the bare basemap place the witness pin — marker
+  // elements live in the canvas container, so their clicks bubble here
+  // and would silently teleport the pin (a later "share location" then
+  // files the report at the marker, not where the witness meant).
+  map.on("click", (e) => {
+    if (e.originalEvent && e.originalEvent.target === map.getCanvas()) {
+      placeWitnessPin(e.lngLat.lat, e.lngLat.lng);
+    }
+  });
+  // Any user camera gesture releases the follow-cam: MapLibre sets
+  // originalEvent only for user-initiated moves (drag, wheel, keyboard,
+  // pinch), so our own panTo never self-cancels here.
+  map.on("movestart", (e) => {
+    if (e.originalEvent) { followGolden = false; updateFollowBtn(); }
+  });
 }
 
 function setMapTheme(theme) {
@@ -478,7 +494,12 @@ function showDetail(caseId) {
   selectedCase = caseId;
   renderDetail();
   const c = state.cases.find((x) => x.id === caseId);
-  if (c && c.lat != null && map && map !== "failed") map.panTo([c.lng, c.lat]);
+  if (c && c.lat != null && map && map !== "failed") {
+    // an explicit "show me this case" beats the follow-cam — without this
+    // the next poll's panTo snatches the camera straight back
+    followGolden = false; updateFollowBtn();
+    map.panTo([c.lng, c.lat]);
+  }
 }
 
 function renderDetail() {
@@ -528,12 +549,24 @@ function renderRespPanel() {
   // plays their own role from /responder instead.
   if (!document.getElementById("resp-select")) return;
   const sel = document.getElementById("resp-select");
-  sel.innerHTML = state.sim.responders.map((r) =>
-    `<option value="${r.id}" ${r.id === selectedResp ? "selected" : ""}>${r.name}${r.medical ? " 🩺" : ""}</option>`).join("");
+  // Keyed render: an unconditional 1 Hz innerHTML rebuild closes the
+  // dropdown the instant a user opens it and eats clicks mid-press.
+  const selKey = state.sim.responders.map((r) => r.id + r.name + (r.medical ? "m" : "")).join("|");
+  if (sel.dataset.key !== selKey) {
+    sel.dataset.key = selKey;
+    sel.innerHTML = state.sim.responders.map((r) =>
+      `<option value="${r.id}" ${r.id === selectedResp ? "selected" : ""}>${r.name}${r.medical ? " 🩺" : ""}</option>`).join("");
+  } else if (sel.value !== selectedResp) {
+    sel.value = selectedResp;
+  }
   const me = state.sim.responders.find((r) => r.id === selectedResp);
-  document.getElementById("resp-manual").checked = !!(me && me.manual);
+  const manualBox = document.getElementById("resp-manual");
+  // never overwrite the checkbox while the user is mid-toggle
+  if (document.activeElement !== manualBox) manualBox.checked = !!(me && me.manual);
 
   const cards = [];
+  const dyn = {};   // volatile text (distance, ETA) updated in place on skip
+  const pids = [];
   const pending = state.assignments.filter((a) =>
     a.responder_id === selectedResp && a.responded_at == null);
   for (const a of pending) {
@@ -541,9 +574,11 @@ function renderRespPanel() {
     if (!order) continue;
     const c = state.cases.find((x) => x.id === order.case_id) || {};
     const dist = (me && c.lat != null) ? `${Math.round(haversineM(me.lat, me.lng, c.lat, c.lng))}m` : "—";
+    pids.push(a.id);
+    dyn["d" + a.id] = dist;
     const instr = J(order.instruction_ids, []).map((i) => `<li>${state.instructions[i] || i}</li>`).join("");
     cards.push(`<div class="rcard">
-      <div class="r-head"><b>${CAT_ICON[c.category] || "📦"} ${order.sku} · ${order.priority}</b><span>${dist}</span></div>
+      <div class="r-head"><b>${CAT_ICON[c.category] || "📦"} ${order.sku} · ${order.priority}</b><span class="r-dyn" data-k="d${a.id}">${dist}</span></div>
       ${order.clinical_flag ? "🩺 clinical flag · " : ""}${escapeHtml((c.detail || c.landmark_text || "").slice(0, 60))}
       <ul class="r-instr">${instr}</ul>
       <div class="btns">
@@ -559,6 +594,7 @@ function renderRespPanel() {
     if (active.status === "accepted" && me && me.eta_s != null) {
       statusTxt += ` · ETA ${fmtDur(me.eta_s)}`;
     }
+    dyn["s" + active.id] = statusTxt;
     const outcomeBtns = active.status === "onsite" && me && me.manual ? `
       <div class="btns">
         <button class="accept" data-act="outcome" data-order="${active.id}" data-out="served">🟢 Diya</button>
@@ -566,19 +602,29 @@ function renderRespPanel() {
         <button data-act="outcome" data-order="${active.id}" data-out="declined">Mana kiya</button>
         <button data-act="outcome" data-order="${active.id}" data-out="escalated">🩺 Doctor bulao</button>
       </div>` : (active.status === "onsite" ? `<div class="r-instr">sim will close this — tick "I'm playing" to decide yourself</div>` : "");
-    cards.push(`<div class="rcard"><div class="r-head"><b>${active.sku} · ${c.digipin || ""}</b><span>${statusTxt}</span></div>${outcomeBtns}</div>`);
+    cards.push(`<div class="rcard"><div class="r-head"><b>${active.sku} · ${c.digipin || ""}</b><span class="r-dyn" data-k="s${active.id}">${statusTxt}</span></div>${outcomeBtns}</div>`);
   }
-  document.getElementById("resp-cards").innerHTML =
-    cards.join("") || '<div class="rcard idle">no offers right now — on patrol</div>';
-  document.querySelectorAll("#resp-cards [data-act]").forEach((b) =>
-    b.addEventListener("click", async () => {
-      const body = b.dataset.act === "outcome"
-        ? { action: "outcome", order_id: b.dataset.order, outcome: b.dataset.out }
-        : { action: b.dataset.act, assignment_id: b.dataset.asg };
-      await fetch("/api/responder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (b.dataset.act === "outcome") flashRespToast("✓ outcome recorded");
-      refresh();
-    }));
+  const box = document.getElementById("resp-cards");
+  const cardsKey = [selectedResp, pids.join(","),
+    active ? active.id + ":" + active.status + (me && me.manual ? "m" : "") : ""].join("|");
+  if (box.dataset.key !== cardsKey) {
+    box.dataset.key = cardsKey;
+    box.innerHTML = cards.join("") || '<div class="rcard idle">no offers right now — on patrol</div>';
+    box.querySelectorAll("[data-act]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        const body = b.dataset.act === "outcome"
+          ? { action: "outcome", order_id: b.dataset.order, outcome: b.dataset.out }
+          : { action: b.dataset.act, assignment_id: b.dataset.asg };
+        await fetch("/api/responder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        if (b.dataset.act === "outcome") flashRespToast("✓ outcome recorded");
+        refresh();
+      }));
+  } else {
+    box.querySelectorAll(".r-dyn").forEach((el) => {
+      const v = dyn[el.dataset.k];
+      if (v != null && el.textContent !== v) el.textContent = v;
+    });
+  }
 }
 
 let respToastUntil = 0;
@@ -668,14 +714,23 @@ function renderPhone() {
   if (!document.getElementById("conv-select")) return;
   const sel = document.getElementById("conv-select");
   const phones = Object.keys(state.conversations);
-  if (!phones.includes(activeConv) && !phones.includes("+91-DEMO")) {
-    // keep DEMO as an always-available local conversation
-  }
   const options = Array.from(new Set(["+91-DEMO", ...phones]));
-  sel.innerHTML = options.map((p) => `<option ${p === activeConv ? "selected" : ""}>${p}</option>`).join("");
+  // keyed: rebuilding every poll closes the dropdown while the user browses
+  const convKey = options.join("|");
+  if (sel.dataset.key !== convKey) {
+    sel.dataset.key = convKey;
+    sel.innerHTML = options.map((p) => `<option ${p === activeConv ? "selected" : ""}>${escapeHtml(p)}</option>`).join("");
+  } else if (sel.value !== activeConv && options.includes(activeConv)) {
+    sel.value = activeConv;
+  }
   document.getElementById("conv-phone").textContent = activeConv;
 
-  const log = (state.conversations[activeConv] || localLog);
+  // own-property + shape check: conversations is a plain JSON object, so a
+  // crafted conversation id like "constructor" would otherwise hand us a
+  // prototype member instead of a thread and wedge the page
+  const ownConv = state && Object.prototype.hasOwnProperty.call(state.conversations, activeConv)
+    ? state.conversations[activeConv] : null;
+  const log = Array.isArray(ownConv) ? ownConv : localLog;
   const msgs = document.getElementById("msgs");
   const atBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 60;
   const bubbleTime = (ts) => {
@@ -710,12 +765,17 @@ function renderPhone() {
 
   const last = log.length ? log[log.length - 1] : null;
   const quick = document.getElementById("quick");
-  if (last && last.from === "bot" && last.buttons && last.buttons.length) {
-    quick.innerHTML = last.buttons.map((b) =>
-      `<button data-payload="${b.id}">${b.label}</button>`).join("");
+  const hasBtns = !!(last && last.from === "bot" && last.buttons && last.buttons.length);
+  // keyed + escaped: no per-second rebuild eating a mid-press tap, and no
+  // unescaped conversation-derived strings in an innerHTML sink
+  const quickKey = hasBtns ? `${last.ts}:${last.buttons.map((b) => b.id).join(",")}` : "";
+  if (quick.dataset.key !== quickKey) {
+    quick.dataset.key = quickKey;
+    quick.innerHTML = hasBtns ? last.buttons.map((b) =>
+      `<button data-payload="${escapeHtml(b.id)}">${escapeHtml(b.label)}</button>`).join("") : "";
     quick.querySelectorAll("button").forEach((btn) =>
       btn.addEventListener("click", () => sendInbound("button", { text: btn.dataset.payload })));
-  } else quick.innerHTML = "";
+  }
 }
 
 const localLog = []; // demo conversation before the server knows it
@@ -856,6 +916,8 @@ function wire() {
   document.getElementById("btn-sound").addEventListener("click", () => {
     soundOn = !soundOn;
     if (soundOn && !audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // this click is a user gesture — the one place resume() always works
+    if (soundOn && audioCtx.state === "suspended") audioCtx.resume();
     if (soundOn) { beep(660, 0.07); beep(880, 0.07, 0.09); }
     document.getElementById("btn-sound").innerHTML = soundOn ? ICON_BELL : ICON_BELL_OFF;
   });
@@ -892,15 +954,26 @@ function connBanner(show) {
   if (b) b.hidden = !show;
 }
 
+let pollBusy = false;
 async function refresh() {
+  // Overlap guard + timeout: a hang-type outage must trip the banner, not
+  // pile up requests forever and then let a late response clobber newer
+  // state after the server recovers.
+  if (pollBusy) return;
+  pollBusy = true;
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), 4000);
   try {
-    const res = await fetch("/api/state");
+    const res = await fetch("/api/state", { signal: ctrl.signal });
     state = await res.json();
     pollFails = 0;
     connBanner(false);
   } catch {
     if (++pollFails >= 2) connBanner(true);
     return;
+  } finally {
+    clearTimeout(tid);
+    pollBusy = false;
   }
   if (!wired) { wire(); wired = true; }
   if (!map) {

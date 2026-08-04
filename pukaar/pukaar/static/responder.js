@@ -46,16 +46,23 @@ function beep(freq = 880, dur = 0.12) {
     o.start(); o.stop(audioCtx.currentTime + dur);
   } catch { /* sound is optional */ }
 }
-document.addEventListener("pointerdown", () => {
+// Deep-linked riders (?id=...) went on duty without a click; a tap is the
+// user gesture that lets us ask for notification permission. NOT {once}:
+// the first tap usually lands before the first /api/state poll resolves
+// (me() still null), and a one-shot would burn the only chance — stay
+// armed until the ask actually happened for an on-duty identity.
+function armNotifyTap() {
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     audioCtx.resume();
   } catch { /* ignore */ }
-  // Deep-linked riders (?id=...) went on duty without a click; their first
-  // tap is the user gesture that lets us ask for notification permission.
   const m = me();
-  if (m && m.manual) enableNotifications();
-}, { once: true });
+  if (m && m.manual) {
+    enableNotifications();
+    document.removeEventListener("pointerdown", armNotifyTap);
+  }
+}
+document.addEventListener("pointerdown", armNotifyTap);
 
 async function api(path, body) {
   const r = await fetch(path, {
@@ -372,6 +379,14 @@ async function enableNotifications() {
     if (!key || !swReg || !("pushManager" in swReg)) return;
     const b64 = (key + "=".repeat((4 - key.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/");
     const raw = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    // A fresh server DB mints a fresh VAPID keypair; subscribing over an
+    // old-key subscription throws InvalidStateError forever. Reconcile:
+    // drop a stale subscription first (same-key resubscribe is a no-op).
+    const cur = await swReg.pushManager.getSubscription();
+    if (cur) {
+      const k = new Uint8Array(cur.options.applicationServerKey || []);
+      if (k.length !== raw.length || k.some((b, i) => b !== raw[i])) await cur.unsubscribe();
+    }
     const sub = await swReg.pushManager.subscribe({
       userVisibleOnly: true, applicationServerKey: raw });
     await api("/api/push/subscribe", { responder_id: myId, subscription: sub.toJSON() });

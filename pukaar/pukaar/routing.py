@@ -147,7 +147,14 @@ class RoadGraph:
 
         Fastest path for the mode: A* over travel time, entering/leaving
         the graph at mid-edge projection points. Door-to-road approach
-        legs count at walking pace for every mode."""
+        legs count at walking pace for every mode.
+
+        CONTRACT NOTE — duration_s is the PLANNER's class-weighted estimate
+        (main roads faster than lanes). The sim moves riders at the flat
+        sim.MODE_SPEED_MPS and derives every user-facing ETA from that same
+        flat speed (sim.responders), so displayed ETAs always match actual
+        arrival. Do not surface duration_s as an ETA without also moving
+        riders at per-class speeds, or the two will drift up to ~75%."""
         speeds = SPEEDS_KMH.get(mode)
         if speeds is None:
             raise ValueError(f"unknown travel mode {mode!r} (want one of {sorted(SPEEDS_KMH)})")

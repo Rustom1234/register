@@ -22,7 +22,7 @@ No cameras, no database of the people served.
 - **Hard rule (CLAUDE.md): never use a paid Anthropic API key for anything
   in this repo — coding, testing, demos, screenshots, video. Everything
   runs on `PUKAAR_BACKEND=mock` (the default). CI must stay key-free.**
-- Layout: `pukaar/` = the working system (FastAPI, 111 tests, `make demo`).
+- Layout: `pukaar/` = the working system (FastAPI, 184 tests, `make demo`).
   `research/` = findings, plans, the KXIC proposal, and (`research/pitch/`)
   the pitch deck.
 

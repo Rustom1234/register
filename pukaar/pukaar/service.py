@@ -307,8 +307,13 @@ class PukaarService:
             self.emit("recheck_confirmed", {"case_id": case_id})
         else:
             order = self.store.one("SELECT * FROM orders WHERE case_id=?", (case_id,))
-            if order:
-                self.dispatch.cancel(order["id"], "witness says person moved on")
+            if order and self.dispatch.cancel(order["id"], "witness says person moved on"):
+                # The rider may already be enroute with a reserved kit — the
+                # person is gone, so the kit goes back on the shelf. The sim
+                # registers this hook at boot (service can't import sim).
+                settle = getattr(self, "kit_settler", None)
+                if settle:
+                    settle(order["id"], "not_found")
 
     def request_pin(self, case_id: str) -> bool:
         """Coordinator one-tap: ask the witness of a landmark-only case for

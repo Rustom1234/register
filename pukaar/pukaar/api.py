@@ -5,9 +5,12 @@ engine, and a periodic retention purge. The UI polls /api/state.
 """
 
 import asyncio
+import math
 import os
 import pathlib
+import re
 import time
+from collections import deque
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
@@ -18,7 +21,7 @@ from pydantic import BaseModel
 from .report import render_report
 from .whatsapp import CloudApi, parse_webhook, verify_signature
 
-from . import geo, strings
+from . import gate, geo, strings
 from .config import Config
 from .db import Store
 from .service import PukaarService
@@ -114,13 +117,17 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         return await call_next(request)
 
     @app.get("/login")
-    def login(token: str = ""):
+    def login(request: Request, token: str = ""):
         if not cfg.admin_token or token != cfg.admin_token:
             raise HTTPException(401, "wrong or missing token")
         from fastapi.responses import RedirectResponse
         resp = RedirectResponse("/", status_code=302)
+        # Secure whenever the client reached us over TLS (directly or via a
+        # reverse proxy) — a staff cookie must not replay over plain http.
+        https = (request.url.scheme == "https"
+                 or request.headers.get("x-forwarded-proto", "") == "https")
         resp.set_cookie("wayside_staff", token, httponly=True, samesite="lax",
-                        max_age=60 * 60 * 24 * 30)
+                        secure=https, max_age=60 * 60 * 24 * 30)
         return resp
 
     def _cells() -> list[dict]:
@@ -135,8 +142,31 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         return out
 
     # ------------------------------------------------------------ inbound --
+    # The service's rate limit is per-phone — but this endpoint is open to
+    # the internet (witnesses can't log in) and the phone id comes from the
+    # client, so a flood can mint a fresh "phone" per request and bypass it.
+    # A global window caps that; emergency texts pass, same as the per-phone
+    # budget (the gate's fixed reply is cheap and a life is not).
+    PHONE_RE = re.compile(r"^[+0-9A-Za-z:_\-]{3,32}$")
+    inbound_times: deque = deque()
+
     @app.post("/api/wa/inbound")
     def wa_inbound(msg: Inbound):
+        if not PHONE_RE.match(msg.phone):
+            raise HTTPException(422, "malformed phone id")
+        for v in (msg.lat, msg.lng):
+            if v is not None and not math.isfinite(v):
+                raise HTTPException(422, "coordinates must be finite numbers")
+        if ((msg.lat is not None and not -90 <= msg.lat <= 90)
+                or (msg.lng is not None and not -180 <= msg.lng <= 180)):
+            raise HTTPException(422, "coordinates out of range")
+        if not (msg.kind == "text" and gate.is_emergency(msg.text)):
+            now = time.monotonic()
+            while inbound_times and now - inbound_times[0] > 10:
+                inbound_times.popleft()
+            if len(inbound_times) >= 30:
+                raise HTTPException(429, "line is busy — please try again in a moment")
+            inbound_times.append(now)
         replies = svc.wa_inbound(msg.phone, msg.kind, text=msg.text, lat=msg.lat,
                                  lng=msg.lng, photo_hint=msg.photo_hint)
         return {"replies": [{"text": r.text, "buttons": r.buttons, "id": r.string_id} for r in replies]}
@@ -278,12 +308,20 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         return svc.daily_metrics()
 
     @app.get("/health")
-    def health():
+    def health(request: Request):
         # tick_age_s is the watchdog signal: an external pinger alerting on
         # age > ~10s catches a dead tick loop even while HTTP still serves.
-        return {"ok": True, "backend": svc.backend.name, "sim_now": sim.sim_now,
-                "tick_age_s": round(time.monotonic() - sim.last_tick_real, 1),
-                "cases": len(svc.store.query("SELECT id FROM cases"))}
+        # On a token-protected deploy the open probe answers ok/tick only —
+        # backend name, sim clock and caseload are operational data.
+        body = {"ok": True,
+                "tick_age_s": round(time.monotonic() - sim.last_tick_real, 1)}
+        staffed = (not cfg.admin_token
+                   or request.cookies.get("wayside_staff") == cfg.admin_token
+                   or request.headers.get("x-wayside-token") == cfg.admin_token)
+        if staffed:
+            body.update({"backend": svc.backend.name, "sim_now": sim.sim_now,
+                         "cases": len(svc.store.query("SELECT id FROM cases"))})
+        return body
 
     @app.get("/report", response_class=HTMLResponse)
     def session_report():

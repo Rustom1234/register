@@ -8,8 +8,12 @@ const $ = (id) => document.getElementById(id);
 
 // Deep link: /witness?phone=+91-9xx-0001 opens that thread standalone;
 // otherwise this browser keeps using the same demo number across visits.
+// Validated before persisting: a crafted value (e.g. an object-prototype
+// key) would otherwise brick the page AND stick via localStorage.
+const PHONE_OK = /^[+0-9A-Za-z:_\-]{3,32}$/;
 const urlPhone = new URLSearchParams(location.search).get("phone");
-let activeConv = urlPhone || localStorage.getItem("pukaar_witness_phone") || "+91-DEMO";
+let activeConv = [urlPhone, localStorage.getItem("pukaar_witness_phone")]
+  .find((p) => p && PHONE_OK.test(p)) || "+91-DEMO";
 localStorage.setItem("pukaar_witness_phone", activeConv);
 
 let state = null;
@@ -77,7 +81,11 @@ function placeWitnessPin(lat, lng) {
 // ---------------------------------------------------------------- phone --
 function renderPhone() {
   $("conv-phone").textContent = activeConv;
-  const log = (state && state.conversations[activeConv]) || localLog;
+  // own-property + shape check — never hand a prototype member to the
+  // renderer no matter what the conversation key is
+  const ownConv = state && Object.prototype.hasOwnProperty.call(state.conversations, activeConv)
+    ? state.conversations[activeConv] : null;
+  const log = Array.isArray(ownConv) ? ownConv : localLog;
   const msgs = $("msgs");
   const atBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 60;
   const bubbleTime = (ts) => {
@@ -107,11 +115,16 @@ function renderPhone() {
   }
   const last = log.length ? log[log.length - 1] : null;
   const quick = $("quick");
-  if (last && last.from === "bot" && last.buttons && last.buttons.length) {
-    quick.innerHTML = last.buttons.map((b) => `<button data-payload="${b.id}">${b.label}</button>`).join("");
+  const hasBtns = !!(last && last.from === "bot" && last.buttons && last.buttons.length);
+  // keyed + escaped, same as the control room's quick row
+  const quickKey = hasBtns ? `${last.ts}:${last.buttons.map((b) => b.id).join(",")}` : "";
+  if (quick.dataset.key !== quickKey) {
+    quick.dataset.key = quickKey;
+    quick.innerHTML = hasBtns ? last.buttons.map((b) =>
+      `<button data-payload="${escapeHtml(b.id)}">${escapeHtml(b.label)}</button>`).join("") : "";
     quick.querySelectorAll("button").forEach((btn) =>
       btn.addEventListener("click", () => sendInbound("button", { text: btn.dataset.payload })));
-  } else quick.innerHTML = "";
+  }
 }
 
 let sendBusy = false; // one in-flight report at a time — Enter-mash safe

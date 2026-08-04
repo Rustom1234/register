@@ -212,7 +212,14 @@ class DispatchEngine:
             return None
         now = self.now()
         status = "escalated" if outcome == "escalated" else "closed"
-        self.store.update("orders", order_id, {"status": status, "closed_at": now})
+        # Compare-and-swap, not check-then-act: the sim's auto-close and a
+        # human close from the UI can race — only the caller whose UPDATE
+        # actually flips the row writes outcomes/audit; the loser gets None.
+        if not self.store.claim(
+                "UPDATE orders SET status=?, closed_at=? "
+                "WHERE id=? AND status IN ('onsite', 'accepted', 'needs_coordinator')",
+                (status, now, order_id)):
+            return None
         self.store.insert("outcomes", {
             "id": new_id("out"), "case_id": order["case_id"],
             "found": int(outcome != "not_found"), "served": int(outcome in ("served", "escalated")),
@@ -236,10 +243,16 @@ class DispatchEngine:
         if not order or order["status"] in ("closed", "escalated"):
             return False
         now = self.now()
+        # Same CAS discipline as close(): a concurrent close must not let
+        # cancel() double-write outcomes for an already-settled order.
+        if not self.store.claim(
+                "UPDATE orders SET status='closed', closed_at=? "
+                "WHERE id=? AND status NOT IN ('closed', 'escalated')",
+                (now, order_id)):
+            return False
         for a in self.store.query(
                 "SELECT * FROM assignments WHERE order_id=? AND responded_at IS NULL", (order_id,)):
             self.store.update("assignments", a["id"], {"responded_at": now, "response": "released"})
-        self.store.update("orders", order_id, {"status": "closed", "closed_at": now})
         self.store.insert("outcomes", {
             "id": new_id("out"), "case_id": order["case_id"], "found": 0, "served": 0,
             "person_accepted": 0, "escalated": 0, "escalation_completed_at": None,
