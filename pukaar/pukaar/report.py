@@ -58,7 +58,7 @@ def render_report(svc, sim) -> str:
 
     kits = " · ".join(f"{sku} {n}" for sku, n in m["kits"].items())
     lang_counts: dict[str, int] = {}
-    for conv in svc.conversations.values():
+    for conv in list(svc.conversations.values()):
         lang = conv.state.get("lang", "hinglish")
         lang_counts[lang] = lang_counts.get(lang, 0) + 1
     lang_mix = " · ".join(f"{k} {v}" for k, v in sorted(lang_counts.items())) or "—"

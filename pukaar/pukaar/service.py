@@ -111,7 +111,7 @@ class PukaarService:
         resp = self.store.one("SELECT * FROM responders WHERE id=?", (responder_id,)) if responder_id else None
         name = (resp or {}).get("display_name") or "karyakarta"
         case_id = order["case_id"]
-        for phone, conv in self.conversations.items():
+        for phone, conv in list(self.conversations.items()):
             if conv.state.get("case_id") == case_id and not conv.state["stopped"]:
                 msg = strings.fmt(sid, self.lang_for(conv),
                                   case_id=case_id[-4:].upper(), name=name)
@@ -282,7 +282,7 @@ class PukaarService:
             "AND o.status IN ('queued','offered','needs_coordinator') AND c.created_at < ?",
             (now - self.cfg.recheck_after_s,))
         for case in stale:
-            found = next(((p, c) for p, c in self.conversations.items()
+            found = next(((p, c) for p, c in list(self.conversations.items())
                           if c.state.get("case_id") == case["id"] and not c.state["stopped"]), None)
             self.store.update("cases", case["id"], {"recheck_sent": 1})
             if not found:
@@ -321,7 +321,7 @@ class PukaarService:
         case = self.store.one("SELECT * FROM cases WHERE id=?", (case_id,))
         if not case or case["lat"] is not None:
             return False
-        found = next(((p, c) for p, c in self.conversations.items()
+        found = next(((p, c) for p, c in list(self.conversations.items())
                       if c.state.get("case_id") == case_id and not c.state["stopped"]), None)
         if not found:
             return False
@@ -337,7 +337,7 @@ class PukaarService:
     def notify_outcome(self, case_id: str, outcome: str) -> None:
         sid = {"served": "S-CLOSURE-SERVED", "escalated": "S-CLOSURE-ESCALATED",
                "not_found": "S-CLOSURE-NOTFOUND", "declined": "S-CLOSURE-DECLINED"}[outcome]
-        for phone, conv in self.conversations.items():
+        for phone, conv in list(self.conversations.items()):
             if conv.state.get("case_id") == case_id and not conv.state["stopped"]:
                 msg = strings.fmt(sid, self.lang_for(conv), case_id=case_id[-4:].upper())
                 conv.remember("bot", "text", msg, ts=self.now())

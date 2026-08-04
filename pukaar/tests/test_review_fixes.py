@@ -189,14 +189,23 @@ def test_orphan_reports_purged(svc, cfg):
     assert not svc.store.query("SELECT * FROM reports WHERE case_id IS NULL")
 
 
-def test_open_case_survives_90d_purge(svc, cfg):
+def test_open_case_within_contract_survives_purge_then_expires(svc, cfg):
     _file_report(svc, "+91-R8")
     case = svc.store.one("SELECT * FROM cases")
     assert case["closed_at"] is None
-    retention.purge(svc.store, cfg, now=svc.now() + cfg.case_row_ttl_s + 60)
+    # Inside its 72h contract an open case is untouchable: row AND pin stay.
+    retention.purge(svc.store, cfg, now=svc.now() + 3600)
     still = svc.store.one("SELECT * FROM cases WHERE id=?", (case["id"],))
-    assert still is not None, "an open case must never be deleted under a live order"
-    assert still["lat"] is not None, "an open case must keep its pin"
+    assert still is not None and still["status"] != "closed"
+    assert still["lat"] is not None, "a live case must keep its pin"
+    # At 90 days the case cannot still be "live": the zombie guard closes it
+    # (its own expires_at lapsed 87 days earlier) and the sweep aggregates it
+    # into the analytics cells rather than keeping pin+text forever.
+    retention.purge(svc.store, cfg, now=svc.now() + cfg.case_row_ttl_s + 60)
+    assert svc.store.one("SELECT * FROM cases WHERE id=?", (case["id"],)) is None
+    cells = svc.store.query("SELECT * FROM analytics_cells")
+    assert cells and sum(c["n"] for c in cells) >= 1, \
+        "the swept case must survive as a coarse aggregate"
 
 
 # ------------------------------------------------------------------ api --

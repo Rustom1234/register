@@ -25,10 +25,25 @@ class Provenance:
         self.ephemeral = not key
         self._key = (key or secrets.token_hex(32)).encode()
 
+    @staticmethod
+    def _canon(v):
+        """Canonicalize to the STORED representation before signing.
+        SQLite persists booleans as 0/1 — signing `true` while the row
+        holds `1` would make every stored mac unverifiable from the very
+        rows it is supposed to vouch for."""
+        if isinstance(v, bool):
+            return int(v)
+        if isinstance(v, dict):
+            return {k: Provenance._canon(x) for k, x in v.items()}
+        if isinstance(v, (list, tuple)):
+            return [Provenance._canon(x) for x in v]
+        return v
+
     def sign(self, channel: str, payload: dict) -> str:
         if channel not in CHANNELS:
             raise ValueError(f"unknown provenance channel: {channel}")
-        msg = json.dumps({"channel": channel, "payload": payload}, sort_keys=True, ensure_ascii=False)
+        msg = json.dumps({"channel": channel, "payload": self._canon(payload)},
+                         sort_keys=True, ensure_ascii=False)
         return hmac.new(self._key, msg.encode(), hashlib.sha256).hexdigest()
 
     def verify(self, channel: str, payload: dict, mac: str) -> bool:

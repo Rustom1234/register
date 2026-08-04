@@ -52,7 +52,7 @@ def test_purge_idempotent(svc, clock, cfg):
     purge(svc.store, cfg, clock())
     stats2 = purge(svc.store, cfg, clock())
     assert stats2 == {"media": 0, "latlng": 0, "cases": 0, "orphan_reports": 0,
-                      "conversations": 0}
+                      "conversations": 0, "expired": 0}
 
 
 def test_provenance_sign_verify_and_tamper():

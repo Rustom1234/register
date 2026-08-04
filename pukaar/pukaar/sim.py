@@ -261,9 +261,19 @@ class Sim:
                    None)
         if med is None:
             return "no idle medical responder — try again in a moment"
-        ang = self.rng.uniform(0, 6.28318)
-        lat, lng = geo.offset_m(med["lat"], med["lng"],
+        # Stage the pin CLEAR of every open case's dedup cell: if the report
+        # merged into an existing case there'd be no fresh order, no loaded
+        # dice — the "golden" run would just silently not be golden.
+        lat = lng = None
+        for _ in range(12):
+            ang = self.rng.uniform(0, 6.28318)
+            cand = geo.offset_m(med["lat"], med["lng"],
                                 500 * math.cos(ang), 500 * math.sin(ang))
+            if not self._near_open_case(*cand):
+                lat, lng = cand
+                break
+        if lat is None:
+            lat, lng = cand   # every bearing is busy — accept the merge risk
         phone = self._next_phone()
         self._play(phone, [
             ("text", "Flyover ke neeche aadmi ke pair mein gehri chot hai, purani patti lagi hai"),
@@ -281,7 +291,21 @@ class Sim:
                  if case_id else None)
         if order:
             self.golden[order["id"]] = med["id"]
-        return f"golden run staged for {med['name']}"
+            return f"golden run staged for {med['name']}"
+        # Honest failure beats a fake success: the report merged or gated —
+        # there is no fresh order, so no clean arc is coming.
+        return ("golden report merged into an existing case — no clean arc; "
+                "let nearby cases close and try again")
+
+    def _near_open_case(self, lat: float, lng: float) -> bool:
+        """Mirror the service's dedup query: would a report here merge?"""
+        cells = geo.neighbor_keys(lat, lng, self.cfg.dedup_cell_m)
+        marks = ",".join("?" for _ in cells)
+        row = self.svc.store.one(
+            f"SELECT id FROM cases WHERE status NOT IN ('closed') AND cell IN ({marks}) "
+            f"AND created_at > ?",
+            tuple(cells) + (self.sim_now - self.cfg.dedup_window_s,))
+        return row is not None
 
     def _next_phone(self) -> str:
         self._phone_counter += 1
@@ -600,7 +624,7 @@ class Sim:
             (json.dumps({
                 "reservations": self._reservations,
                 "restocks": {f"{d}|{s}": due
-                             for (d, s), due in self._pending_restocks.items()},
+                             for (d, s), due in list(self._pending_restocks.items())},
             }),))
 
     # ------------------------------------------------- inventory & restock --
@@ -623,7 +647,7 @@ class Sim:
                                              "depot": self._depot_name(depot_id)})
 
     def _process_restocks(self) -> None:
-        done = [k for k, due in self._pending_restocks.items() if self.sim_now >= due]
+        done = [k for k, due in list(self._pending_restocks.items()) if self.sim_now >= due]
         for key in done:
             depot_id, sku = key
             self.svc.store.execute(
@@ -637,7 +661,7 @@ class Sim:
             self._save_ledger()
 
     def _complete_escalations(self) -> None:
-        done = [oid for oid, t in self._pending_escalations.items() if self.sim_now >= t]
+        done = [oid for oid, t in list(self._pending_escalations.items()) if self.sim_now >= t]
         for oid in done:
             self.svc.dispatch.escalation_complete(oid)
             del self._pending_escalations[oid]

@@ -19,7 +19,26 @@ from .db import Store
 
 
 def purge(store: Store, cfg: Config, now: float) -> dict:
-    stats = {"media": 0, "latlng": 0, "cases": 0, "orphan_reports": 0, "conversations": 0}
+    stats = {"media": 0, "latlng": 0, "cases": 0, "orphan_reports": 0,
+             "conversations": 0, "expired": 0}
+
+    # Zombie guard: expires_at is the case's own 72h contract, but nothing
+    # enforced it — a case that fell out of every rail kept its pin and
+    # landmark text FOREVER, which quietly voids the retention story. Close
+    # it (with an audit line) so the normal clocks below start running.
+    # Escalated cases are excluded: the clinical follow-up rail owns those.
+    rows = store.query(
+        "SELECT id FROM cases WHERE status NOT IN ('closed', 'escalated') "
+        "AND expires_at IS NOT NULL AND expires_at < ?", (now,))
+    for r in rows:
+        store.update("cases", r["id"], {"status": "closed", "closed_at": now})
+        store.execute(
+            "UPDATE orders SET status='closed', closed_at=? "
+            "WHERE case_id=? AND status NOT IN ('closed', 'escalated')",
+            (now, r["id"]))
+        store.audit("system", "case_expired", r["id"], "system", "",
+                    "72h expiry — auto-closed by the retention job", ts=now)
+    stats["expired"] = len(rows)
 
     closed = "(SELECT closed_at FROM cases WHERE cases.id = reports.case_id)"
     rows = store.query(
