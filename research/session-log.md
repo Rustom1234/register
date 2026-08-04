@@ -281,8 +281,26 @@ silent straight-line fallbacks: 0 in 600 random routes across all three
 modes. Doc counts refreshed (167 tests). All 167 pass; supervisor
 re-verified live, zero console errors.
 
+**Improvement loop (2026-08-03/04, standing order — running until told to stop):**
+the founder asked for a self-pacing loop: research, find flaws, add
+needed features, YC-level frontend, flawless routing, package/pricing
+research. Log of each round: `research/loop-log.md`.
+- **Round 1 (closed):** 20 confirmed defects fixed via finder-fleet +
+  adversarial verification workflows — reserve-at-accept kit ledger,
+  golden-run hijack guard, arrival-gated-on-pickup, PUKAAR_DB restart
+  reconciliation, staff gate (PUKAAR_ADMIN_TOKEN + /login cookie),
+  keyed coordinator render, scenario-button thread jump, pricing research
+  (`research/pricing-research.md`, pilot ≈ ₹1,250/mo). 173 tests.
+- **Round 2 (closed):** phones work now — the 539px grid-track bug
+  (min-width:auto floor) and the viewport-locked shell (footer painting
+  over panels) are fixed; all four surfaces measure exactly 390px on a
+  390px phone. Plus /favicon.ico through the staff gate, send-button
+  busy state on both phone panels, designed empty states for feed/cases,
+  cache-buster → 20260804a. **175 tests.** Commit `5bb201b1d`.
+
 ---
-**Last updated:** 2026-08-02, after the find-issues iteration. Before
+**Last updated:** 2026-08-04, after loop Round 2. Before that: the
+find-issues iteration of 2026-08-02. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render
 as real bent paths, ETA shows correctly, all 4 pages load with zero
