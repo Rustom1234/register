@@ -388,6 +388,47 @@ class PukaarService:
             "kits_low": kits_low,
         }
 
+    def shift_summary(self, now: float, hours: float = 12.0) -> dict:
+        """A coordinator's end-of-shift handover: what happened in the last
+        `hours` of sim time, in numbers a non-technical NGO head can read.
+        Everything is scoped to cases CREATED in the window."""
+        q = self.store.query
+        since = now - hours * 3600
+        cases = q("SELECT * FROM cases WHERE created_at >= ?", (since,))
+        case_ids = {c["id"] for c in cases}
+        outs = [o for o in q("SELECT * FROM outcomes WHERE created_at >= ?", (since,))
+                if o["case_id"] in case_ids]
+        served = sum(1 for o in outs if o["served"])
+        escalated = sum(1 for o in outs if o["escalated"])
+        not_found = sum(1 for o in outs if not o["found"])
+        by_cat: dict[str, int] = {}
+        for c in cases:
+            by_cat[c["category"] or "unknown"] = by_cat.get(c["category"] or "unknown", 0) + 1
+        # kit movement in the window, from the audit-quality feed
+        kits_out = sum(1 for e in self.feed if e["ts"] >= since and e["kind"] == "kit_pickup")
+        returns = sum(1 for e in self.feed if e["ts"] >= since and e["kind"] == "kit_return")
+        restocks = sum(1 for e in self.feed if e["ts"] >= since and e["kind"] == "restock_delivered")
+        accept_times = [r["accepted_at"] - r["created_at"] for r in
+                        q("SELECT created_at, accepted_at FROM orders "
+                          "WHERE accepted_at IS NOT NULL AND created_at >= ?", (since,))]
+        still_open = sum(1 for c in cases if c["status"] not in ("closed", "escalated"))
+        return {
+            "window_hours": hours,
+            "generated_sim": now,
+            "reports_received": len(cases),
+            "people_served": served,
+            "clinical_escalations": escalated,
+            "not_found": not_found,
+            "still_open_at_handover": still_open,
+            "by_category": by_cat,
+            "median_accept_s": round(statistics.median(accept_times)) if accept_times else None,
+            "kits_delivered": kits_out,
+            "kits_returned_unused": returns,
+            "courier_restocks": restocks,
+            "kits_on_hand": self.metrics()["kits"],
+            "low_stock_skus": self.metrics()["kits_low"],
+        }
+
     def daily_metrics(self) -> dict:
         """Per-sim-day aggregates + kill-criteria evaluation (build plan §7).
         Cost model: kit ₹300 + ₹120 per dispatch run (research cost basis)."""

@@ -18,7 +18,7 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .report import render_report
+from .report import render_report, render_shift
 from .whatsapp import CloudApi, parse_webhook, verify_signature
 
 from . import gate, geo, strings
@@ -401,6 +401,17 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     @app.get("/report", response_class=HTMLResponse)
     def session_report():
         return render_report(svc, sim)
+
+    @app.get("/shift", response_class=HTMLResponse)
+    def shift_report(hours: float = 12.0):
+        # A coordinator's printable end-of-shift handover (staff-gated).
+        hours = min(72.0, max(1.0, hours))
+        return render_shift(svc.shift_summary(sim.sim_now, hours), hours)
+
+    @app.get("/api/shift")
+    def shift_json(hours: float = 12.0):
+        hours = min(72.0, max(1.0, hours))
+        return svc.shift_summary(sim.sim_now, hours)
 
     @app.get("/api/export")
     def export():

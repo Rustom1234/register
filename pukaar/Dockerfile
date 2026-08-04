@@ -9,6 +9,8 @@ EXPOSE 8877
 #   PUKAAR_HMAC_KEY     — persistent provenance signing (boot refuses without it)
 #   PUKAAR_ADMIN_TOKEN  — staff gate: without it every surface/API is public
 #   PUKAAR_DB=/data/pukaar.db  — on a mounted volume, or all state dies with the container
+#   PUKAAR_MEDIA_DIR=/data/media — uploaded witness photos; same volume, or
+#                                  they vanish on redeploy (and /api/media 404s)
 # And serve behind HTTPS (a reverse proxy / platform TLS): the responder
 # app's install + push notifications require a secure origin.
 # Optional: PUKAAR_SEED_DEMO=1 (photogenic demo session), WA_* (real

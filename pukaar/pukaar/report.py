@@ -120,3 +120,72 @@ Emergency messages are fixed strings — no model ever speaks in the 112 path.
 Kit SKUs: {', '.join(f"{k} ({v['name']})" for k, v in strings.KIT_SKUS.items())}.
 </div>
 </body></html>"""
+
+
+def render_shift(s: dict, hours: float) -> str:
+    """Printable end-of-shift handover for a coordinator — one page, plain
+    language, light theme for print. All numbers scoped to the window."""
+    def _hm(sec):
+        if sec is None:
+            return "—"
+        return f"{int(sec // 60)}m {int(sec % 60)}s" if sec >= 60 else f"{int(sec)}s"
+
+    cats = s["by_category"]
+    cat_rows = "".join(
+        f"<tr><td>{html.escape(k)}</td><td>{v}</td></tr>"
+        for k, v in sorted(cats.items(), key=lambda kv: -kv[1])) or "<tr><td>—</td><td>0</td></tr>"
+    low = ", ".join(html.escape(x) for x in s["low_stock_skus"]) or "none"
+    kits = ", ".join(f"{html.escape(k)}: {v}" for k, v in s["kits_on_hand"].items()) or "—"
+    d = int(s["generated_sim"] // 86400)
+    clock = f"D{d} {int(s['generated_sim'] % 86400 // 3600):02d}:{int(s['generated_sim'] % 3600 // 60):02d}"
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Wayside — shift handover</title>
+<style>
+  body {{ font: 15px/1.6 system-ui, -apple-system, sans-serif; color: #1a1c22;
+    max-width: 720px; margin: 40px auto; padding: 0 20px; }}
+  h1 {{ font-size: 22px; letter-spacing: 0.06em; margin: 0; }}
+  .sub {{ color: #6f6d66; margin: 2px 0 24px; }}
+  .grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 0 0 26px; }}
+  .stat {{ border: 1px solid #e3e0d8; border-radius: 10px; padding: 14px 16px; }}
+  .stat b {{ display: block; font-size: 28px; font-variant-numeric: tabular-nums; }}
+  .stat.hero b {{ color: #177a43; }}
+  .stat span {{ color: #6f6d66; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }}
+  h2 {{ font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #6f6d66;
+    border-bottom: 1px solid #e3e0d8; padding-bottom: 6px; margin: 26px 0 10px; }}
+  table {{ border-collapse: collapse; width: 100%; }}
+  td {{ padding: 5px 8px; border-bottom: 1px solid #efece5; }}
+  td:last-child {{ text-align: right; font-variant-numeric: tabular-nums; }}
+  .foot {{ color: #8b8983; font-size: 12px; margin-top: 30px; border-top: 1px solid #e3e0d8; padding-top: 12px; }}
+  @media print {{ body {{ margin: 0; }} }}
+</style></head><body>
+<h1>WAYSIDE · SHIFT HANDOVER</h1>
+<p class="sub">Last {int(hours)} hours · generated {clock} (sim time)</p>
+
+<div class="grid">
+  <div class="stat hero"><b>{s['people_served']}</b><span>people served</span></div>
+  <div class="stat"><b>{s['reports_received']}</b><span>reports received</span></div>
+  <div class="stat"><b>{s['clinical_escalations']}</b><span>clinical escalations</span></div>
+  <div class="stat"><b>{s['still_open_at_handover']}</b><span>still open — hand to next shift</span></div>
+  <div class="stat"><b>{_hm(s['median_accept_s'])}</b><span>median time to accept</span></div>
+  <div class="stat"><b>{s['not_found']}</b><span>person had moved on</span></div>
+</div>
+
+<h2>Reports by need</h2>
+<table>{cat_rows}</table>
+
+<h2>Kit movement this shift</h2>
+<table>
+  <tr><td>Kits delivered</td><td>{s['kits_delivered']}</td></tr>
+  <tr><td>Returned unused (person not found)</td><td>{s['kits_returned_unused']}</td></tr>
+  <tr><td>Courier restocks received</td><td>{s['courier_restocks']}</td></tr>
+</table>
+
+<h2>Stock at handover</h2>
+<p>{kits}<br><b>Low / reorder:</b> {low}</p>
+
+<div class="foot">
+Privacy by architecture: no identities of street residents are stored; photos delete at
+case close; exact pins null 7 days after close. This handover is a live snapshot — print
+or save it at the end of a shift. Numbers cover cases opened in the window only.
+</div>
+</body></html>"""
