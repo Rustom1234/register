@@ -114,17 +114,27 @@ function renderPhone() {
   } else quick.innerHTML = "";
 }
 
+let sendBusy = false; // one in-flight report at a time — Enter-mash safe
+
 async function sendInbound(kind, extra = {}) {
   const body = { phone: activeConv, kind, ...extra };
   if (kind === "text" || kind === "button") localEcho(extra.text, kind);
   else if (kind === "voice") localEcho("🎤 " + extra.text, "voice");
   typingUntil = Date.now() + 900;
   renderPhone();
-  const res = await fetch("/api/wa/inbound", {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-  });
-  await res.json();
-  setTimeout(() => { typingUntil = 0; refresh(); }, 700);
+  const btn = $("btn-send");
+  sendBusy = true;
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch("/api/wa/inbound", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    await res.json();
+  } finally {
+    sendBusy = false;
+    if (btn) btn.disabled = false;
+    setTimeout(() => { typingUntil = 0; refresh(); }, 700);
+  }
 }
 
 function localEcho(text, kind) {
@@ -132,6 +142,7 @@ function localEcho(text, kind) {
 }
 
 function sendText() {
+  if (sendBusy) return; // the button is disabled, but Enter still fires
   const input = $("msg-in");
   const text = input.value.trim();
   if (!text) return;

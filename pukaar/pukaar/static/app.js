@@ -449,7 +449,9 @@ function feedLine(e) {
 
 function renderFeed() {
   const el = document.getElementById("feed");
-  el.innerHTML = state.feed.map(feedLine).join("");
+  el.innerHTML = state.feed.length
+    ? state.feed.map(feedLine).join("")
+    : '<div class="empty-note">Quiet so far — dispatch events stream here the moment a report lands.</div>';
 }
 
 // ---------------------------------------------------------------- cases --
@@ -466,7 +468,7 @@ function renderCases() {
       <span class="cat-ic" title="${escapeHtml(c.category || "")}">${CAT_ICON[c.category] || ""}</span>
       <span class="cid">${c.id.slice(-4).toUpperCase()}</span>
       <span class="meta">${escapeHtml(c.landmark_text || c.digipin || "")}${who}</span>${chip}</div>`;
-  }).join("") || '<div class="fi"><span class="t"></span><span>none — quiet streets 🌙</span></div>';
+  }).join("") || '<div class="empty-note">No open cases — quiet streets 🌙</div>';
   el.querySelectorAll(".case-row").forEach((row) =>
     row.addEventListener("click", () => showDetail(row.dataset.id)));
 }
@@ -722,6 +724,8 @@ function escapeHtml(s) {
   return (s || "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 }
 
+let sendBusy = false; // one in-flight report at a time — Enter-mash safe
+
 async function sendInbound(kind, extra = {}) {
   const body = { phone: activeConv, kind, ...extra };
   if (kind === "text" || kind === "button") {
@@ -731,11 +735,19 @@ async function sendInbound(kind, extra = {}) {
   }
   typingUntil = Date.now() + 900;          // brief typing dots feel human
   renderPhone();
-  const res = await fetch("/api/wa/inbound", {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-  });
-  await res.json();
-  setTimeout(() => { typingUntil = 0; refresh(); }, 700);
+  const btn = document.getElementById("btn-send");
+  sendBusy = true;
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch("/api/wa/inbound", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    await res.json();
+  } finally {
+    sendBusy = false;
+    if (btn) btn.disabled = false;
+    setTimeout(() => { typingUntil = 0; refresh(); }, 700);
+  }
 }
 
 function localEcho(text, kind) {
@@ -859,6 +871,7 @@ function wire() {
 }
 
 function sendText() {
+  if (sendBusy) return; // the button is disabled, but Enter still fires
   const input = document.getElementById("msg-in");
   const text = input.value.trim();
   if (!text) return;

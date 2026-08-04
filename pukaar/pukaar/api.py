@@ -95,7 +95,8 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     # witness-facing webhooks and the health probe: a hosted control room
     # must never expose live witness chats, pins, or exports to the open
     # internet. /login?token=... sets the cookie so all pages just work.
-    OPEN_PATHS = {"/health", "/api/wa/inbound", "/webhook", "/login"}
+    OPEN_PATHS = {"/health", "/api/wa/inbound", "/webhook", "/login",
+                  "/favicon.ico"}
 
     @app.middleware("http")
     async def staff_gate(request: Request, call_next):
@@ -357,6 +358,13 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     @app.get("/supervisor")
     def supervisor_app():
         return FileResponse(STATIC / "supervisor.html")
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    def favicon():
+        # Browsers request this unprompted on every surface (including the
+        # bare /login page) — serve the app icon instead of a 404.
+        return FileResponse(STATIC / "icons" / "icon-192.png",
+                            media_type="image/png")
 
     @app.get("/sw.js")
     def service_worker():

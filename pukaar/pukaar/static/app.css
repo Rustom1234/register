@@ -111,16 +111,30 @@ button.golden:hover { background: rgba(250,178,25,0.10); border-color: var(--war
 
 /* ---------------------------------------------------------------- layout */
 #layout { flex: 1 1 auto; display: grid; grid-template-columns: 330px 1fr 380px; min-height: 0; }
-#left { padding: 10px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+/* min-width: 0 on all three grid items: without it their min-content
+   becomes a track floor, and on phones (single 1fr column + overflow
+   visible) the widest feed line silently pushed the whole page to 539px */
+#left { padding: 10px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto;
+        min-width: 0; }
 #left > * { flex: 0 0 auto; }   /* natural heights; the column scrolls, panels never overlap */
 #center { position: relative; min-width: 0; }
-#right { padding: 10px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+#right { padding: 10px; display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+         min-width: 0; }
 #right > .panel:not(.grow) { flex: 0 0 auto; }
 /* supervisor view: no phone/scenario/responder-panel column */
 body.no-left #layout { grid-template-columns: 1fr 380px; }
 @media (max-width: 900px) {
   /* must out-specify the desktop no-left rule, or phones get two columns */
   body.no-left #layout { grid-template-columns: 1fr; grid-template-rows: 430px auto; }
+  /* the toolbar row was the page's widest element (596px) — let every
+     level of the topbar wrap instead of forcing horizontal scroll */
+  #topbar { flex-wrap: wrap; row-gap: 6px; }
+  .top-right { flex-wrap: wrap; row-gap: 6px; }
+  .top-tools { flex-wrap: wrap; row-gap: 6px; }
+  .legend { flex-wrap: wrap; right: 12px; border-radius: 14px; row-gap: 4px; }
+}
+@media (max-width: 620px) {
+  .brand-sub { display: none; }   /* one line of brand is plenty on a phone */
 }
 
 .panel {
@@ -219,6 +233,7 @@ body.no-left #layout { grid-template-columns: 1fr 380px; }
 }
 .phone-input button { border-radius: 50%; width: 36px; height: 36px; padding: 0; flex: 0 0 auto; }
 .phone-input .send { background: var(--good); color: #fff; border-color: transparent; }
+.phone-input .send:disabled { opacity: 0.45; cursor: default; transform: none; }
 .phone-hint { color: var(--muted); font-size: 10.5px; padding: 0 12px 9px; background: var(--wa-bg); }
 
 .scenarios { gap: 6px; }
@@ -309,6 +324,9 @@ body.no-left #layout { grid-template-columns: 1fr 380px; }
 
 /* ------------------------------------------------------------------ feed */
 .feed { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; min-height: 120px; }
+/* calm placeholder for panels with nothing to show yet */
+.empty-note { color: var(--muted); font-size: 12px; line-height: 1.5; padding: 10px 4px;
+              font-style: italic; }
 .fi { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; color: var(--ink-2);
   padding: 3px 6px 3px 9px; border-radius: 6px; position: relative;
   transition: background var(--t-fast); }
@@ -380,11 +398,15 @@ body.no-left #layout { grid-template-columns: 1fr 380px; }
 
 /* ------------------------------------------------------- narrow screens -- */
 @media (max-width: 1100px) {
+  /* the shell must stop being viewport-locked once panels stack: with
+     height 100% the grid rows overflow #layout and paint under #foot */
+  html, body { height: auto; min-height: 100%; }
   body { overflow: auto; }
-  #layout { grid-template-columns: 1fr; grid-template-rows: auto 430px auto; }
+  #layout { flex: 0 0 auto; grid-template-columns: 1fr; grid-template-rows: auto 430px auto; }
   #center { position: relative; height: 430px; }
   #left, #right { overflow: visible; }
   .tiles { flex-wrap: wrap; }
+  #foot { flex-wrap: wrap; }
 }
 
 /* ------------------------------------------------------------------ foot */
