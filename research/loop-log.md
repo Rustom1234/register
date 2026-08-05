@@ -551,3 +551,44 @@ Suite **206**. Cache 20260804o. Commit `9f5117c41`.
 **R14 queue:** adversarial sweep of the r12/r13 changes, another
 pilot-readiness feature (responder roster/vetting admin view?), witness
 first-contact consent line (DPDP), deploy if founder green-lights Fly.
+
+---
+
+## Round 14 — CLOSED (2026-08-05)
+
+**Theme: the first broad audit since R3 — and it caught a deploy-breaker.**
+6 finders across the whole system, **12/12 confirmed, all fixed**. (The
+queued DPDP-consent item was already done: S-NOTICE covers the compliant
+first-contact notice in all three scripts — verified, no work needed.)
+
+- **P1 — the documented deploy was broken.** With PUKAAR_ADMIN_TOKEN set
+  (what deploy-app.md tells the founder to do), the witness page + its
+  /static assets + its data were ALL 401-gated → a judge opening /witness
+  gets a dead page. Fixed: a scoped PUBLIC `/api/witness/state` (zone +
+  the caller's OWN thread only — leaks no other chats/pins/positions) and
+  opening /witness + /static + /data + /sw.js in the gate. /api/state,
+  control room, supervisor, responder, exports, /shift stay gated.
+  Verified live on a token deploy: witness boots + reports end-to-end,
+  every staff surface 401s.
+- **P2s**: /webhook inert without WA_APP_SECRET (was an open unsigned
+  injection endpoint on the default demo config); body_limit requires
+  Content-Length on open JSON paths (closes a chunked bypass of the r12
+  DoS fix); responder api() awaits r.json() (unawaited rejection left
+  buttons dead forever); responder/depot names escape into every
+  innerHTML sink; retention orphan sweep gets a 60s mtime grace (can't
+  delete an in-flight upload).
+- **P3s**: shift_summary + run_purge cross-thread iterations snapshotted
+  (R4's sweep predated both); coordinator supply strip keys on structure
+  not the live countdown (was closing the assign dropdown every 30s);
+  responder poll got app.js's overlap-guard + timeout; ACCEPT button
+  Hindi/English lang tags un-swapped.
+- P3 (routing): fetch_real_roads.py (founder's OSM importer) skips the
+  per-mode connectivity check — logged for the importer, not demo-path.
+
+3 tests updated to the correct new contract, 2 new regression tests
+(witness-public-on-token-deploy, orphan grace). Suite **208**. Cache
+20260804p. Commit `6b9cfecd7`.
+
+**R15 queue:** the fetch_real_roads connectivity check, responder
+roster/vetting view, deploy a real instance if founder green-lights Fly,
+another feature pass. The code is now materially more deploy-safe.

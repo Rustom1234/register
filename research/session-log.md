@@ -377,8 +377,16 @@ research. Log of each round: `research/loop-log.md`.
   Skipped the CI-pages item (repo is an is-a.dev fork; auto-deploy would
   collide). **206 tests.** Commit `9f5117c41`.
 
+- **Round 14 (closed):** first broad audit since R3 — 12/12 findings
+  fixed, incl. a P1 that broke the documented token deploy (witness page
+  + assets were 401-gated; fixed with scoped public /api/witness/state +
+  opened static/data, staff surfaces stay gated; verified live). Plus
+  webhook-inert-without-secret, chunked body-limit bypass, responder
+  api() await, name-escaping, orphan-sweep grace, 2 more thread snapshots.
+  **208 tests.** Commit `6b9cfecd7`.
+
 ---
-**Last updated:** 2026-08-05, after loop Round 13. Before that: the
+**Last updated:** 2026-08-05, after loop Round 14. Before that: the
 find-issues iteration of 2026-08-02. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render
