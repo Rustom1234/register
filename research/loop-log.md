@@ -478,3 +478,41 @@ Suite **202**. Cache 20260804k. Commit `5488d2e0e`.
 sweep of the photo path + shift export, deploy a real instance if the
 founder green-lights the Fly card, GitHub Actions pages workflow for the
 marketing site.
+
+---
+
+## Round 12 — CLOSED (2026-08-05)
+
+**Theme: bilingual rider + a hard security sweep of my own new code.**
+
+### Feature (commit b4707f658)
+- **Bilingual rider app**: Devanagari beside every action label a Delhi
+  responder taps/reads — banner, ACCEPT/Pass, the outcome grid, kit
+  hints, arrived, duty toggle, waiting line. Small muted .hn class. Bug
+  avoided: the 1 Hz countdown update set textContent (would wipe the
+  Hindi span) — now updates only the countdown sub-label. 7 labels
+  verified live to the onsite screen.
+
+### Sweep of the photo + shift code (commit 04be2bcbb) — 9/10 confirmed
+- **P1, unauthenticated DoS** (my round-9 code): /api/wa/photo's 3 MB cap
+  ran only AFTER the body was spooled to disk + read into one bytes; a
+  multi-GB POST could exhaust the temp volume and OOM the single worker
+  (which also runs the sim). Fixed: body_limit middleware rejects on
+  Content-Length before parsing (verified live, forged 5 MB → 413) +
+  64 KB chunked read with early abort.
+- **P2, orphaned files**: file written before wa_inbound, which can
+  short-circuit on the per-phone budget → a file no report references →
+  the row-driven purge never deletes it. Fixed: unlink if unreferenced,
+  plus a retention backstop directory sweep.
+- **P2, shift undercount**: kit counts came from the bounded 250-event
+  feed. Now from the durable outcomes table; restocks labelled "recent".
+- **P3s**: photo upload idempotent (client_id); control-room /shift link
+  added; FastAPI title + pyproject desc de-Pukaar'd.
+- Deleted a proof-of-bug test a verifier agent left in tests/; proper
+  regression tests assert the FIX (413, no-orphan, sweep, dedupe).
+
+Suite **206**. Cache 20260804m. Commits `b4707f658`, `04be2bcbb`.
+
+**R13 queue:** GitHub Actions pages workflow for the marketing site,
+adversarial sweep of the bilingual/rider changes, another pilot-readiness
+feature, deploy a real instance if the founder green-lights Fly.

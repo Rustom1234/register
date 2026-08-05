@@ -362,8 +362,16 @@ research. Log of each round: `research/loop-log.md`.
   Fly.io/Render private-URL checklist; Dockerfile documents
   PUKAAR_MEDIA_DIR volume). **202 tests.** Commit `5488d2e0e`.
 
+- **Round 12 (closed):** bilingual rider app (Devanagari on every
+  action label, verified live) + a security sweep of the round-9/11 photo
+  & shift code — 9/10 findings fixed including a P1 unauthenticated
+  upload DoS (body-limit middleware + chunked read, verified 413),
+  orphaned-file leaks (unlink + retention backstop sweep), shift
+  undercount (durable outcomes not the 250-feed), photo idempotency.
+  **206 tests.** Commits `b4707f658` + `04be2bcbb`.
+
 ---
-**Last updated:** 2026-08-04, after loop Round 11. Before that: the
+**Last updated:** 2026-08-05, after loop Round 12. Before that: the
 find-issues iteration of 2026-08-02. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render
