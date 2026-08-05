@@ -794,7 +794,8 @@ function renderPhone() {
       const who = m.from === "bot" ? "bot" : "witness";
       const fresh = i >= prevCount ? " fresh" : "";
       const voice = m.kind === "voice" ? ` voice" data-len="${3 + (m.text || "").length % 7}` : "";
-      return `<div class="bubble ${who}${fresh}${voice}">${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Wayside" : "you"}${bubbleTime(m.ts)}</span></div>`;
+      const hi = /[\u0900-\u097F]/.test(m.text || "") ? ' lang="hi"' : "";
+      return `<div class="bubble ${who}${fresh}${voice}"${hi}>${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Wayside" : "you"}${bubbleTime(m.ts)}</span></div>`;
     }).join("") + (typing
       ? '<div class="bubble bot typing"><span></span><span></span><span></span></div>' : "");
     msgs.dataset.key = threadKey;

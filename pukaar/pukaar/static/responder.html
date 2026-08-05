@@ -189,18 +189,18 @@ footer { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--mut
   <main>
     <!-- off duty: identity + go on duty -->
     <section id="scr-pick" class="card">
-      <h2>Who are you? · आप कौन हैं?</h2>
+      <h2>Who are you? · <span lang="hi">आप कौन हैं?</span></h2>
       <p class="hint">Pick your responder identity. The sim keeps playing everyone
       else — offers, movement and arrival stay real. <a href="/">Control room →</a></p>
       <select id="pick" aria-label="Choose responder"></select>
-      <button id="duty-btn" class="big">Go on duty<span class="hn">ड्यूटी शुरू करें</span></button>
+      <button id="duty-btn" class="big">Go on duty<span class="hn" lang="hi">ड्यूटी शुरू करें</span></button>
     </section>
 
     <!-- on duty, idle -->
     <section id="scr-idle" hidden>
       <div class="card">
         <h2>On duty</h2>
-        <p id="idle-line" class="hint"><span class="livedot" aria-hidden="true"></span>Waiting for calls near you… · <span class="hn">आस-पास की कॉल का इंतज़ार…</span></p>
+        <p id="idle-line" class="hint"><span class="livedot" aria-hidden="true"></span>Waiting for calls near you… · <span class="hn" lang="hi">आस-पास की कॉल का इंतज़ार…</span></p>
         <div class="kitchips" id="kits" aria-label="Kits in stock"></div>
         <p class="hint" id="me-stats"></p>
       </div>
@@ -208,7 +208,7 @@ footer { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--mut
         <h2>Recent activity</h2>
         <ul id="idle-feed" class="afeed"><li class="af-empty">no activity yet — the line is quiet</li></ul>
       </div>
-      <button id="duty-off" class="big off">Go off duty<span class="hn">ड्यूटी बंद</span></button>
+      <button id="duty-off" class="big off">Go off duty<span class="hn" lang="hi">ड्यूटी बंद</span></button>
     </section>
 
     <!-- incoming offers -->
@@ -227,6 +227,6 @@ footer { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--mut
   </footer>
 </div>
 <div id="toast" role="status">✓ recorded</div>
-<script src="/static/responder.js?v=20260804m"></script>
+<script src="/static/responder.js?v=20260804o"></script>
 </body>
 </html>

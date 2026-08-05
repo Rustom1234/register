@@ -33,6 +33,7 @@ function netNote(msg, ok = false) {
   if (!n) {
     n = document.createElement("div");
     n.id = "net-note";
+    n.setAttribute("role", "status");
     n.style.cssText = "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);" +
       "border-radius:999px;" +
       "padding:10px 18px;font-size:13px;font-weight:600;z-index:99;max-width:90vw;text-align:center";
@@ -134,7 +135,8 @@ function renderPhone() {
       const who = m.from === "bot" ? "bot" : "witness";
       const fresh = i >= prevCount ? " fresh" : "";
       const voice = m.kind === "voice" ? ` voice" data-len="${3 + (m.text || "").length % 7}` : "";
-      return `<div class="bubble ${who}${fresh}${voice}">${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Wayside" : "you"}${bubbleTime(m.ts)}</span></div>`;
+      const hi = /[\u0900-\u097F]/.test(m.text || "") ? ' lang="hi"' : "";
+      return `<div class="bubble ${who}${fresh}${voice}"${hi}>${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Wayside" : "you"}${bubbleTime(m.ts)}</span></div>`;
     }).join("") + (typing ? '<div class="bubble bot typing"><span></span><span></span><span></span></div>' : "");
     msgs.dataset.key = threadKey;
     msgs.dataset.conv = activeConv;
