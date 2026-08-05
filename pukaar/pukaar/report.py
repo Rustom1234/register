@@ -177,7 +177,7 @@ def render_shift(s: dict, hours: float) -> str:
 <table>
   <tr><td>Kits delivered</td><td>{s['kits_delivered']}</td></tr>
   <tr><td>Returned unused (person not found)</td><td>{s['kits_returned_unused']}</td></tr>
-  <tr><td>Courier restocks received</td><td>{s['courier_restocks']}</td></tr>
+  <tr><td>Courier restocks received (recent)</td><td>{s['courier_restocks']}</td></tr>
 </table>
 
 <h2>Stock at handover</h2>

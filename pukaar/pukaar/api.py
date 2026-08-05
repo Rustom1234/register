@@ -94,7 +94,7 @@ def build_app(cfg: Config | None = None) -> FastAPI:
                 traceback.print_exc()
             last = now
 
-    app = FastAPI(title="Pukaar demo", lifespan=lifespan)
+    app = FastAPI(title="Wayside demo", lifespan=lifespan)
     app.state.svc, app.state.sim = svc, sim
 
     # ---- staff gate (hosted deploys) -----------------------------------
@@ -104,6 +104,21 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     # internet. /login?token=... sets the cookie so all pages just work.
     OPEN_PATHS = {"/health", "/api/wa/inbound", "/api/wa/photo", "/webhook",
                   "/login", "/favicon.ico"}
+
+    # Hard ceiling on any request body (4 MB). /api/wa/photo is open to the
+    # internet and its own 3 MB check only runs AFTER the multipart body is
+    # buffered to disk + memory — an unauthenticated multi-GB POST could
+    # spool the temp volume and OOM the single worker before any guard fires.
+    # Rejecting on Content-Length here stops that before a byte is parsed.
+    MAX_BODY = 4 * 1024 * 1024
+
+    @app.middleware("http")
+    async def body_limit(request: Request, call_next):
+        if request.method in ("POST", "PUT", "PATCH"):
+            cl = request.headers.get("content-length")
+            if cl and cl.isdigit() and int(cl) > MAX_BODY:
+                return PlainTextResponse("request body too large", status_code=413)
+        return await call_next(request)
 
     @app.middleware("http")
     async def staff_gate(request: Request, call_next):
@@ -207,7 +222,7 @@ def build_app(cfg: Config | None = None) -> FastAPI:
 
     @app.post("/api/wa/photo")
     async def wa_photo(phone: str = Form(...), caption: str = Form(""),
-                       file: UploadFile = File(...)):
+                       client_id: str = Form(""), file: UploadFile = File(...)):
         if not PHONE_RE.match(phone):
             raise HTTPException(422, "malformed phone id")
         ext = MEDIA_TYPES.get((file.content_type or "").lower())
@@ -219,9 +234,24 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         if len(inbound_times) >= 30:
             raise HTTPException(429, "line is busy — please try again in a moment")
         inbound_times.append(now)
-        data = await file.read()
-        if len(data) > 3 * 1024 * 1024:
-            raise HTTPException(413, "photo too large — 3 MB max")
+        # idempotent retries (same as text): a double-tap or a lost-response
+        # retry must not store a second copy or file a second report
+        if client_id:
+            key = (phone, "photo:" + client_id[:64])
+            if key in seen_cids:
+                return {"stored": None, "replies": []}
+        # Chunked read with an early abort — never materialize an oversized
+        # body into one bytes even if the Content-Length guard was bypassed.
+        chunks, total = [], 0
+        while True:
+            chunk = await file.read(65536)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > 3 * 1024 * 1024:
+                raise HTTPException(413, "photo too large — 3 MB max")
+            chunks.append(chunk)
+        data = b"".join(chunks)
         if not data:
             raise HTTPException(422, "empty file")
         MEDIA_DIR.mkdir(parents=True, exist_ok=True)
@@ -230,6 +260,18 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         (MEDIA_DIR / ref).write_bytes(data)
         hint = (caption or "").strip()[:200] or "photo uploaded by the witness (unreviewed)"
         replies = svc.wa_inbound(phone, "photo", photo_hint=hint, media_ref=ref)
+        # If wa_inbound short-circuited (per-phone rate budget) it never filed
+        # a report referencing this file — the retention purge iterates report
+        # rows, so an unreferenced file would leak on disk forever. Delete it.
+        if not svc.store.one("SELECT id FROM reports WHERE media_ref=?", (ref,)):
+            try:
+                (MEDIA_DIR / ref).unlink(missing_ok=True)
+            except OSError:
+                pass
+            return {"stored": None, "replies": [
+                {"text": r.text, "buttons": r.buttons, "id": r.string_id} for r in replies]}
+        if client_id:
+            seen_cids[(phone, "photo:" + client_id[:64])] = time.monotonic()
         return {"stored": ref,
                 "replies": [{"text": r.text, "buttons": r.buttons, "id": r.string_id} for r in replies]}
 

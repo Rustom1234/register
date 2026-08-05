@@ -330,6 +330,7 @@ function wire() {
     renderPhone();
     const fd = new FormData();
     fd.append("phone", activeConv);
+    fd.append("client_id", Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
     fd.append("file", f);
     try {
       const res = await fetch("/api/wa/photo", { method: "POST", body: fd });

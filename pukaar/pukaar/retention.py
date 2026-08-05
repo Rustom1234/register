@@ -60,6 +60,23 @@ def purge(store: Store, cfg: Config, now: float) -> dict:
         store.update("reports", r["id"], {"media_ref": None, "media_purged": 1})
     stats["media"] = len(rows)
 
+    # Backstop sweep: delete any media file on disk with no live report row
+    # referencing it. The row-driven purge above misses files orphaned by a
+    # short-circuited upload or a report deleted through another branch —
+    # "the dangerous database never exists" has to hold for the filesystem too.
+    if media_dir.is_dir():
+        referenced = {row["media_ref"] for row in store.query(
+            "SELECT media_ref FROM reports WHERE media_ref IS NOT NULL AND media_ref != 'media'")}
+        orphans = 0
+        for f in media_dir.iterdir():
+            if f.is_file() and f.name not in referenced:
+                try:
+                    f.unlink()
+                    orphans += 1
+                except OSError:
+                    pass
+        stats["media_orphans"] = orphans
+
     # Coordinates are nulled only once the case is finished — an open case's
     # pin is the only way to serve it (and open cases close in hours, not days).
     rows = store.query(

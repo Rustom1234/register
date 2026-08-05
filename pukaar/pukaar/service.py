@@ -404,9 +404,14 @@ class PukaarService:
         by_cat: dict[str, int] = {}
         for c in cases:
             by_cat[c["category"] or "unknown"] = by_cat.get(c["category"] or "unknown", 0) + 1
-        # kit movement in the window, from the audit-quality feed
-        kits_out = sum(1 for e in self.feed if e["ts"] >= since and e["kind"] == "kit_pickup")
-        returns = sum(1 for e in self.feed if e["ts"] >= since and e["kind"] == "kit_return")
+        # Kit movement from DURABLE tables, not the 250-event feed (which
+        # silently undercounts a busy shift): a delivered kit == a served or
+        # escalated outcome (the person got it); a returned kit == a
+        # not_found/declined close (the reserved kit went back). Restocks
+        # aren't persisted as rows, so that one line stays feed-derived and
+        # is labelled "recent" in the report.
+        kits_out = sum(1 for o in outs if o["served"] or o["escalated"])
+        returns = sum(1 for o in outs if not o["served"] and not o["escalated"])
         restocks = sum(1 for e in self.feed if e["ts"] >= since and e["kind"] == "restock_delivered")
         accept_times = [r["accepted_at"] - r["created_at"] for r in
                         q("SELECT created_at, accepted_at FROM orders "

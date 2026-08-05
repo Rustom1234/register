@@ -51,8 +51,11 @@ def test_purge_idempotent(svc, clock, cfg):
     _old_case(svc, created_at=clock() - cfg.case_row_ttl_s - 5)
     purge(svc.store, cfg, clock())
     stats2 = purge(svc.store, cfg, clock())
-    assert stats2 == {"media": 0, "latlng": 0, "cases": 0, "orphan_reports": 0,
-                      "conversations": 0, "expired": 0}
+    # media_orphans appears only when a media dir exists to scan; the second
+    # purge does no NEW work regardless, so every count is zero.
+    assert all(v == 0 for v in stats2.values())
+    assert {"media", "latlng", "cases", "orphan_reports", "conversations",
+            "expired"} <= set(stats2)
 
 
 def test_provenance_sign_verify_and_tamper():

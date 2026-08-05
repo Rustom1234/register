@@ -107,3 +107,61 @@ def test_photo_before_pin_retro_links_to_the_case(tmp_path):
     assert row and row["case_id"], "pre-case photo must retro-link when the case forms"
     st = client.get("/api/state").json()
     assert ref in (st["media"].get(row["case_id"]) or [])
+
+
+def test_oversized_body_rejected_before_buffering(tmp_path):
+    client, cfg = _client(tmp_path)
+    # Content-Length over the 4 MB hard ceiling → 413 from the middleware,
+    # before any multipart parsing spools it to disk
+    r = client.post("/api/wa/photo",
+                    data={"phone": "+91-BIG"},
+                    files={"file": ("big.png", io.BytesIO(b"x" * 10), "image/png")},
+                    headers={"content-length": str(5 * 1024 * 1024)})
+    assert r.status_code == 413
+
+
+def test_rate_limited_upload_leaves_no_orphan_file(tmp_path):
+    client, cfg = _client(tmp_path)
+    from pathlib import Path
+    phone = "+91-RL1"
+    svc = client.app.state.svc
+    # burn the per-phone budget via the service directly, so the endpoint's
+    # own global flood window (which would 429 first) stays clear
+    for i in range(cfg.rate_limit_msgs + 1):
+        svc.wa_inbound(phone, "text", text=f"hi {i}")
+    before = set(p.name for p in Path(cfg.media_dir).glob("*")) if Path(cfg.media_dir).is_dir() else set()
+    r = _upload(client, phone=phone)
+    assert r.status_code == 200 and r.json()["stored"] is None, \
+        "rate-limited upload must succeed HTTP-wise but claim no storage"
+    after = set(p.name for p in Path(cfg.media_dir).glob("*")) if Path(cfg.media_dir).is_dir() else set()
+    assert after == before, "a non-filed upload must not leave a file on disk"
+
+
+def test_photo_client_id_dedupes(tmp_path):
+    client, cfg = _client(tmp_path)
+    client.post("/api/wa/inbound", json={"phone": "+91-IDP", "kind": "text",
+                                         "text": "flyover ke neeche aadmi ghayal hai, khoon"})
+    client.post("/api/wa/inbound", json={"phone": "+91-IDP", "kind": "location",
+                                         "lat": 28.5933, "lng": 77.2507})
+    r1 = client.post("/api/wa/photo", data={"phone": "+91-IDP", "client_id": "shot1"},
+                     files={"file": ("a.png", io.BytesIO(PNG), "image/png")})
+    ref = r1.json()["stored"]
+    assert ref
+    r2 = client.post("/api/wa/photo", data={"phone": "+91-IDP", "client_id": "shot1"},
+                     files={"file": ("a.png", io.BytesIO(PNG), "image/png")})
+    assert r2.json()["stored"] is None, "same client_id must not store a second copy"
+    n = len(client.app.state.svc.store.query("SELECT id FROM reports WHERE media_ref=?", (ref,)))
+    assert n == 1
+
+
+def test_retention_sweeps_orphan_files_from_disk(tmp_path):
+    client, cfg = _client(tmp_path)
+    from pathlib import Path
+    from pukaar import retention
+    # plant an orphan file that no report row references
+    Path(cfg.media_dir).mkdir(parents=True, exist_ok=True)
+    orphan = Path(cfg.media_dir) / "med_orphan.png"
+    orphan.write_bytes(PNG)
+    svc = client.app.state.svc
+    retention.purge(svc.store, cfg, svc.now() + 100)
+    assert not orphan.exists(), "the backstop sweep must delete unreferenced files"

@@ -1,7 +1,7 @@
 [project]
 name = "pukaar"
 version = "0.1.0"
-description = "Pukaar - witness-powered street aid: WhatsApp-style intake agent, triage, kit orders, and nearest-trusted-responder dispatch, with a live demo control room."
+description = "Wayside - witness-powered street aid: WhatsApp-style intake agent, triage, kit orders, and nearest-trusted-responder dispatch, with a live demo control room."
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.110",
