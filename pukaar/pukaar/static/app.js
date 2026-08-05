@@ -448,9 +448,12 @@ function feedLine(e) {
     case "restock_delivered":
       html = `📦 courier delivered +${e.qty} × ${e.sku} to ${e.depot || "depot"}`; cls = "good"; break;
     case "kit_pickup":
-      html = `📦 <b>${e.name || respName(e.responder_id)}</b> collected the kit at ${e.depot || "the depot"}`; cls = "good"; break;
+      html = `📦 <b>${e.name ? escapeHtml(e.name) : respName(e.responder_id)}</b> collected the kit at ${escapeHtml(e.depot || "the depot")}`; cls = "good"; break;
     case "kit_return":
-      html = `📦 unused ${e.sku} returned to ${e.depot || "the depot"}`; break;
+      html = `📦 unused ${escapeHtml(e.sku || "")} returned to ${escapeHtml(e.depot || "the depot")}`; break;
+    case "roster_change":
+      html = `👤 <b>${respName(e.responder_id)}</b> ${e.active ? "back on duty" : "taken off duty"}`;
+      cls = e.active ? "good" : "warn"; break;
     case "recheck_sent":
       html = `🤔 asked the witness of <b>${short(e.case_id)}</b>: still there?`; break;
     case "recheck_confirmed":
@@ -468,6 +471,42 @@ function renderFeed() {
   el.innerHTML = state.feed.length
     ? state.feed.map(feedLine).join("")
     : '<div class="empty-note">Quiet so far — dispatch events stream here the moment a report lands.</div>';
+}
+
+// -------------------------------------------------------------- roster --
+// The volunteer roster: who can respond, vetting state, this session's
+// served count, and an on/off-duty toggle. Keyed so the poll doesn't
+// clobber a click. Only present on surfaces that include the panel.
+function renderRoster() {
+  const el = document.getElementById("roster");
+  if (!el || !state.roster) return;
+  const cnt = document.getElementById("roster-count");
+  const onDuty = state.roster.filter((r) => r.active).length;
+  if (cnt) cnt.textContent = `${onDuty}/${state.roster.length} on`;
+  const key = state.roster.map((r) => `${r.id}:${r.active}:${r.served}:${r.vetting}`).join("|");
+  if (el.dataset.key === key) return;
+  el.dataset.key = key;
+  el.innerHTML = state.roster.map((r) => {
+    const badge = r.vetting === "verified"
+      ? '<span class="vet ok" title="vetted volunteer">✓ vetted</span>'
+      : `<span class="vet pend" title="vetting pending">${escapeHtml(r.vetting)}</span>`;
+    return `<div class="rost-row${r.active ? "" : " off"}">
+      <span class="rost-name">${escapeHtml(r.name)}${r.medical ? ' <span title="medical-trained">🩺</span>' : ""}</span>
+      ${badge}
+      <span class="rost-served" title="served this session">${r.served}</span>
+      <button class="rost-tog" data-rid="${escapeHtml(r.id)}" data-active="${r.active ? 1 : 0}"
+        title="${r.active ? "take off duty" : "put on duty"}">${r.active ? "on duty" : "off"}</button>
+    </div>`;
+  }).join("");
+  el.querySelectorAll(".rost-tog").forEach((b) =>
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      await fetch("/api/roster/active", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ responder_id: b.dataset.rid, active: b.dataset.active !== "1" }),
+      });
+      refresh();
+    }));
 }
 
 // ---------------------------------------------------------------- cases --
@@ -1057,7 +1096,7 @@ async function refresh() {
   document.getElementById("prov-note").textContent =
     state.prov_ephemeral ? "demo HMAC key (ephemeral) — set PUKAAR_HMAC_KEY for persistent provenance" : "persistent HMAC provenance key";
   syncMap(); renderTiles(); renderFeed(); renderCases(); renderPhone(); renderDetail();
-  renderRespPanel(); renderCoord(); drawCells(); playNewFeedSounds();
+  renderRespPanel(); renderCoord(); renderRoster(); drawCells(); playNewFeedSounds();
   applyCaseDeepLink();
   const veil = document.getElementById("boot-veil");
   if (veil && !veil.classList.contains("gone")) {

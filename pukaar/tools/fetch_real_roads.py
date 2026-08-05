@@ -195,6 +195,40 @@ def main() -> None:
         f.write("\n")
     roads = sum(1 for f in features if f["properties"]["kind"] == "road")
     print(f"wrote {args.out} — {len(features)} features ({roads} roads)")
+    _connectivity_report(args.out)
+
+
+def _connectivity_report(path: Path) -> None:
+    """Per-mode sanity check the router relies on: a mode with disconnected
+    islands silently degrades to straight-line (_direct) fallbacks in the
+    sim, so warn loudly here where the founder can see it, rather than let
+    riders 'fly' across gaps at run time."""
+    try:
+        import random
+        import sys as _sys
+        _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+        from pukaar import routing
+    except Exception as exc:  # tool must still succeed if the pkg isn't importable
+        print(f"(connectivity check skipped: {exc})", file=sys.stderr)
+        return
+    graph = routing.RoadGraph(path)
+    lats = [n[0] for n in graph.nodes] or [0]
+    lngs = [n[1] for n in graph.nodes] or [0]
+    box = (min(lats), max(lats), min(lngs), max(lngs))
+    rng = random.Random(1)
+    for mode in ("walk", "cycle", "scooter"):
+        direct = 0
+        N = 200
+        for _ in range(N):
+            a = (rng.uniform(box[0], box[1]), rng.uniform(box[2], box[3]))
+            b = (rng.uniform(box[0], box[1]), rng.uniform(box[2], box[3]))
+            wps, _d, _t = graph.route(a[0], a[1], b[0], b[1], mode=mode)
+            if len(wps) <= 2:
+                direct += 1
+        pct = 100 * direct / N
+        flag = "  ⚠ disconnected islands — routing will use straight lines" if pct > 5 else ""
+        print(f"connectivity [{mode:7s}]: {pct:.0f}% straight-line fallback{flag}",
+              file=sys.stderr)
 
 
 if __name__ == "__main__":

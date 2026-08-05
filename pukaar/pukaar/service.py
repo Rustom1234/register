@@ -388,6 +388,37 @@ class PukaarService:
             "kits_low": kits_low,
         }
 
+    def roster(self) -> list[dict]:
+        """The volunteer roster for the coordinator: who can respond, their
+        vetting + duty state, and this session's contribution. An NGO's
+        first operational question is 'who are these people and are they
+        vetted' — this answers it from the responders table + outcomes."""
+        rows = self.store.query(
+            "SELECT id, display_name, medical, vetting, active FROM responders "
+            "ORDER BY display_name")
+        served = {r["closed_by"]: r["n"] for r in self.store.query(
+            "SELECT closed_by, COUNT(*) n FROM outcomes WHERE served=1 GROUP BY closed_by")}
+        out = []
+        for r in rows:
+            out.append({
+                "id": r["id"], "name": r["display_name"],
+                "medical": bool(r["medical"]),
+                "vetting": r["vetting"] or "pending",
+                "active": bool(r["active"]),
+                "served": served.get(r["id"], 0),
+            })
+        return out
+
+    def set_active(self, responder_id: str, active: bool) -> bool:
+        row = self.store.one("SELECT id FROM responders WHERE id=?", (responder_id,))
+        if not row:
+            return False
+        self.store.execute("UPDATE responders SET active=? WHERE id=?",
+                           (1 if active else 0, responder_id))
+        self.emit("roster_change", {"responder_id": responder_id,
+                                    "active": bool(active)})
+        return True
+
     def shift_summary(self, now: float, hours: float = 12.0) -> dict:
         """A coordinator's end-of-shift handover: what happened in the last
         `hours` of sim time, in numbers a non-technical NGO head can read.

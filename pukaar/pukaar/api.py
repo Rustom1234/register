@@ -338,6 +338,7 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             "sim": sim.snapshot(),
             "depots": sim.depots(),
             "restocks": sim.restocks_view(),
+            "roster": svc.roster(),
             "media": _case_media(),
             "cases": cases,
             "orders": orders,
@@ -489,6 +490,22 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     def shift_json(hours: float = 12.0):
         hours = min(72.0, max(1.0, hours))
         return svc.shift_summary(sim.sim_now, hours)
+
+    @app.get("/api/roster")
+    def roster():
+        return {"roster": svc.roster()}
+
+    class RosterCtl(BaseModel):
+        responder_id: str
+        active: bool
+
+    @app.post("/api/roster/active")
+    def roster_active(ctl: RosterCtl):
+        # Deactivating a volunteer stops NEW offers immediately (dispatch
+        # only ever offers to active=1); any job already in hand runs out.
+        if not svc.set_active(ctl.responder_id, ctl.active):
+            raise HTTPException(404, "no such responder")
+        return {"ok": True}
 
     @app.get("/api/export")
     def export():
