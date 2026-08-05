@@ -516,3 +516,38 @@ Suite **206**. Cache 20260804m. Commits `b4707f658`, `04be2bcbb`.
 **R13 queue:** GitHub Actions pages workflow for the marketing site,
 adversarial sweep of the bilingual/rider changes, another pilot-readiness
 feature, deploy a real instance if the founder green-lights Fly.
+
+---
+
+## Round 13 — CLOSED (2026-08-05)
+
+**Theme: accessibility + i18n correctness.** The bilingual rider (r12)
+was a lie to a screen reader — Devanagari with no lang markup gets
+pronounced in an English voice, worse than useless for a low-literacy
+responder on TalkBack.
+
+- **lang="hi" on every Devanagari string**: the 9 rider .hn action
+  labels, the EN ROUTE / AT THE PIN banner, the duty pill (switched from
+  textContent to innerHTML with the responder name escaped), the
+  "Who are you?" heading.
+- **Chat bubbles**: any bubble whose text contains Devanagari now gets
+  lang="hi" via a per-message U+0900–097F check — both the witness page
+  and the control-room phone panel (so the bot replying in देवनागरी
+  reads correctly).
+- **role="status"** on the witness offline/queued toast (responder toast
+  already had it) so status changes are announced.
+- Verified live with an automated a11y pass: 10 Devanagari elements
+  tagged, 0 untagged; every button/link on all four surfaces has an
+  accessible name.
+
+**Deliberately skipped** the queued GitHub Actions pages workflow: this
+repo is a FORK of the is-a.dev DNS registry (the existing publish/
+dnscontrol/raw-api workflows are upstream), so an auto-Pages deploy could
+collide with the fork's purpose — the site deploy stays documented
+manually in site/DEPLOY.md. Flagged rather than risk upstream conflict.
+
+Suite **206**. Cache 20260804o. Commit `9f5117c41`.
+
+**R14 queue:** adversarial sweep of the r12/r13 changes, another
+pilot-readiness feature (responder roster/vetting admin view?), witness
+first-contact consent line (DPDP), deploy if founder green-lights Fly.

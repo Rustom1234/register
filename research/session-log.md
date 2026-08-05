@@ -370,8 +370,15 @@ research. Log of each round: `research/loop-log.md`.
   undercount (durable outcomes not the 250-feed), photo idempotency.
   **206 tests.** Commits `b4707f658` + `04be2bcbb`.
 
+- **Round 13 (closed):** accessibility + i18n — lang="hi" on every
+  Devanagari string (rider labels, banner, duty pill, chat bubbles in
+  both witness + control room), role="status" on the witness toast;
+  verified live (10 tagged / 0 untagged, all interactive elements named).
+  Skipped the CI-pages item (repo is an is-a.dev fork; auto-deploy would
+  collide). **206 tests.** Commit `9f5117c41`.
+
 ---
-**Last updated:** 2026-08-05, after loop Round 12. Before that: the
+**Last updated:** 2026-08-05, after loop Round 13. Before that: the
 find-issues iteration of 2026-08-02. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render
