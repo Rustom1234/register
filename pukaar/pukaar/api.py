@@ -102,8 +102,20 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     # witness-facing webhooks and the health probe: a hosted control room
     # must never expose live witness chats, pins, or exports to the open
     # internet. /login?token=... sets the cookie so all pages just work.
+    # Public witness surface (witnesses can't log in): the reporting page,
+    # its scoped data feed, and the intake webhooks. NOT the control room,
+    # supervisor, responder app, /api/state, exports or media — those stay
+    # staff-only. Client assets under /static, /data and /sw.js are public
+    # too (they are client code with no secrets; the DATA behind them is
+    # what the gate protects).
     OPEN_PATHS = {"/health", "/api/wa/inbound", "/api/wa/photo", "/webhook",
-                  "/login", "/favicon.ico"}
+                  "/login", "/favicon.ico", "/witness", "/api/witness/state"}
+
+    def _is_public(path: str) -> bool:
+        return (path in OPEN_PATHS
+                or path == "/sw.js"
+                or path.startswith("/static/")
+                or path.startswith("/data/"))
 
     # Hard ceiling on any request body (4 MB). /api/wa/photo is open to the
     # internet and its own 3 MB check only runs AFTER the multipart body is
@@ -118,6 +130,13 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             cl = request.headers.get("content-length")
             if cl and cl.isdigit() and int(cl) > MAX_BODY:
                 return PlainTextResponse("request body too large", status_code=413)
+            # A chunked/HTTP2 POST can omit Content-Length and sidestep the
+            # cap. The open JSON intake paths always send a length from
+            # fetch(); require it so an unauthenticated caller can't stream
+            # an unbounded body FastAPI would buffer whole. (The multipart
+            # photo path is bounded separately by its own chunked read.)
+            if cl is None and request.url.path in ("/api/wa/inbound", "/webhook"):
+                return PlainTextResponse("length required", status_code=411)
         return await call_next(request)
 
     @app.middleware("http")
@@ -125,7 +144,7 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         token = cfg.admin_token
         if token:
             path = request.url.path
-            if path not in OPEN_PATHS:
+            if not _is_public(path):
                 ok = (request.cookies.get("wayside_staff") == token
                       or request.headers.get("x-wayside-token") == token)
                 if not ok:
@@ -285,6 +304,22 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         if not p.is_file():
             raise HTTPException(404, "no such media (purged or never existed)")
         return FileResponse(p)
+
+    @app.get("/api/witness/state")
+    def witness_state(phone: str = ""):
+        # Scoped, PUBLIC state for the witness page: only the zone (to draw
+        # the map) and the caller's OWN conversation thread — never other
+        # witnesses' chats, case pins, or responder positions. /api/state
+        # (the full operational feed) stays staff-gated.
+        own = []
+        if phone and PHONE_RE.match(phone):
+            conv = svc.conversations.get(phone)
+            if conv:
+                own = conv.log
+        return {
+            "zone": {"lat": cfg.zone_lat, "lng": cfg.zone_lng, "radius_m": cfg.zone_radius_m},
+            "conversations": {phone: own} if phone else {},
+        }
 
     # ------------------------------------------------------------- state --
     @app.get("/api/state")
@@ -485,6 +520,13 @@ def build_app(cfg: Config | None = None) -> FastAPI:
 
     @app.post("/webhook")
     async def wa_webhook(request: Request):
+        # Inert unless signature verification is actually possible: without
+        # WA_APP_SECRET, verify_signature would pass anything, turning this
+        # open path into an unauthenticated message-injection endpoint that
+        # bypasses the /api/wa/inbound flood + validation guards. A real Meta
+        # pilot sets WA_APP_SECRET anyway (the boot guard forces it).
+        if not cloud.app_secret:
+            raise HTTPException(403, "webhook not configured")
         raw = await request.body()
         if not verify_signature(raw, request.headers.get("X-Hub-Signature-256"),
                                 cloud.app_secret):

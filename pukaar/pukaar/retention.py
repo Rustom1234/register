@@ -14,6 +14,7 @@ runs it on a timer and exposes a demo button.
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 from .config import Config
@@ -69,12 +70,18 @@ def purge(store: Store, cfg: Config, now: float) -> dict:
             "SELECT media_ref FROM reports WHERE media_ref IS NOT NULL AND media_ref != 'media'")}
         orphans = 0
         for f in media_dir.iterdir():
-            if f.is_file() and f.name not in referenced:
-                try:
-                    f.unlink()
-                    orphans += 1
-                except OSError:
-                    pass
+            if not (f.is_file() and f.name not in referenced):
+                continue
+            # Grace guard: a photo is written to disk a beat BEFORE its report
+            # row exists, so a purge firing in that gap (e.g. the demo purge
+            # button mid-upload) must not delete a live, still-uploading file.
+            try:
+                if time.time() - f.stat().st_mtime < 60:
+                    continue
+                f.unlink()
+                orphans += 1
+            except OSError:
+                pass
         stats["media_orphans"] = orphans
 
     # Coordinates are nulled only once the case is finished — an open case's

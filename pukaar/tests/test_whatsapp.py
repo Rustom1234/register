@@ -51,6 +51,24 @@ def _client():
     return TestClient(app)
 
 
+# The webhook is inert without WA_APP_SECRET (an unsigned open endpoint would
+# be a message-injection hole); a real Meta pilot always sets it. These tests
+# configure the secret and sign the body the way Meta does.
+import hashlib
+import hmac
+import json as _json
+import os
+
+
+def _signed_post(client, body: dict):
+    secret = os.environ["WA_APP_SECRET"]
+    raw = _json.dumps(body).encode()
+    sig = "sha256=" + hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+    return client.post("/webhook", content=raw,
+                       headers={"content-type": "application/json",
+                                "X-Hub-Signature-256": sig})
+
+
 def test_webhook_verify_roundtrip():
     with _client() as client:
         r = client.get("/webhook", params={"hub.mode": "subscribe",
@@ -63,22 +81,40 @@ def test_webhook_verify_roundtrip():
         assert r.status_code == 403
 
 
-def test_webhook_post_feeds_pipeline():
+def test_webhook_inert_without_app_secret():
+    # the default hosted/demo state (no WA_APP_SECRET) must NOT accept
+    # unsigned injected messages
+    os.environ.pop("WA_APP_SECRET", None)
     with _client() as client:
         r = client.post("/webhook", json=_wrap(
-            {"from": "919876543210", "type": "text", "text": {"body": "ek aadmi ghayal hai"}}))
-        assert r.status_code == 200
-        assert r.json() == {"handled": 1, "sending": False}
-        state = client.get("/api/state").json()
-        assert any("919876" in p for p in state["conversations"])
+            {"from": "919000000000", "type": "text", "text": {"body": "x"}}))
+        assert r.status_code == 403
+
+
+def test_webhook_post_feeds_pipeline():
+    os.environ["WA_APP_SECRET"] = "test-secret"
+    try:
+        with _client() as client:
+            r = _signed_post(client, _wrap(
+                {"from": "919876543210", "type": "text", "text": {"body": "ek aadmi ghayal hai"}}))
+            assert r.status_code == 200
+            assert r.json() == {"handled": 1, "sending": False}
+            state = client.get("/api/state").json()
+            assert any("919876" in p for p in state["conversations"])
+    finally:
+        del os.environ["WA_APP_SECRET"]
 
 
 def test_webhook_voice_flows_as_voice_kind():
-    with _client() as client:
-        r = client.post("/webhook", json=_wrap(
-            {"from": "919812345678", "type": "audio", "audio": {"id": "m9", "voice": True}}))
-        assert r.status_code == 200 and r.json()["handled"] == 1
-        state = client.get("/api/state").json()
-        conv = next(v for k, v in state["conversations"].items() if "919812" in k)
-        assert conv[0]["kind"] == "voice"
-        assert conv[0]["text"].startswith("🎤")
+    os.environ["WA_APP_SECRET"] = "test-secret"
+    try:
+        with _client() as client:
+            r = _signed_post(client, _wrap(
+                {"from": "919812345678", "type": "audio", "audio": {"id": "m9", "voice": True}}))
+            assert r.status_code == 200 and r.json()["handled"] == 1
+            state = client.get("/api/state").json()
+            conv = next(v for k, v in state["conversations"].items() if "919812" in k)
+            assert conv[0]["kind"] == "voice"
+            assert conv[0]["text"].startswith("🎤")
+    finally:
+        del os.environ["WA_APP_SECRET"]

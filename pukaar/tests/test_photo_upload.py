@@ -163,5 +163,15 @@ def test_retention_sweeps_orphan_files_from_disk(tmp_path):
     orphan = Path(cfg.media_dir) / "med_orphan.png"
     orphan.write_bytes(PNG)
     svc = client.app.state.svc
+
+    # a JUST-written file is spared (it could be an in-flight upload whose
+    # report row doesn't exist yet — the 60s mtime grace guard)
     retention.purge(svc.store, cfg, svc.now() + 100)
-    assert not orphan.exists(), "the backstop sweep must delete unreferenced files"
+    assert orphan.exists(), "the grace guard must spare a just-written file"
+
+    # once it's older than the grace window, the backstop sweep deletes it
+    import os
+    old = orphan.stat().st_mtime - 120
+    os.utime(orphan, (old, old))
+    retention.purge(svc.store, cfg, svc.now() + 100)
+    assert not orphan.exists(), "the backstop sweep must delete an aged unreferenced file"

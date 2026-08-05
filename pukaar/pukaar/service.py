@@ -412,7 +412,7 @@ class PukaarService:
         # is labelled "recent" in the report.
         kits_out = sum(1 for o in outs if o["served"] or o["escalated"])
         returns = sum(1 for o in outs if not o["served"] and not o["escalated"])
-        restocks = sum(1 for e in self.feed if e["ts"] >= since and e["kind"] == "restock_delivered")
+        restocks = sum(1 for e in list(self.feed) if e["ts"] >= since and e["kind"] == "restock_delivered")
         accept_times = [r["accepted_at"] - r["created_at"] for r in
                         q("SELECT created_at, accepted_at FROM orders "
                           "WHERE accepted_at IS NOT NULL AND created_at >= ?", (since,))]
@@ -500,7 +500,7 @@ class PukaarService:
         cutoff = self.now() - self.cfg.conversation_ttl_s
         kept = self.store.query("SELECT phone FROM conversations")
         alive = {r["phone"] for r in kept}
-        for phone in [p for p in self.conversations
+        for phone in [p for p in list(self.conversations)
                       if p not in alive and self._last_activity(p) < cutoff]:
             self.conversations.pop(phone, None)
             self._msg_times.pop(phone, None)

@@ -392,7 +392,9 @@ function liftVeil() {
 
 async function refresh() {
   try {
-    const res = await fetch("/api/state");
+    // scoped, public endpoint: just this witness's own thread + the zone —
+    // works on a staff-token deploy where /api/state is (correctly) gated
+    const res = await fetch("/api/witness/state?phone=" + encodeURIComponent(activeConv));
     state = await res.json();
     const backOnline = pollFails > 0; // poll just recovered from a dead spell
     pollFails = 0;

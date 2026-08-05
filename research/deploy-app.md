@@ -18,6 +18,10 @@ on its built-in mock agent unless *you* choose to add one.
   can't log in to report). This is by design.
 - You share the URL **plus the token** with people you trust; you share
   the URL **alone** for someone to only try the witness side.
+- **Responders** (the `/responder` app) count as staff for access: it
+  reads the live operational feed, so on a token deploy a rider opens it
+  via the same `…/login?token=…` link once on their phone, then it works
+  for 30 days. Vetted volunteers get the link; the public never needs it.
 
 The token is one value you invent (any long random string). Treat it
 like a password.

@@ -73,7 +73,10 @@ async function api(path, body) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     });
-    return r.json();
+    // AWAIT: a non-JSON response (500 HTML, proxy error page) makes r.json()
+    // reject — unawaited, that rejection escapes the try and leaves the
+    // tapped button dead forever. Awaited, it degrades to the offline path.
+    return await r.json();
   } catch {
     return { ok: false, offline: true };
   }
@@ -109,7 +112,7 @@ function toast(txt) {
 function renderPick() {
   if (!pickFilled && state.sim.responders.length) {
     $("pick").innerHTML = state.sim.responders
-      .map((r) => `<option value="${r.id}">${r.name}${r.medical ? " · medical-trained" : ""}</option>`)
+      .map((r) => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.name)}${r.medical ? " · medical-trained" : ""}</option>`)
       .join("");
     if (myId) $("pick").value = myId;
     pickFilled = true;
@@ -146,7 +149,7 @@ function renderIdleFeed() {
   if (!kept.length) return;   // keep the "quiet" placeholder
   const t = (ts) => `${String(Math.floor((ts % 86400) / 3600)).padStart(2, "0")}:` +
                     `${String(Math.floor((ts % 3600) / 60)).padStart(2, "0")}`;
-  const nm = (id) => (state.sim.responders.find((r) => r.id === id) || { name: "" }).name;
+  const nm = (id) => escapeHtml((state.sim.responders.find((r) => r.id === id) || { name: "" }).name);
   const line = (e) => {
     switch (e.kind) {
       case "order_accepted": return `${nm(e.responder_id)} accepted a call`;
@@ -182,7 +185,7 @@ function offerCard(a, order, c) {
       <span>wave ${order.wave || 1}</span>${order.clinical_flag ? "<span>🩺 clinical flag</span>" : ""}</div>
     <div class="ttl" aria-label="time left to accept"><i style="width:${(left / ttl) * 100}%"></i></div>
     <div class="btnrow">
-      <button class="big" data-acc="${a.id}">ACCEPT · लो<span class="hn" lang="hi">${Math.ceil(left / 60)} min left</span></button>
+      <button class="big" data-acc="${a.id}">ACCEPT · <span lang="hi">लो</span><span class="hn">${Math.ceil(left / 60)} min left</span></button>
       <button class="big decline" data-dec="${a.id}">Pass<span class="hn" lang="hi">छोड़ें</span></button>
     </div>
   </div>`;
@@ -387,9 +390,16 @@ function render() {
   renderIdle(m);
 }
 
+let pollBusy = false;
 async function poll() {
+  // overlap guard + timeout: on a slow phone network stacked polls resolve
+  // out of order and flap the offer/step UI backward for a frame
+  if (pollBusy) return;
+  pollBusy = true;
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), 4000);
   try {
-    state = await (await fetch("/api/state")).json();
+    state = await (await fetch("/api/state", { signal: ctrl.signal })).json();
     $("f-status").textContent = "live";
     if (autoDuty) {
       autoDuty = false;
@@ -402,6 +412,9 @@ async function poll() {
     render();
   } catch {
     $("f-status").textContent = "reconnecting…";
+  } finally {
+    clearTimeout(tid);
+    pollBusy = false;
   }
 }
 

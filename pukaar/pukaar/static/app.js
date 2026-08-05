@@ -233,7 +233,7 @@ function caseHtml(c) {
 function respHtml(r) {
   const eta = r.state === "enroute" && r.eta_s != null ? ` · ${fmtDur(r.eta_s)}` : "";
   return `<div class="resp-wrap"><div class="resp-marker ${r.state}">${r.name[0]}</div>` +
-    `<div class="resp-tag">${MODE_GLYPH[r.mode] || ""} ${r.name}${eta}</div></div>`;
+    `<div class="resp-tag">${MODE_GLYPH[r.mode] || ""} ${escapeHtml(r.name)}${eta}</div></div>`;
 }
 
 // remaining road path per enroute responder — the tween loop reads this to
@@ -261,7 +261,7 @@ function depotHtml(d) {
     .map(([sku, n]) => `${SKU_LETTER[sku] || sku[0]}${n}`).join(" ");
   const low = (d.low || []).length ? " low" : "";
   return `<div class="depot-wrap"><div class="depot-box${low}">📦</div>` +
-    `<div class="resp-tag depot-tag${low}">${d.name} · ${stock}</div></div>`;
+    `<div class="resp-tag depot-tag${low}">${escapeHtml(d.name)} · ${stock}</div></div>`;
 }
 
 function syncDepots() {
@@ -401,7 +401,7 @@ function feedLine(e) {
   const mm = String(Math.floor((e.ts % 3600) / 60)).padStart(2, "0");
   const time = `${hh}:${mm}`;
   const short = (id) => (id || "").slice(-4).toUpperCase();
-  const respName = (id) => (state.sim.responders.find((r) => r.id === id) || { name: id }).name;
+  const respName = (id) => escapeHtml((state.sim.responders.find((r) => r.id === id) || { name: id }).name);
   let cls = "", html = "";
   switch (e.kind) {
     case "case_created": {
@@ -434,9 +434,9 @@ function feedLine(e) {
     case "coordinator_flag":
       html = `⚠️ flag: ${e.reason}`; cls = "warn"; break;
     case "sos":
-      html = `🆘 <b>${e.name || respName(e.responder_id)}</b> pressed SOS — contact them NOW`; cls = "crit"; break;
+      html = `🆘 <b>${e.name ? escapeHtml(e.name) : respName(e.responder_id)}</b> pressed SOS — contact them NOW`; cls = "crit"; break;
     case "safety_alert":
-      html = `🛟 safety: <b>${e.name || respName(e.responder_id)}</b> — ${e.reason}`; cls = "warn"; break;
+      html = `🛟 safety: <b>${e.name ? escapeHtml(e.name) : respName(e.responder_id)}</b> — ${escapeHtml(e.reason || "")}`; cls = "warn"; break;
     case "purge":
       html = `🧹 retention purge — media ${e.media}, lat/lng ${e.latlng}, rows ${e.cases}, orphan reports ${e.orphan_reports ?? 0}`; break;
     case "night_hold":
@@ -524,7 +524,7 @@ function renderDetail() {
   document.getElementById("detail-id").textContent = c.id.slice(-4).toUpperCase();
   const order = state.orders.find((o) => o.case_id === c.id);
   const asgs = state.assignments.filter((a) => order && a.order_id === order.id);
-  const respName = (id) => (state.sim.responders.find((r) => r.id === id) || { name: id || "—" }).name;
+  const respName = (id) => escapeHtml((state.sim.responders.find((r) => r.id === id) || { name: id || "—" }).name);
 
   // real uploaded photos (deleted from disk by the retention job when the
   // case closes — the link is honest about its lifespan)
@@ -576,7 +576,7 @@ function renderRespPanel() {
   if (sel.dataset.key !== selKey) {
     sel.dataset.key = selKey;
     sel.innerHTML = state.sim.responders.map((r) =>
-      `<option value="${r.id}" ${r.id === selectedResp ? "selected" : ""}>${r.name}${r.medical ? " 🩺" : ""}</option>`).join("");
+      `<option value="${r.id}" ${r.id === selectedResp ? "selected" : ""}>${escapeHtml(r.name)}${r.medical ? " 🩺" : ""}</option>`).join("");
   } else if (sel.value !== selectedResp) {
     sel.value = selectedResp;
   }
@@ -696,19 +696,30 @@ function renderCoord() {
   // the coordinator's cursor. Only rebuild when the queue itself changes.
   // Courier countdowns tick in 30s buckets so the strip stays fresh
   // without per-second DOM churn.
+  // key on STRUCTURE only (which depots dry, which restocks/orders exist) —
+  // NOT the live countdown, or the whole panel (and any open assign
+  // dropdown) would rebuild every 30s. The minutes update in place below.
+  const courierMin = (r) => Math.max(1, Math.ceil(r.due_s / 60));
   const supplyKey = dry.map((x) => `d:${x.depot}:${x.sku}`).join(",") + ";" +
-    restocks.map((r) => `r:${r.depot}:${r.sku}:${Math.ceil(r.due_s / 30)}`).join(",");
+    restocks.map((r) => `r:${r.depot}:${r.sku}`).join(",");
   const key = stuck.map((o) => {
     const c = state.cases.find((x) => x.id === o.case_id) || {};
     return `${o.id}:${c.lat == null}`;
   }).join("|") + "§" + supplyKey;
-  if (panel.dataset.key === key) return;
+  if (panel.dataset.key === key) {
+    // structure unchanged: just tick the courier countdowns in place
+    restocks.forEach((r, i) => {
+      const el = document.querySelector(`#coord-body .r-min[data-k="${i}"]`);
+      if (el) el.textContent = `~${courierMin(r)} min`;
+    });
+    return;
+  }
   panel.dataset.key = key;
   const supplyHtml =
     dry.map((x) => `<div class="fi crit"><span class="t">supply</span>
       <span><b>${escapeHtml(x.sku)}</b> dry at ${escapeHtml(x.depot)} — riders go direct without a kit</span></div>`).join("") +
-    restocks.map((r) => `<div class="fi"><span class="t">supply</span>
-      <span>🚚 courier: <b>+8 ${escapeHtml(r.sku)}</b> → ${escapeHtml(r.depot)} · ~${Math.max(1, Math.ceil(r.due_s / 60))} min</span></div>`).join("");
+    restocks.map((r, i) => `<div class="fi"><span class="t">supply</span>
+      <span>🚚 courier: <b>+8 ${escapeHtml(r.sku)}</b> → ${escapeHtml(r.depot)} · <span class="r-min" data-k="${i}">~${courierMin(r)} min</span></span></div>`).join("");
   document.getElementById("coord-body").innerHTML = supplyHtml + stuck.map((o) => {
     const c = state.cases.find((x) => x.id === o.case_id) || {};
     const pinless = c.lat == null;
@@ -721,7 +732,7 @@ function renderCoord() {
     const sug = nearestIdle(c);
     const opts = state.sim.responders.map((r) => {
       const isSug = sug && r.id === sug.id;
-      return `<option value="${r.id}" ${isSug ? "selected" : ""}>${r.name}${isSug ? ` · ${sug.m}m ★` : ""}</option>`;
+      return `<option value="${r.id}" ${isSug ? "selected" : ""}>${escapeHtml(r.name)}${isSug ? ` · ${sug.m}m ★` : ""}</option>`;
     }).join("");
     return `<div class="fi warn"><span class="t">${o.sku}</span>
       <span><b>${o.id.slice(-4).toUpperCase()}</b> ${escapeHtml((c.detail || "").slice(0, 30))}</span>
