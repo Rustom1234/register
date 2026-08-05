@@ -385,8 +385,14 @@ research. Log of each round: `research/loop-log.md`.
   api() await, name-escaping, orphan-sweep grace, 2 more thread snapshots.
   **208 tests.** Commit `6b9cfecd7`.
 
+- **Round 15 (closed):** responder roster/vetting panel (coordinator
+  side — vetting badges, medical marker, served count, on/off-duty toggle
+  that dispatch respects; svc.roster()/set_active + /api/roster/active,
+  keyed render, verified live) + per-mode connectivity check in the
+  fetch_real_roads OSM importer. **211 tests.** Commit `7198fdf8c`.
+
 ---
-**Last updated:** 2026-08-05, after loop Round 14. Before that: the
+**Last updated:** 2026-08-05, after loop Round 15. Before that: the
 find-issues iteration of 2026-08-02. Before
 that: routing/ETA engine and the witness/supervisor interface split —
 all 111 tests pass; verified live with Playwright (route lines render

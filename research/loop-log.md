@@ -592,3 +592,32 @@ first-contact notice in all three scripts — verified, no work needed.)
 **R15 queue:** the fetch_real_roads connectivity check, responder
 roster/vetting view, deploy a real instance if founder green-lights Fly,
 another feature pass. The code is now materially more deploy-safe.
+
+---
+
+## Round 15 — CLOSED (2026-08-05)
+
+**Theme: pilot-readiness feature — the volunteer roster.** After two
+audit-heavy rounds, a feature: the operational piece an NGO asks for
+first — who can respond and are they vetted.
+
+- **Responder roster panel** (coordinator side, supervisor + control
+  room): each volunteer with vetting badge (✓ vetted / pending),
+  medical marker, session served-count, and an on/off-duty toggle.
+  Deactivating stops NEW offers immediately (dispatch `_candidates`
+  already filters `active=1`); a job in hand runs out. svc.roster() +
+  set_active(), POST /api/roster/active (staff-gated), rides /api/state,
+  keyed render. Verified live: 6 vetted, toggle dims the row + updates
+  the 5/6-on count, zero errors. Friendly "taken off duty" feed line;
+  names escaped (kit_pickup/kit_return too — same class as R14).
+- **OSM-import connectivity check** (R14 P3): tools/fetch_real_roads.py
+  now runs a per-mode fallback report after writing — warns loudly if
+  walk/cycle/scooter have disconnected islands that would degrade the
+  router to straight lines. 0% on the shipped demo zone.
+
+3 roster tests. Suite **211**. Cache 20260804q. Commit `7198fdf8c`.
+
+**R16 queue:** deploy a real Fly instance if the founder green-lights the
+card; a fresh sweep of r15; witness data-subject rights note; or another
+feature. The product is deeply mature — 15 rounds, 211 tests, offline,
+bilingual, a11y, photos, shift+roster ops views, deploy-safe, audited 4×.
