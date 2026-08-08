@@ -18,13 +18,19 @@ a live **demo control room** you can record.
 ```bash
 cd pukaar          # or just: make install && make demo
 uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
-.venv/bin/python -m pytest -q          # 211 tests, all offline
-.venv/bin/python -m pukaar             # http://127.0.0.1:8877
+.venv/bin/python -m pytest -q          # 217 tests, all offline
+.venv/bin/python -m pukaar             # http://127.0.0.1:8877 — calm board
 ```
 
-Open the URL, press a scenario button (or chat as the witness in the phone
-panel), and watch: intake → case → kit order → offer waves → responder
-moving on the map → outcome → closure message. `MOCK AGENT` badge means the
+The board boots **calm**: an empty zone, every rider off duty, no
+simulated activity. That's the live-pitch mode — open **`/responder`**,
+go on duty as a rider (their pin appears at an on-road home spot), then
+press a scenario button (or chat as the witness in the phone panel) and
+watch the one story you created: intake → case → kit order → offer wave →
+your rider collecting the kit at a depot and driving the streets → outcome
+→ closure message. Prefer the busy self-running showcase (several riders
+working, reports arriving on their own)? `PUKAAR_SEED_DEMO=1` (what
+`make demo` sets) or `PUKAAR_SIM_AMBIENT=1`. `MOCK AGENT` badge means the
 deterministic offline backend is driving; set `ANTHROPIC_API_KEY` (or
 `PUKAAR_BACKEND=claude`) to switch extraction/routing/assessment to Claude
 with structured outputs — same pipeline, same fixed strings.

@@ -63,6 +63,14 @@ class Config:
 
     # Simulation
     sim_speed: float = 6.0          # sim seconds per real second
+    # Ambient mode: riders boot on duty and drift between random errands,
+    # and the sim files a fresh witness report every few minutes — the
+    # busy-board showcase (and what most tests exercise). Calm mode (the
+    # `python -m pukaar` default, see __main__) boots an empty board:
+    # riders exist but are off duty until someone taps "on duty" in the
+    # rider app, nothing moves without a job, and every case is one a
+    # human actually filed.
+    sim_ambient: bool = True
     zone_lat: float = 28.5933      # Nizamuddin, Delhi
     zone_lng: float = 77.2507
     zone_radius_m: float = 1500.0

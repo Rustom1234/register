@@ -450,10 +450,11 @@ def build_app(cfg: Config | None = None) -> FastAPI:
 
     @app.post("/api/manual")
     def manual_ctl(ctl: ManualCtl):
-        if ctl.manual:
-            sim.manual.add(ctl.responder_id)
-        else:
-            sim.manual.discard(ctl.responder_id)
+        # The rider app's duty button. Taking over a rider also puts them
+        # on duty (their pin appears at their home spot and they join the
+        # candidate pool); releasing them takes them off the board — the
+        # calm-mode "I'm ready" flow is exactly this call.
+        sim.set_duty(ctl.responder_id, ctl.manual, manual=True)
         return {"manual": sorted(sim.manual)}
 
     @app.get("/api/metrics/daily")
@@ -503,7 +504,10 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     def roster_active(ctl: RosterCtl):
         # Deactivating a volunteer stops NEW offers immediately (dispatch
         # only ever offers to active=1); any job already in hand runs out.
-        if not svc.set_active(ctl.responder_id, ctl.active):
+        # Through the sim so duty state and the map stay in step — a rider
+        # the supervisor activates appears; one they deactivate leaves once
+        # free. set_duty calls svc.set_active itself for the DB + feed.
+        if not sim.set_duty(ctl.responder_id, ctl.active):
             raise HTTPException(404, "no such responder")
         return {"ok": True}
 

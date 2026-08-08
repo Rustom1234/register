@@ -109,6 +109,7 @@ class Sim:
                 pass
         self.running = True
         self.speed = cfg.sim_speed
+        self.ambient = cfg.sim_ambient     # False = calm boot: see config.py
         self.manual: set[str] = set()      # responders a human is playing via the UI
         self.golden: dict[str, str] = {}   # order_id -> chosen responder (scripted clean arc)
         self._restock_flagged: set[tuple[str, str]] = set()          # (depot, sku)
@@ -135,7 +136,10 @@ class Sim:
         self._decides: dict[str, float] = {}   # assignment_id -> decision due (per-offer, not per-responder)
         self._coord_next = 0.0                 # the sim plays the coordinator too
         self._pending_escalations: dict[str, float] = {}
-        self._random_report_at = self.sim_now + self.rng.uniform(60, 240)
+        # Ambient mode files its own witness reports; calm mode never does —
+        # every case on a calm board is one a human actually created.
+        self._random_report_at = (self.sim_now + self.rng.uniform(60, 240)
+                                  if self.ambient else math.inf)
         self.last_tick_real = time.monotonic()   # /health watchdog signal
         # Every close path must settle the kit ledger; the witness-recheck
         # cancel lives in service.py, which can't import sim — hook it here.
@@ -160,18 +164,65 @@ class Sim:
             rid = f"resp_{i+1}"
             self.svc.store.insert("responders", {
                 "id": rid, "partner_id": "partner_1", "display_name": name,
-                "medical": int(medical), "vetting": "verified", "active": 1,
+                "medical": int(medical), "vetting": "verified",
+                "active": 1 if self.ambient else 0,
             })
-            lat, lng = self._random_point(0.85)
+            # Ambient: scattered around the zone, already working. Calm: a
+            # deterministic on-road home spot near "their" depot, off duty
+            # and off the map until someone flips them on.
+            lat, lng = (self._random_point(0.85) if self.ambient
+                        else self._home_spot(i))
             self._resp[rid] = {
                 "id": rid, "name": name, "medical": medical, "lat": lat, "lng": lng,
                 "mode": mode, "speed": MODE_SPEED_MPS[mode],   # m per sim-second
                 "accept_p": self.rng.uniform(0.55, 0.85),      # GoodSAM band, generous end
-                "state": "idle", "order_id": None, "target": None,
+                "state": "idle", "order_id": None, "target": None, "on_duty": self.ambient,
                 "dwell_until": None, "route": None, "route_idx": 0, "steps": None,
                 "depot_id": None, "depot_name": None, "pickup_idx": None, "picked_up": True,
             }
-            self.svc.positions[rid] = (lat, lng)
+            if self.ambient:
+                self.svc.positions[rid] = (lat, lng)
+
+    def _home_spot(self, i: int) -> tuple[float, float]:
+        """Calm-mode start position for rider i: a spot a few hundred metres
+        from their depot, snapped onto the street network so the first trip
+        never begins with an off-road hop."""
+        depot = self.depot_list[i % len(self.depot_list)]
+        offs = [(0.0028, 0.0012), (-0.0022, 0.0026), (0.0009, -0.0031)]
+        dlat, dlng = offs[(i // len(self.depot_list)) % len(offs)]
+        lat, lng = depot[2] + dlat, depot[3] + dlng
+        if self.graph is not None:
+            snap = self.graph._snap(lat, lng, routing.SPEEDS_KMH["walk"])
+            if snap is not None:
+                return snap.lat, snap.lng
+        return lat, lng
+
+    def set_duty(self, rid: str, on: bool, manual: bool = False) -> bool:
+        """Flip a rider on or off duty — the calm-mode entry point, driven
+        by the rider app's duty button and the supervisor roster toggle.
+        On duty: appear on the map at the current spot and join the
+        dispatch candidate pool. Off duty: leave both — but never mid-job;
+        a rider with an open order stays until it closes."""
+        r = self._resp.get(rid)
+        if not r:
+            return False
+        if manual:
+            (self.manual.add if on else self.manual.discard)(rid)
+            if not on and self.ambient:
+                # Ambient board: releasing the takeover hands the rider back
+                # to the sim — it does NOT bench them. Only the calm board
+                # treats the rider app's duty-off as leaving the shift.
+                return True
+        if on and not r.get("on_duty", True):
+            r["on_duty"] = True
+            self.svc.positions[rid] = (r["lat"], r["lng"])
+            self.svc.set_active(rid, True)     # emits roster_change for the feed
+        elif not on and r.get("on_duty", True):
+            r["on_duty"] = False
+            if r["state"] == "idle":
+                self.svc.positions.pop(rid, None)
+            self.svc.set_active(rid, False)
+        return True
 
     def _route_to(self, r: dict, tlat: float, tlng: float) -> list[tuple[float, float]]:
         """Waypoints for r to reach (tlat, tlng) by its travel mode, over
@@ -276,8 +327,18 @@ class Sim:
     def _random_point(self, radius_frac: float = 1.0) -> tuple[float, float]:
         r = self.cfg.zone_radius_m * radius_frac * (self.rng.random() ** 0.5)
         ang = self.rng.uniform(0, 6.28318)
-        return geo.offset_m(self.cfg.zone_lat, self.cfg.zone_lng,
-                            r * math.cos(ang), r * math.sin(ang))
+        lat, lng = geo.offset_m(self.cfg.zone_lat, self.cfg.zone_lng,
+                                r * math.cos(ang), r * math.sin(ang))
+        # Keep random spots near the street network. A point deep inside a
+        # courtyard, park, or the rail yard forces a long straight approach
+        # leg on every trip that touches it — riders visibly "fly" off-road.
+        # Within 40 m of a road is believable (someone under a flyover isn't
+        # standing ON the carriageway); beyond that, pull to the road edge.
+        if self.graph is not None:
+            snap = self.graph._snap(lat, lng, routing.SPEEDS_KMH["walk"])
+            if snap is not None and snap.approach_m > 40:
+                return snap.lat, snap.lng
+        return lat, lng
 
     # ---------------------------------------------------------- scenarios --
     def run_scenario(self, name: str) -> str:
@@ -308,7 +369,8 @@ class Sim:
         # Idle + non-manual only: hijacking a rider mid-job would strand
         # whatever they were doing (an onsite order has no other closer).
         med = next((r for r in self._resp.values()
-                    if r["medical"] and r["state"] == "idle" and r["id"] not in self.manual),
+                    if r["medical"] and r["state"] == "idle" and r.get("on_duty", True)
+                    and r["id"] not in self.manual),
                    None)
         if med is None:
             return "no idle medical responder — try again in a moment"
@@ -422,7 +484,8 @@ class Sim:
                 continue
             idle = [(geo.haversine_m(case["lat"], case["lng"], r["lat"], r["lng"]), r["id"])
                     for r in self._resp.values()
-                    if r["state"] == "idle" and r["id"] not in used and r["id"] not in self.manual]
+                    if r["state"] == "idle" and r.get("on_duty", True)
+                    and r["id"] not in used and r["id"] not in self.manual]
             if not idle:
                 return
             idle.sort()
@@ -450,6 +513,8 @@ class Sim:
                     r["route"], r["route_idx"], r["steps"] = None, 0, None
                     r["depot_id"], r["depot_name"] = None, None
                     r["pickup_idx"], r["picked_up"] = None, True
+                    if not r.get("on_duty", True):
+                        self.svc.positions.pop(r["id"], None)
             else:
                 # 'onsite' included so a restart (or any external hiccup)
                 # never strands a live order forever.
@@ -494,10 +559,10 @@ class Sim:
                     # Loaded dice, real pipeline — but never hijack a live
                     # job; a decline degrades to needs_coordinator, which
                     # the coordinator rail already handles.
-                    accepted = r["state"] == "idle"
+                    accepted = r["state"] == "idle" and r.get("on_duty", True)
                 else:
                     p = r["accept_p"] * (1.25 if a["priority"] == "P1" else 1.0)
-                    busy = r["state"] != "idle"
+                    busy = r["state"] != "idle" or not r.get("on_duty", True)
                     accepted = (not busy) and self.rng.random() < min(0.95, p)
                 if self.svc.dispatch.respond(a["id"], accepted) and accepted:
                     self._on_accept(r, a["order_id"])
@@ -563,8 +628,14 @@ class Sim:
         never a straight beeline through whatever's between here and there."""
         route = r.get("route")
         if not route:
-            r["lat"], r["lng"] = geo.step_towards(r["lat"], r["lng"], *r["target"], dist_m)
-            return
+            # A mover without a polyline re-routes over the graph instead of
+            # beelining through buildings; the straight step survives only as
+            # the absolute last resort (no graph, no mesh — never in practice).
+            r["route"], r["route_idx"] = self._route_to(r, *r["target"]), 1
+            route = r.get("route")
+            if not route:
+                r["lat"], r["lng"] = geo.step_towards(r["lat"], r["lng"], *r["target"], dist_m)
+                return
         remaining = dist_m
         while remaining > 0 and r["route_idx"] < len(route):
             nxt = route[r["route_idx"]]
@@ -606,6 +677,8 @@ class Sim:
 
     def _responders_move(self, dt: float) -> None:
         for r in self._resp.values():
+            if not r.get("on_duty", True) and r["state"] == "idle":
+                continue                     # off duty and free: not on the map
             self._check_overdue(r)
             if r["state"] == "enroute" and r["target"]:
                 self._advance_route(r, r["speed"] * dt)
@@ -620,12 +693,17 @@ class Sim:
             elif r["state"] == "onsite":
                 if r["id"] not in self.manual and self.sim_now >= (r["dwell_until"] or 0):
                     self._close_order(r)
-            else:  # idle drift — still road-routed, just slower and ambient
+            elif self.ambient:  # idle drift — road-routed errands, ambient mode only
                 if r["target"] is None or self.rng.random() < 0.005:
                     r["target"] = self._random_point()
                     r["route"], r["route_idx"] = self._route_to(r, *r["target"]), 1
                 self._advance_route(r, r["speed"] * 0.4 * dt)
-            self.svc.positions[r["id"]] = (r["lat"], r["lng"])
+            # calm-mode idle: stand exactly where you are — a rider waits at
+            # their spot until dispatch gives them a reason to move. The
+            # guard keeps a just-closed off-duty rider from being re-added
+            # the same tick _close_order removed them.
+            if r.get("on_duty", True) or r["state"] != "idle":
+                self.svc.positions[r["id"]] = (r["lat"], r["lng"])
 
     def _close_order(self, r: dict) -> None:
         order = self.svc.store.one("SELECT * FROM orders WHERE id=?", (r["order_id"],))
@@ -655,6 +733,8 @@ class Sim:
         r["state"], r["order_id"], r["target"] = "idle", None, None
         r["route"], r["route_idx"], r["steps"] = None, 0, None
         r["depot_id"], r["depot_name"], r["pickup_idx"], r["picked_up"] = None, None, None, True
+        if not r.get("on_duty", True):     # off-duty request honored at close
+            self.svc.positions.pop(r["id"], None)
 
     def settle_kit(self, order_id: str, outcome: str) -> None:
         """Settle an order's kit reservation on close — SHARED by the sim's
@@ -788,7 +868,7 @@ class Sim:
             "lat": r["lat"], "lng": r["lng"], "state": r["state"], "order_id": r["order_id"],
             "manual": r["id"] in self.manual, "route": route_out, "eta_s": eta_s, "dist_m": dist_m,
             "depot": r.get("depot_name"), "picked_up": bool(r.get("picked_up", True)),
-            "steps": steps, "step_i": step_i,
+            "steps": steps, "step_i": step_i, "on_duty": bool(r.get("on_duty", True)),
         }
 
     def _clock_str(self) -> str:

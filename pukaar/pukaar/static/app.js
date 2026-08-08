@@ -303,6 +303,14 @@ function syncMap() {
 
   const trailFeatures = [];
   for (const r of state.sim.responders) {
+    // Off-duty riders aren't on the streets — no pin, no trail. (They still
+    // appear in the roster panel and the rider app's identity picker.)
+    if (r.on_duty === false) {
+      const gone = respMarkers.get(r.id);
+      if (gone) { gone.remove(); respMarkers.delete(r.id); }
+      respTrails.delete(r.id);
+      continue;
+    }
     const key = `${r.state}|${r.eta_s == null ? "" : fmtDur(r.eta_s)}`;
     if (!respMarkers.has(r.id)) {
       const m = domMarker(respHtml(r), [r.lng, r.lat], "500");

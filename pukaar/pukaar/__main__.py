@@ -12,6 +12,12 @@ from .config import Config
 
 def main() -> None:
     cfg = Config()
+    # Calm boot is the default for a live pitch: an empty board that fills
+    # only when a rider goes on duty and a witness files a report. The
+    # busy ambient showcase stays behind PUKAAR_SEED_DEMO=1 (which needs
+    # riders working the seeded backlog) or PUKAAR_SIM_AMBIENT=1.
+    cfg.sim_ambient = bool(os.environ.get("PUKAAR_SEED_DEMO")
+                           or os.environ.get("PUKAAR_SIM_AMBIENT"))
     host = os.environ.get("PUKAAR_HOST", "127.0.0.1")
     port = int(os.environ.get("PUKAAR_PORT", "8877"))
     # Refuse a non-local bind without a persistent provenance key — hosting
