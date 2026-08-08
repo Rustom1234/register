@@ -183,6 +183,8 @@ class DispatchEngine:
             return False
         if not accepted:
             self.store.update("assignments", assignment_id, {"responded_at": now, "response": "declined"})
+            self.emit("offer_declined", {"order_id": a["order_id"],
+                                         "responder_id": a["responder_id"]})
             return True
         # Deactivation must also void offers already in flight: an offer can
         # sit open for offer_ttl_s, and "stops NEW offers" alone would let a

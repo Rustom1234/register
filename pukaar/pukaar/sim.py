@@ -383,6 +383,16 @@ class Sim:
                     if r["medical"] and r["state"] == "idle" and r.get("on_duty", True)
                     and r["id"] not in self.manual),
                    None)
+        if med is None and not self.ambient:
+            # Calm board: the golden button must be self-sufficient — bring a
+            # sim-driven medical rider on shift (roster path, not a manual
+            # takeover) rather than dead-clicking. The feed shows the join.
+            bench = next((r for r in self._resp.values()
+                          if r["medical"] and r["state"] == "idle"
+                          and r["id"] not in self.manual), None)
+            if bench is not None:
+                self.set_duty(bench["id"], True)
+                med = bench
         if med is None:
             return "no idle medical responder — try again in a moment"
         # Stage the pin CLEAR of every open case's dedup cell: if the report
@@ -485,8 +495,7 @@ class Sim:
         the hold (api sim_ctl) instead of being clobbered on arrival."""
         if self.ambient:
             return
-        travelling = any(r["state"] == "enroute" and r["id"] in self.manual
-                         for r in self._resp.values())
+        travelling = any(r["state"] == "enroute" for r in self._resp.values())
         if travelling and self._pace_hold is None and self.speed < 24:
             self._pace_hold = self.speed
             self.speed = 24.0
@@ -879,6 +888,7 @@ class Sim:
             "sim_now": self.sim_now,
             "clock": self._clock_str(),
             "speed": self.speed,
+            "pacing": self._pace_hold is not None,
             "running": self.running,
             "is_night": not self.svc.dispatch.in_dispatch_window(self.sim_now),
             "golden": list(self.golden.keys()),

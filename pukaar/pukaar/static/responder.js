@@ -176,6 +176,8 @@ function offerCard(a, order, c) {
   const ttl = (state.config && state.config.offer_ttl_s) || 180;
   const left = Math.max(0, a.offered_at + ttl - state.sim.sim_now);
   const kit = (state.kit_skus[order.sku] || {}).name || order.sku;
+  const wallLeft = Math.max(1, Math.round(left / ((state.sim && state.sim.speed) || 1)));
+  const leftTxt = wallLeft < 95 ? `${wallLeft} s left` : `${Math.ceil(wallLeft / 60)} min left`;
   return `<div class="card offer ${order.priority === "P1" ? "p1" : ""}" data-aid="${a.id}">
     <div class="row1">
       <span class="pill ${order.priority === "P1" ? "p1" : "p2"}">${order.priority}</span>
@@ -185,7 +187,7 @@ function offerCard(a, order, c) {
       <span>wave ${order.wave || 1}</span>${order.clinical_flag ? "<span>🩺 clinical flag</span>" : ""}</div>
     <div class="ttl" aria-label="time left to accept"><i style="width:${(left / ttl) * 100}%"></i></div>
     <div class="btnrow">
-      <button class="big" data-acc="${a.id}">ACCEPT · <span lang="hi">लो</span><span class="hn">${Math.ceil(left / 60)} min left</span></button>
+      <button class="big" data-acc="${a.id}">ACCEPT · <span lang="hi">लो</span><span class="hn">${leftTxt}</span></button>
       <button class="big decline" data-dec="${a.id}">Pass<span class="hn" lang="hi">छोड़ें</span></button>
     </div>
   </div>`;
@@ -209,7 +211,7 @@ function renderOffers(offers) {
       // only refresh the countdown sub-label — textContent would wipe the
       // Hindi span baked into the button
       const accHn = acc && acc.querySelector(".hn");
-      if (acc && !acc.disabled && accHn) accHn.textContent = `${Math.ceil(left / 60)} min left`;
+      if (acc && !acc.disabled && accHn) accHn.textContent = `${leftTxt}`;
     }
     return;
   }
@@ -232,6 +234,7 @@ function renderOffers(offers) {
       b.disabled = true;
       const res = await api("/api/responder", { action: "decline", assignment_id: b.dataset.dec });
       if (res.offline) { b.disabled = false; toast("⚠ no signal — try again"); }
+      else toast("Passed — the offer moves on · अगले को जाएगा");
     }));
   show("scr-offers");
 }

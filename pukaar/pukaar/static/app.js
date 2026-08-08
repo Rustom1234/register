@@ -515,6 +515,9 @@ function feedLine(e) {
       html = `📦 <b>${e.name ? escapeHtml(e.name) : respName(e.responder_id)}</b> collected the kit at ${escapeHtml(e.depot || "the depot")}`; cls = "good"; break;
     case "kit_return":
       html = `📦 unused ${escapeHtml(e.sku || "")} returned to ${escapeHtml(e.depot || "the depot")}`; break;
+    case "offer_declined":
+      html = `↩️ <b>${respName(e.responder_id)}</b> passed on ${short(e.order_id)} — next in wave`; cls = "warn";
+      break;
     case "pace":
       html = e.on ? "⏩ time compressed while the rider travels" : "⏱ back to normal speed";
       break;
@@ -836,10 +839,13 @@ function renderCoord() {
         <span class="act"><button class="req-pin" data-case="${o.case_id}">request pin</button></span></div>`;
     }
     const sug = nearestIdle(c);
-    const opts = state.sim.responders.map((r) => {
+    // Off-duty riders can't take an assignment (dispatch requires active=1)
+    // — offering them is a guaranteed dead click.
+    const onDuty = state.sim.responders.filter((r) => r.on_duty !== false);
+    const opts = (onDuty.length ? onDuty : []).map((r) => {
       const isSug = sug && r.id === sug.id;
       return `<option value="${r.id}" ${isSug ? "selected" : ""}>${escapeHtml(r.name)}${isSug ? ` · ${sug.m}m ★` : ""}</option>`;
-    }).join("");
+    }).join("") || '<option value="">no one on duty</option>';
     return `<div class="fi warn"><span class="t">${o.sku}</span>
       <span><b>${o.id.slice(-4).toUpperCase()}</b> ${escapeHtml((c.detail || "").slice(0, 30))}</span>
       <span class="act"><select data-order="${o.id}">${opts}</select>
@@ -848,10 +854,12 @@ function renderCoord() {
   document.querySelectorAll("#coord-body [data-assign]").forEach((b) =>
     b.addEventListener("click", async () => {
       const sel = document.querySelector(`#coord-body select[data-order="${b.dataset.assign}"]`);
-      await fetch("/api/responder", {
+      if (!sel.value) { flashRespToast("no one is on duty to assign"); return; }
+      const res = await (await fetch("/api/responder", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "assign", order_id: b.dataset.assign, responder_id: sel.value }),
-      });
+      })).json().catch(() => ({ ok: false }));
+      flashRespToast(res.ok ? "assigned ✓" : "assign failed — rider unavailable");
       refresh();
     }));
   document.querySelectorAll("#coord-body .req-pin").forEach((b) =>
@@ -1025,6 +1033,7 @@ function wirePhone() {
       const res = await (await fetch(`/api/scenario/${b.dataset.sc}`, { method: "POST" })).json();
       if (b.dataset.sc === "golden_run") { followGolden = true; updateFollowBtn(); }
       if (res.phone) activeConv = res.phone;   // watch the story play, live
+      else if (typeof res.result === "string") flashRespToast(res.result);
       refresh();
     }));
 }
@@ -1069,7 +1078,10 @@ function wire() {
   document.getElementById("speed").addEventListener("change", async (e) => {
     await fetch("/api/sim", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "speed", value: +e.target.value }) });
   });
-  document.getElementById("btn-purge").addEventListener("click", async () => { await fetch("/api/purge", { method: "POST" }); refresh(); });
+  document.getElementById("btn-purge").addEventListener("click", async () => {
+    if (!confirm("Run the retention purge now? Media past TTL is deleted permanently.")) return;
+    await fetch("/api/purge", { method: "POST" }); refresh();
+  });
   document.getElementById("detail-close").addEventListener("click", () => {
     selectedCase = null; renderDetail();
     history.replaceState(null, "", location.pathname);
@@ -1146,7 +1158,7 @@ async function refresh() {
     }
   }
   document.getElementById("clock").textContent =
-    `${state.sim.is_night ? "🌙 " : ""}${state.sim.clock} · ${state.sim.speed}×`;
+    `${state.sim.is_night ? "🌙 " : ""}${state.sim.clock} · ${state.sim.speed}×${state.sim.pacing ? " ⏩" : ""}`;
   document.getElementById("btn-pause").textContent = state.sim.running ? "⏸" : "▶";
   const speedSel = document.getElementById("speed");
   if ([...speedSel.options].some((o) => +o.value === state.sim.speed)) speedSel.value = String(state.sim.speed);
@@ -1157,7 +1169,7 @@ async function refresh() {
       (state.script === "auto" ? " (mirrors the witness)" : "") + " — click to cycle";
   }
   const badge = document.getElementById("backend-badge");
-  badge.textContent = state.backend === "claude" ? "CLAUDE LIVE" : "MOCK AGENT";
+  badge.textContent = state.backend === "claude" ? "CLAUDE LIVE" : "SIM AGENT · demo";
   badge.classList.toggle("live", state.backend === "claude");
   document.getElementById("foot-backend").textContent = state.backend;
   document.getElementById("prov-note").textContent =

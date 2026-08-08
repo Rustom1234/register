@@ -715,3 +715,28 @@ Judge P2 reconciliation:
 220 tests green. Cache 20260805d. Investor critic still running; NGO r3
 queue (consent offers, release-and-rewave, night strip, stock adjust,
 road ranking, STOP honesty) next.
+
+## Overnight round 4 — 2026-08-05 (investor P0/P1 wave: silent failures speak)
+
+Fifth critic (YC-partner product skeptic) reported. Verified + fixed:
+- **P0 golden-run dead click**: on a calm board the golden button now
+  brings a sim medical rider on shift itself (roster path, feed shows the
+  join) — verified live: "golden run staged for Meena", case + offer on a
+  cold board. Scenario buttons also toast the sim's own result string
+  instead of discarding it.
+- Auto-pace covers every accept path in calm mode (any enroute rider, not
+  only manual ones) and the header clock shows a ⏩ pill while pacing.
+- Coordinator assign: dropdown offers only on-duty riders ("no one on
+  duty" otherwise), failures toast instead of dying silently.
+- Declines are visible: feed line "passed on … — next in wave", phone
+  toast "Passed — the offer moves on".
+- Offer countdown speaks wall-clock ("45 s left"), not sim-minutes.
+- MOCK AGENT badge → "SIM AGENT · demo"; retention purge asks before
+  irreversibly deleting media.
+- Investor's "refresh wipes chats" did NOT reproduce on the current
+  build (state serves last-30 logs for last-6 threads; verified live).
+
+220 tests green. Cache 20260805e. Remaining queue → r5: NGO consent
+offers + release-and-rewave + night strip + stock adjust + road-distance
+ranking + STOP honesty; investor P2s (offer-card story line, arrived-
+from-afar flag, ID vocabulary, pause chip); mobile P2 tap targets.
