@@ -72,8 +72,10 @@ def test_stopped_witness_gets_no_progress(svc, clock):
     _seed_responder(svc, *geo.offset_m(*base, 150, 0))
     _file_report(svc, "+91-P4", "aadmi ghayal hai", *base)
     svc.wa_inbound("+91-P4", "text", text="STOP")
-    before = len(svc.conversations["+91-P4"].log)
+    # STOP now deletes the thread outright — the strongest form of
+    # "no further messages": there is nothing left to write into.
+    assert "+91-P4" not in svc.conversations
     svc.dispatch.tick()
     a = svc.store.one("SELECT * FROM assignments WHERE responded_at IS NULL")
     svc.dispatch.respond(a["id"], True)
-    assert len(svc.conversations["+91-P4"].log) == before
+    assert "+91-P4" not in svc.conversations

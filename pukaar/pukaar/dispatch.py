@@ -27,6 +27,7 @@ class DispatchEngine:
         self.now = now_fn
         self.positions = positions_fn      # live responder positions from the sim
         self.emit = on_event               # feed events for the UI / audit trail
+        self.kit_settler = None            # wired by the service (sim.settle_kit)
 
     # ------------------------------------------------------------- create
     def create_order(self, case: dict, order: dict, mac: str) -> dict:
@@ -207,6 +208,35 @@ class DispatchEngine:
             self.store.update("assignments", other["id"], {"responded_at": now, "response": "released"})
         self.emit("order_accepted", {"order_id": order["id"], "responder_id": a["responder_id"],
                                      "wave": order["wave"], "accept_s": now - a["offered_at"]})
+        return True
+
+    def release(self, order_id: str, reason: str = "coordinator release") -> bool:
+        """Coordinator unstick for a job that will never finish (rider's
+        phone died, scooter broke): put an accepted/onsite order back into
+        the wave cycle with an audit row — the honest alternative to
+        closing it with a false outcome. The kit reservation returns to the
+        shelf via the settler; a fresh wave re-reserves on the next accept."""
+        order = self.store.one("SELECT * FROM orders WHERE id=?", (order_id,))
+        if not order or order["status"] not in ("accepted", "onsite"):
+            return False
+        now = self.now()
+        if self.kit_settler:
+            self.kit_settler(order_id, "not_found")   # returns the reserved kit
+        self.store.update("orders", order_id, {
+            "status": "queued", "responder_id": None, "accepted_at": None,
+            "arrived_at": None})
+        # Reset the slate for the fresh wave: riders who lost the original
+        # race ('released') or held the job ('accepted') become offerable
+        # again — same re-eligibility semantics as a night timeout. Actual
+        # declines stay declined; they said no to this case.
+        self.store.execute(
+            "UPDATE assignments SET response='timeout_night' "
+            "WHERE order_id=? AND response IN ('released', 'accepted')", (order_id,))
+        self.store.audit("dispatch", "released_rewave", order_id, "human_coordinator",
+                         "", reason, ts=now)
+        self.emit("order_released", {"order_id": order_id,
+                                     "responder_id": order["responder_id"],
+                                     "reason": reason})
         return True
 
     def arrived(self, order_id: str, dist_m: float | None = None) -> None:

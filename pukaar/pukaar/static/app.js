@@ -518,6 +518,9 @@ function feedLine(e) {
       html = `📦 <b>${e.name ? escapeHtml(e.name) : respName(e.responder_id)}</b> collected the kit at ${escapeHtml(e.depot || "the depot")}`; cls = "good"; break;
     case "kit_return":
       html = `📦 unused ${escapeHtml(e.sku || "")} returned to ${escapeHtml(e.depot || "the depot")}`; break;
+    case "order_released":
+      html = `↩ coordinator released ${short(e.order_id)} from <b>${respName(e.responder_id)}</b> — re-waving`; cls = "warn";
+      break;
     case "offer_declined":
       html = `↩️ <b>${respName(e.responder_id)}</b> passed on ${short(e.order_id)} — next in wave`; cls = "warn";
       break;
@@ -673,7 +676,22 @@ function renderDetail() {
   const tfmt = (t) => t == null ? "…" : `${String(Math.floor((t % 86400) / 3600)).padStart(2, "0")}:${String(Math.floor((t % 3600) / 60)).padStart(2, "0")}`;
   const tl = `<div class="timeline">` + steps.map((s) =>
     `<div class="tl ${s.done ? "done" : ""}"><div class="tl-t">${tfmt(s.t)}</div>${s.txt}</div>`).join("") + `</div>`;
-  document.getElementById("detail-body").innerHTML = kv + tl;
+  // Honest unstick for a job that will never finish (dead phone, broken
+  // scooter): back to the wave cycle with an audit row — never a fake
+  // outcome. Confirmation guards the misclick.
+  const rel = order && ["accepted", "onsite"].includes(order.status)
+    ? `<button class="ghost rel-order" data-rel="${order.id}" style="margin-top:8px">↩ release & re-wave (rider can't finish)</button>` : "";
+  document.getElementById("detail-body").innerHTML = kv + tl + rel;
+  const rb = document.querySelector("#detail-body [data-rel]");
+  if (rb) rb.addEventListener("click", async () => {
+    if (!confirm("Release this job back to dispatch? The rider stands down and a fresh wave goes out.")) return;
+    const res = await (await fetch("/api/responder", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "release", order_id: rb.dataset.rel }),
+    })).json().catch(() => ({ ok: false }));
+    flashRespToast(res.ok ? "released — re-waving ✓" : "release failed");
+    refresh();
+  });
 }
 
 // ------------------------------------------------------- responder phone --
@@ -1163,6 +1181,21 @@ async function refresh() {
   document.getElementById("clock").textContent =
     `${state.sim.is_night ? "🌙 " : ""}${state.sim.clock} · ${state.sim.speed}×${state.sim.pacing ? " ⏩" : ""}`;
   document.getElementById("btn-pause").textContent = state.sim.running ? "⏸" : "▶";
+  // Night hold visibility: queued orders outside the dispatch window are
+  // a real backlog a human should see, not a silent parking lot.
+  let nchip = document.getElementById("night-chip");
+  if (!nchip) {
+    nchip = document.createElement("div");
+    nchip.id = "night-chip";
+    document.getElementById("center").appendChild(nchip);
+  }
+  const heldQ = (state.orders || []).filter((o) => o.status === "queued");
+  if (state.sim.is_night && heldQ.length) {
+    const oldest = Math.min(...heldQ.map((o) => o.created_at));
+    const hrs = Math.max(0, (state.sim.sim_now - oldest) / 3600);
+    nchip.textContent = `🌙 held for morning: ${heldQ.length} (oldest ${hrs.toFixed(1)} h)`;
+    nchip.hidden = false;
+  } else nchip.hidden = true;
   let pchip = document.getElementById("paused-chip");
   if (!pchip) {
     pchip = document.createElement("div");

@@ -151,6 +151,7 @@ class Sim:
         # Every close path must settle the kit ledger; the witness-recheck
         # cancel lives in service.py, which can't import sim — hook it here.
         svc.kit_settler = self.settle_kit
+        svc.dispatch.kit_settler = self.settle_kit
         self._seed_world()
 
     # -------------------------------------------------------------- setup --
@@ -544,7 +545,10 @@ class Sim:
         for r in self._resp.values():
             if r["order_id"]:
                 order = self.svc.store.one("SELECT * FROM orders WHERE id=?", (r["order_id"],))
-                if not order or order["status"] in ("closed", "escalated"):
+                # "not accepted/onsite" covers closes AND coordinator
+                # release-and-rewave (status back to queued): the released
+                # rider stands down instead of driving a job they lost.
+                if not order or order["status"] not in ("accepted", "onsite"):
                     # Safety rail: every settling close path pops the
                     # reservation itself — one still present here means the
                     # order was closed externally without settling, i.e. the

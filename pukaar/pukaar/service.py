@@ -61,6 +61,11 @@ class PukaarService:
         self.feed: deque[dict] = deque(maxlen=250)
         self.positions: dict[str, tuple[float, float]] = {}
         self._msg_times: dict[str, deque] = {}   # phone -> recent inbound ts
+        # Hashed STOP suppression: the conversation row is DELETED on STOP
+        # (S-STOP says the number is removed, so it is); this set keeps the
+        # promise's other half — stray button/location taps stay silent,
+        # only a fresh TEXT re-opens the line. Hashes only, never numbers.
+        self._stopped_hashes: set[str] = set()
         self.dispatch = DispatchEngine(store, cfg, now_fn, lambda: self.positions, self.emit)
         self.push = PushService(store)
         self._load_conversations()
@@ -129,6 +134,11 @@ class PukaarService:
                    photo_hint: str | None = None,
                    media_ref: str | None = None) -> list[BotMsg]:
         phone_hash = hashlib.sha256(f"pukaar:{phone}".encode()).hexdigest()[:12]
+        if phone_hash in self._stopped_hashes:
+            if kind == "text" and (text or "").strip():
+                self._stopped_hashes.discard(phone_hash)   # fresh text re-opens
+            else:
+                return []          # opted out: stray taps get silence, not replies
         conv = self.conversations.setdefault(phone, Conversation(phone_hash=phone_hash))
 
         # Abuse guard: a per-witness message budget. Emergencies bypass it —
@@ -226,6 +236,17 @@ class PukaarService:
 
         for r in replies:
             conv.remember("bot", "text", r.text, r.buttons, ts=self.now())
+        # STOP means what S-STOP says: the number is removed. Delete the
+        # conversation row and the in-memory thread, keep only a hashed
+        # suppression entry in the audit log. A fresh text starts a fresh
+        # thread — exactly the re-open behaviour the string promises.
+        if any(r.string_id == "S-STOP" for r in replies):
+            self.store.audit("intake", "witness_stop", conv.phone_hash, "system",
+                             "", "conversation deleted at witness request", ts=self.now())
+            self.store.execute("DELETE FROM conversations WHERE phone=?", (phone,))
+            self.conversations.pop(phone, None)
+            self._stopped_hashes.add(phone_hash)
+            return replies
         self._save_conversation(phone, conv)
         return replies
 

@@ -419,6 +419,9 @@ def build_app(cfg: Config | None = None) -> FastAPI:
                     dist_m = round(geo.haversine_m(pos[0], pos[1], case["lat"], case["lng"]))
             svc.dispatch.arrived(act.order_id, dist_m=dist_m)
             return {"ok": True}
+        if act.action == "release" and act.order_id:
+            # Coordinator unstick: back into the wave cycle, honestly.
+            return {"ok": svc.dispatch.release(act.order_id)}
         if act.action == "assign" and act.order_id and act.responder_id:
             return {"ok": svc.dispatch.manual_assign(act.order_id, act.responder_id)}
         if act.action == "sos" and act.responder_id:

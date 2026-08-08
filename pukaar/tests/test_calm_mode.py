@@ -133,3 +133,42 @@ def test_ambient_manual_release_does_not_bench():
     # releasing the takeover hands back to the sim; the rider stays on shift
     assert sim._resp["resp_1"]["on_duty"] is True
     assert "resp_1" in svc.positions
+
+
+def test_release_and_rewave_unsticks_an_accepted_order(svc, clock):
+    """NGO-ops: the honest unstick — a job the rider can never finish goes
+    back to the wave cycle with an audit row, never a false outcome."""
+    svc.store.insert("responders", {
+        "id": "resp_a", "partner_id": "partner_1", "display_name": "A",
+        "medical": 1, "vetting": "verified", "active": 1})
+    svc.positions["resp_a"] = (28.5933, 77.2507)
+    svc.store.insert("responders", {
+        "id": "resp_b", "partner_id": "partner_1", "display_name": "B",
+        "medical": 1, "vetting": "verified", "active": 1})
+    svc.positions["resp_b"] = (28.5940, 77.2510)
+    svc.wa_inbound("+915555", "text", "aadmi ghayal hai patti chahiye")
+    svc.wa_inbound("+915555", "location", lat=28.5933, lng=77.2507)
+    svc.wa_inbound("+915555", "button", "fresh:10")
+    clock.advance(5); svc.dispatch.tick()
+    a = svc.store.one("SELECT * FROM assignments WHERE responder_id='resp_a' AND responded_at IS NULL")
+    assert svc.dispatch.respond(a["id"], True)
+    order = svc.store.one("SELECT * FROM orders")
+    assert order["status"] == "accepted"
+    assert svc.dispatch.release(order["id"], "phone died")
+    order = svc.store.one("SELECT * FROM orders")
+    assert order["status"] == "queued" and order["responder_id"] is None
+    assert svc.store.query("SELECT * FROM audit_log WHERE action='released_rewave'")
+    clock.advance(5); svc.dispatch.tick()   # fresh wave goes out
+    asgs = svc.store.query("SELECT * FROM assignments WHERE responded_at IS NULL")
+    assert asgs, "release did not re-wave"
+
+
+def test_stop_deletes_conversation_and_keeps_hashed_audit(svc, clock):
+    svc.wa_inbound("+916666", "text", "aadmi ghayal hai")
+    out = svc.wa_inbound("+916666", "text", "STOP")
+    assert [m.string_id for m in out] == ["S-STOP"]
+    assert svc.store.one("SELECT * FROM conversations WHERE phone='+916666'") is None
+    assert "+916666" not in svc.conversations
+    rows = svc.store.query("SELECT * FROM audit_log WHERE action='witness_stop'")
+    assert rows and "+916666" not in str(rows)   # hashed, never the number
+    assert svc.wa_inbound("+916666", "text", "wahan phir koi hai")  # re-opens

@@ -761,3 +761,24 @@ answered a probe) — re-verified clean on 8879; future rounds kill old
 servers first. Remaining big queue → r6: NGO wave-2 (consent offers,
 release-and-rewave, night strip, stock adjust, road ranking, STOP
 honesty) + investor offer-card story line + ID vocabulary.
+
+## Overnight round 6 — 2026-08-05 (NGO wave-2: coordinator rails)
+
+- **Release-and-rewave**: accepted/onsite orders can be released back to
+  the wave cycle from the case detail ("rider can't finish") — kit
+  reservation returns to the shelf, the released rider stands down, the
+  race-losers of the original wave become offerable again, an audit row
+  (released_rewave) records it, and the feed narrates. The honest
+  alternative to closing a stuck job with a false outcome.
+- **Night-hold visibility**: a 🌙 "held for morning: N (oldest Xh)" chip
+  over the map whenever queued orders are parked outside the dispatch
+  window.
+- **STOP means deleted**: S-STOP now deletes the conversation row and
+  memory outright, leaves a hashed witness_stop audit entry, and a
+  suppression set keeps stray post-STOP button taps silent while a fresh
+  text re-opens the line — every promise in the string is now literally
+  true. Old tests updated to the new contract.
+
+222 tests green (2 new). Cache 20260805g. Remaining queue → r7: consent
+offers for manual_assign, stock-adjust endpoint + UI, road-distance
+candidate ranking, offer-card case story line, ID vocabulary.
