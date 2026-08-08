@@ -470,3 +470,15 @@ button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible
 /* saved-but-unsent witness reports (offline outbox) — honest, dimmed */
 .bubble.pending { opacity: 0.75; border: 1px dashed var(--line); }
 .bubble.pending .b-meta { color: var(--warn); }
+
+/* phone ergonomics: 44px touch minimums, iOS focus-zoom guard */
+@media (max-width: 620px) {
+  .scenarios button, .photo-menu button, .quick button { min-height: 44px; }
+  .phone-input input { font-size: 16px; }   /* <16px triggers iOS zoom-on-focus */
+  .rost-tog { padding: 10px 14px; }
+}
+
+#paused-chip { position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  z-index: 30; background: var(--surface-3); border: 1px solid var(--warn);
+  color: var(--warn); border-radius: 999px; padding: 7px 16px; font-size: 13px;
+  font-weight: 600; box-shadow: var(--shadow-2); }

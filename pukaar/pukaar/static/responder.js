@@ -110,6 +110,11 @@ function toast(txt) {
 /* ------------------------------------------------------------ screens -- */
 
 function renderPick() {
+  // Offline shell boot: an empty select renders as a broken white box —
+  // say why it's empty instead.
+  if (!pickFilled && !$("pick").options.length) {
+    $("pick").innerHTML = '<option value="" disabled selected>no signal — connect once to load names</option>';
+  }
   if (!pickFilled && state.sim.responders.length) {
     $("pick").innerHTML = state.sim.responders
       .map((r) => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.name)}${r.medical ? " · medical-trained" : ""}</option>`)

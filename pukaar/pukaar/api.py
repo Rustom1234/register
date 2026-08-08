@@ -405,8 +405,19 @@ def build_app(cfg: Config | None = None) -> FastAPI:
                     sim._pending_escalations[act.order_id] = sim.sim_now + 900
             return {"ok": bool(closed)}
         if act.action == "arrived" and act.order_id:
-            # geolocation-free fallback: the responder taps "I've arrived"
-            svc.dispatch.arrived(act.order_id)
+            # Geolocation-free fallback: the responder taps "I've arrived".
+            # Attach the sim-tracked distance to the pin so a tap from 1.4 km
+            # out reads as what it is in the feed and audit, not as arrival.
+            dist_m = None
+            order = svc.store.one("SELECT * FROM orders WHERE id=?", (act.order_id,))
+            case = svc.store.one("SELECT * FROM cases WHERE id=?",
+                                 (order["case_id"],)) if order else None
+            if order and case and case["lat"] is not None:
+                pos = svc.positions.get(order["responder_id"])
+                if pos:
+                    from . import geo
+                    dist_m = round(geo.haversine_m(pos[0], pos[1], case["lat"], case["lng"]))
+            svc.dispatch.arrived(act.order_id, dist_m=dist_m)
             return {"ok": True}
         if act.action == "assign" and act.order_id and act.responder_id:
             return {"ok": svc.dispatch.manual_assign(act.order_id, act.responder_id)}

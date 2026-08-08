@@ -484,7 +484,10 @@ function feedLine(e) {
       html = `✅ <b>${respName(e.responder_id)}</b> accepted ${short(e.order_id)} (wave ${e.wave}, ${fmtDur(e.accept_s)})`;
       cls = "good"; break;
     case "responder_arrived":
-      html = `📍 <b>${respName(e.responder_id)}</b> reached the spot`; break;
+      html = e.far_m
+        ? `📍 <b>${respName(e.responder_id)}</b> tapped "arrived" — ${(e.far_m / 1000).toFixed(1)} km from the pin`
+        : `📍 <b>${respName(e.responder_id)}</b> reached the spot`;
+      cls = e.far_m ? "warn" : cls; break;
     case "outcome": {
       const [ic, txt, c] = OUTCOME_TXT[e.outcome] || ["·", e.outcome, ""];
       html = `${ic} <b>${short(e.case_id)}</b> ${txt}`; cls = c; break;
@@ -1160,6 +1163,14 @@ async function refresh() {
   document.getElementById("clock").textContent =
     `${state.sim.is_night ? "🌙 " : ""}${state.sim.clock} · ${state.sim.speed}×${state.sim.pacing ? " ⏩" : ""}`;
   document.getElementById("btn-pause").textContent = state.sim.running ? "⏸" : "▶";
+  let pchip = document.getElementById("paused-chip");
+  if (!pchip) {
+    pchip = document.createElement("div");
+    pchip.id = "paused-chip";
+    pchip.textContent = "⏸ PAUSED — press ▶ to resume";
+    document.getElementById("center").appendChild(pchip);
+  }
+  pchip.hidden = !!state.sim.running;
   const speedSel = document.getElementById("speed");
   if ([...speedSel.options].some((o) => +o.value === state.sim.speed)) speedSel.value = String(state.sim.speed);
   const scriptBtn = document.getElementById("btn-script");

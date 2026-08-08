@@ -740,3 +740,24 @@ Fifth critic (YC-partner product skeptic) reported. Verified + fixed:
 offers + release-and-rewave + night strip + stock adjust + road-distance
 ranking + STOP honesty; investor P2s (offer-card story line, arrived-
 from-afar flag, ID vocabulary, pause chip); mobile P2 tap targets.
+
+## Overnight round 5 — 2026-08-05 (investor + mobile P2 polish)
+
+- Far-arrival honesty: a manual "I've arrived" tap now carries the
+  rider's real distance to the pin; beyond 300 m the feed line ambers
+  ("tapped arrived — 1.4 km from the pin") and an arrived_far audit row
+  is written (mechanism verified: far_m=1400 + audit row).
+- PAUSED chip over the map — a stray pause click no longer silently
+  freezes the "live" board.
+- 44 px touch minimums for scenario/photo/quick-reply buttons on phones;
+  witness input at 16 px (kills iOS zoom-on-focus); supervisor roster
+  duty toggles padded; wmap-hint moved top-left off the attribution;
+  responder offline identity picker explains itself instead of rendering
+  an empty white box.
+
+220 tests green. Cache 20260805f. Note: stacked heartbeats from earlier
+rounds caused a port-8877 collision during verification (stale server
+answered a probe) — re-verified clean on 8879; future rounds kill old
+servers first. Remaining big queue → r6: NGO wave-2 (consent offers,
+release-and-rewave, night strip, stock adjust, road ranking, STOP
+honesty) + investor offer-card story line + ID vocabulary.

@@ -209,11 +209,16 @@ class DispatchEngine:
                                      "wave": order["wave"], "accept_s": now - a["offered_at"]})
         return True
 
-    def arrived(self, order_id: str) -> None:
+    def arrived(self, order_id: str, dist_m: float | None = None) -> None:
         order = self.store.one("SELECT * FROM orders WHERE id=?", (order_id,))
         if order and order["status"] == "accepted":
             self.store.update("orders", order_id, {"status": "onsite", "arrived_at": self.now()})
-            self.emit("responder_arrived", {"order_id": order_id, "responder_id": order["responder_id"]})
+            ev = {"order_id": order_id, "responder_id": order["responder_id"]}
+            if dist_m is not None and dist_m > 300:
+                ev["far_m"] = dist_m
+                self.store.audit("dispatch", "arrived_far", order_id, "responder_observed",
+                                 "", f"manual arrival {dist_m} m from pin", ts=self.now())
+            self.emit("responder_arrived", ev)
 
     def close(self, order_id: str, outcome: str) -> dict | None:
         """outcome in: served | not_found | declined | escalated."""
