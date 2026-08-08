@@ -194,25 +194,74 @@ function placeWitnessPin(lat, lng) {
 // ------------------------------------------------------ smooth motion --
 // The UI polls at 1 Hz, so raw positions arrive as 1-second jumps. Responder
 // markers glide between polls via one rAF loop (their attached route line
-// rides along). Reduced-motion users get instant snaps.
+// rides along). A straight lerp between polls would cut corners — at 12×
+// a scooter covers ~80 m per poll, a whole block — so an enroute marker
+// glides ALONG its route polyline: the waypoints it passed between two
+// polls are recovered by matching the previous poll's remaining route
+// against this poll's, and the tween walks them at constant speed.
+// Reduced-motion users get instant snaps.
 const REDUCED_MOTION = window.matchMedia
   && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const respTweens = new Map();   // id -> {m, from, to, start}  ([lng, lat])
+const respTweens = new Map();   // id -> {m, path: [[lng,lat]...], cum, total, start}
+const respRoutesAhead = new Map();   // id -> last polled remaining route ([[lat,lng]...])
 let tweenRaf = null;
 
-function glideMarker(id, m, toLngLat) {
-  if (REDUCED_MOTION || !map || map === "failed") { m.setLngLat(toLngLat); return; }
+function pathMetrics(path) {
+  const cum = [0];
+  let total = 0;
+  const kx = Math.cos((path[0][1] * Math.PI) / 180);   // planar approx — fine at zone scale
+  for (let i = 1; i < path.length; i++) {
+    const dx = (path[i][0] - path[i - 1][0]) * kx, dy = path[i][1] - path[i - 1][1];
+    total += Math.hypot(dx, dy);
+    cum.push(total);
+  }
+  return { cum, total };
+}
+
+function glideMarker(id, m, toLngLat, routeAhead) {
+  // Returns the [lng,lat] corner points passed since the last poll, so the
+  // movement trail can hug the same streets the dot does.
+  const prevAhead = respRoutesAhead.get(id);
+  respRoutesAhead.set(id, routeAhead || null);
+  if (REDUCED_MOTION || !map || map === "failed") { m.setLngLat(toLngLat); return []; }
   const cur = m.getLngLat();
-  if (cur.lng === toLngLat[0] && cur.lat === toLngLat[1]) { respTweens.delete(id); return; }
-  respTweens.set(id, { m, from: [cur.lng, cur.lat], to: toLngLat, start: performance.now() });
+  if (cur.lng === toLngLat[0] && cur.lat === toLngLat[1]) { respTweens.delete(id); return []; }
+
+  // Corners passed = prefix of the previous remaining route that is no
+  // longer ahead now. Identical vertex arrays make the match exact. A
+  // route with NO overlap at all is a different trip (new order,
+  // re-route) — then a straight glide is honest; but a long passed prefix
+  // is normal at high sim speeds (30× ≈ 170 m and a dozen lane corners
+  // per poll), so the guard checks overlap, not corner count.
+  const passed = [];
+  if (prevAhead && prevAhead.length) {
+    const nextAhead = routeAhead && routeAhead.length ? routeAhead[0] : null;
+    let matched = !nextAhead;   // no route now (arrival): whole prefix passed
+    for (const wp of prevAhead) {
+      if (nextAhead && wp[0] === nextAhead[0] && wp[1] === nextAhead[1]) { matched = true; break; }
+      passed.push([wp[1], wp[0]]);                    // [lat,lng] -> [lng,lat]
+      if (passed.length > 48) break;                  // hard bound, never hit in practice
+    }
+    if (!matched) passed.length = 0;
+  }
+  const path = [[cur.lng, cur.lat], ...passed, toLngLat];
+  const { cum, total } = pathMetrics(path);
+  if (!total) { respTweens.delete(id); return passed; }
+  respTweens.set(id, { m, path, cum, total, start: performance.now() });
   if (!tweenRaf) tweenRaf = requestAnimationFrame(tweenTick);
+  return passed;
 }
 
 function tweenTick(now) {
   for (const [id, t] of respTweens) {
     const k = Math.min(1, (now - t.start) / 950);   // ~one poll interval
-    t.m.setLngLat([t.from[0] + (t.to[0] - t.from[0]) * k,
-                   t.from[1] + (t.to[1] - t.from[1]) * k]);
+    const s = k * t.total;
+    let i = 1;
+    while (i < t.cum.length - 1 && t.cum[i] < s) i++;
+    const seg = t.cum[i] - t.cum[i - 1] || 1;
+    const f = (s - t.cum[i - 1]) / seg;
+    t.m.setLngLat([t.path[i - 1][0] + (t.path[i][0] - t.path[i - 1][0]) * f,
+                   t.path[i - 1][1] + (t.path[i][1] - t.path[i - 1][1]) * f]);
     if (k >= 1) respTweens.delete(id);
   }
   if (respTweens.size && routePaths.size) pushRoutes();   // line rides the dot
@@ -312,19 +361,26 @@ function syncMap() {
       continue;
     }
     const key = `${r.state}|${r.eta_s == null ? "" : fmtDur(r.eta_s)}`;
+    let corners = [];
     if (!respMarkers.has(r.id)) {
       const m = domMarker(respHtml(r), [r.lng, r.lat], "500");
       m.__key = key;
       respMarkers.set(r.id, m);
+      respRoutesAhead.set(r.id, r.route || null);
     } else {
       const m = respMarkers.get(r.id);
-      glideMarker(r.id, m, [r.lng, r.lat]);
+      corners = glideMarker(r.id, m, [r.lng, r.lat], r.route) || [];
       // swap the pin DOM only when its content actually changes — replacing
       // it every poll flickers and would cut any in-flight glide
       if (m.__key !== key) { m.getElement().innerHTML = respHtml(r); m.__key = key; }
     }
-    // movement trail: keep the last ~24 points while working, fade otherwise
+    // movement trail: passed corners first so the line hugs the streets the
+    // dot just glided along; keep the last ~24 points while working
     const trail = respTrails.get(r.id) || [];
+    for (const c of corners) {
+      const lastc = trail[trail.length - 1];
+      if (!lastc || lastc[0] !== c[0] || lastc[1] !== c[1]) trail.push(c);
+    }
     const last = trail[trail.length - 1];
     if (!last || last[0] !== r.lng || last[1] !== r.lat) trail.push([r.lng, r.lat]);
     while (trail.length > 24) trail.shift();
@@ -1149,3 +1205,10 @@ function drawCells() {
 
 refresh();
 setInterval(refresh, 1000);
+
+// Read-only debug handles so scripted checks (Playwright) can measure the
+// rendered board — e.g. marker-to-route distance — without reaching into
+// closure state. Getters only; nothing here mutates.
+Object.defineProperty(window, "__dbg", {
+  value: { get state() { return state; }, get map() { return map; } },
+});
