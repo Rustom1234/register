@@ -110,10 +110,22 @@ class Intake:
 
         # Otherwise ask for exactly the next missing thing.
         if not self._has_location(s):
-            s["stage"] = "need_location"
-            s["location_asked"] = True
-            out.append(BotMsg(strings.SAFETY["S-ASK-LOCATION"], string_id="S-ASK-LOCATION"))
-        elif not s["category"]:
+            if s.get("location_asks", 0) >= 2 and (s.get("detail") or s.get("landmark_text")):
+                # Terminal human rung (NGO-ops audit): two unanswered pin
+                # asks means the witness's words aren't in our landmark
+                # vocabulary — adopt what they SAID as a landmark-only
+                # location and let the coordinator's request-pin rail take
+                # it, instead of asking "where?" forever and filing nothing.
+                s["landmark_text"] = s["landmark_text"] or (s["detail"] or "")[:80]
+                s["geo_conf"] = "landmark"
+                s["location_asked"] = True
+            else:
+                s["stage"] = "need_location"
+                s["location_asked"] = True
+                s["location_asks"] = s.get("location_asks", 0) + 1
+                out.append(BotMsg(strings.SAFETY["S-ASK-LOCATION"], string_id="S-ASK-LOCATION"))
+                return out
+        if not s["category"]:
             s["stage"] = "need_category"
             out.append(BotMsg(strings.SAFETY["S-ASK-CATEGORY"],
                               buttons=list(strings.CATEGORY_BUTTONS), string_id="S-ASK-CATEGORY"))

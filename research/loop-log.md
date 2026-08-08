@@ -661,3 +661,31 @@ queued for round 2 with the remaining two critic reports.
 
 217 tests green; live calm-flow verified end to end (404s, accept via
 depot, auto-pace round-trip). Cache 20260805c.
+
+## Overnight round 2 — 2026-08-05 (NGO-ops P1 wave)
+
+The NGO operations-director critic delivered the deepest report
+("conditionally yes" to piloting). Verified and fixed its top P1s:
+
+- **Gate precision (borderline P0):** bare "khoon beh raha hai" — the
+  ordinary way witnesses describe any bleeding wound — no longer bounces
+  to 112 with nothing filed; heavy-bleeding phrases (bahut/zyada/tez
+  khoon, khoon ruk nahi) still gate, in both scripts. Golden set updated
+  both directions. 112 bounces now surface on the /shift handover ("check
+  these by hand each morning" row) — they were already durably recorded.
+- **Intake terminal rung:** two unanswered location asks now adopt the
+  witness's own words as a landmark-only case for the coordinator's
+  request-pin rail — verified live: case filed on turn 4 with
+  geo_conf=landmark instead of seven asks and nothing.
+- **Dedup category guard:** cross-category near-hits stay separate cases
+  (a food report 80 m from a medical case is a different person).
+- **Vetting is now a gate:** offers, manual assignment, and the accept
+  path all require vetting='verified' (seeds unchanged, so the demo
+  behaves identically until a real roster varies).
+
+220 tests green (3 new). Queued for r3: manual-assign consent offer,
+release-and-rewave on stuck accepted orders, night-P1 held-for-morning
+strip, stock-adjust endpoint, road-distance candidate ranking, mobile
+CSS P1s (sticky outcome bar, AA contrast, witness fold), judge P2 doc
+reconciliation + deck 217 rebuild, STOP-string honesty, investor report
+(still running).

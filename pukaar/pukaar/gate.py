@@ -15,7 +15,7 @@ _PATTERNS = [
     # unconscious
     r"\bbehosh\b", r"\bbeh?osh\b", r"unconscious", r"not\s+waking", r"hosh\s+nahi",
     # heavy bleeding
-    r"bahut\s+khoon", r"khoon\s+beh", r"khoon\s+hi\s+khoon", r"bleeding\s+(a\s+lot|heavily|badly)",
+    r"bahut\s+khoon", r"(?:zyada|tez)\s+khoon", r"khoon\s+hi\s+khoon", r"bleeding\s+(a\s+lot|heavily|badly)",
     r"blood\s+everywhere", r"khoon\s+ruk\s+nahi",
     # breathing — "can(no)t breathe": cannot/can't/cant all count
     r"saans\s+nahi", r"not\s+breathing", r"can(?:'?t|not)\s+breathe", r"breathing\s+problem",
@@ -44,7 +44,7 @@ _PATTERNS = [
     # gate must catch it too (\b doesn't work across Devanagari; match bare).
     r"बेहोश",                              # unconscious
     r"होश\s*(में\s*)?नहीं",                 # not conscious
-    r"बहुत\s*खून", r"खून\s*बह", r"खून\s*रुक\s*नहीं",   # heavy bleeding
+    r"बहुत\s*खून", r"(?:ज़्यादा|तेज़|तेज)\s*खून", r"खून\s*रुक\s*नहीं",   # heavy bleeding
     r"साँ?स\s*नहीं", r"सांस\s*नहीं", r"दम\s*घुट", r"गला\s*घुट",   # not breathing / choking
     r"एक्सिडेंट", r"एक्सीडेंट", r"टक्कर", r"गाड़ी\s*ने\s*मार",  # accident
     r"दौरा", r"गिर\s*के\s*बेहोश",            # seizure / collapse

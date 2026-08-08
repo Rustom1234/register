@@ -84,3 +84,54 @@ def test_far_reports_do_not_merge(svc):
         svc.wa_inbound(phone, "location", lat=la, lng=ln)
         svc.wa_inbound(phone, "button", text="fresh:10")
     assert len(svc.store.query("SELECT * FROM cases")) == 2
+
+
+def test_pinless_unknown_landmark_reaches_a_human(svc, clock):
+    """NGO-ops audit: a witness whose landmark isn't in the vocabulary must
+    never be asked "where?" forever and then lost — after two unanswered
+    asks the words they typed become a landmark-only case for the
+    coordinator's request-pin rail."""
+    msgs = ["aadmi ghayal hai dargah ke paas chai ki dukaan ke saamne",
+            "dargah ke paas chai ki dukaan", "bas wahi dukaan ke saamne"]
+    for m in msgs:
+        clock.advance(30)
+        out = svc.wa_inbound("+919999000111", "text", m)
+    # third turn moved past location instead of asking a third time
+    assert "S-ASK-LOCATION" not in [b.string_id for b in out]
+    clock.advance(30)
+    svc.wa_inbound("+919999000111", "button", "fresh:10")
+    case = svc.store.one("SELECT * FROM cases")
+    assert case is not None and case["geo_conf"] == "landmark"
+    assert "dargah" in (case["landmark_text"] or "")
+
+
+def test_dedup_never_merges_across_categories(svc, clock):
+    """A food report near an open medical case is a DIFFERENT person."""
+    svc.wa_inbound("+911111", "text", "aadmi ghayal hai patti chahiye")
+    svc.wa_inbound("+911111", "location", lat=28.5933, lng=77.2507)
+    svc.wa_inbound("+911111", "button", "fresh:10")
+    clock.advance(600)
+    svc.wa_inbound("+912222", "text", "amma bhookhi hai wahin par")
+    svc.wa_inbound("+912222", "location", lat=28.5935, lng=77.2508)
+    svc.wa_inbound("+912222", "button", "fresh:10")
+    cases = svc.store.query("SELECT * FROM cases ORDER BY created_at")
+    assert len(cases) == 2, [c["category"] for c in cases]
+    assert {c["category"] for c in cases} == {"medical", "food"}
+
+
+def test_unvetted_responder_gets_no_offers(svc, clock):
+    """Vetting is a gate, not a badge: pending vetting = no offers, no
+    manual assignment, no accept."""
+    svc.store.insert("responders", {
+        "id": "resp_x", "partner_id": "partner_1", "display_name": "Naya",
+        "medical": 1, "vetting": "pending", "active": 1})
+    svc.positions["resp_x"] = (28.5933, 77.2507)
+    svc.wa_inbound("+913333", "text", "aadmi ghayal hai patti chahiye")
+    svc.wa_inbound("+913333", "location", lat=28.5933, lng=77.2507)
+    svc.wa_inbound("+913333", "button", "fresh:10")
+    clock.advance(5)
+    svc.dispatch.tick()
+    assert svc.store.query(
+        "SELECT * FROM assignments WHERE responder_id='resp_x'") == []
+    order = svc.store.one("SELECT * FROM orders")
+    assert not svc.dispatch.manual_assign(order["id"], "resp_x")

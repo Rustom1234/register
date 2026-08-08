@@ -249,10 +249,14 @@ class PukaarService:
             cell = geo.cell_key(p["lat"], p["lng"], self.cfg.dedup_cell_m)
             neighbors = geo.neighbor_keys(p["lat"], p["lng"], self.cfg.dedup_cell_m)
             marks = ",".join("?" for _ in neighbors)
+            # Same CATEGORY only: a 150 m cell in a dense basti holds many
+            # people at once — a food report near an open medical case is a
+            # different person, and merging them silently starves one of
+            # them while telling their witness a stranger's closure story.
             existing = self.store.one(
                 f"SELECT * FROM cases WHERE status NOT IN ('closed') AND cell IN ({marks}) "
-                f"AND created_at > ? ORDER BY created_at DESC",
-                tuple(neighbors) + (now - self.cfg.dedup_window_s,))
+                f"AND category = ? AND created_at > ? ORDER BY created_at DESC",
+                tuple(neighbors) + (p["category"], now - self.cfg.dedup_window_s))
             if existing:
                 self.store.update("cases", existing["id"],
                                   {"merged_witnesses": existing["merged_witnesses"] + 1})
@@ -449,11 +453,18 @@ class PukaarService:
         kits_out = sum(1 for o in outs if o["served"] or o["escalated"])
         returns = sum(1 for o in outs if not o["served"] and not o["escalated"])
         restocks = sum(1 for e in list(self.feed) if e["ts"] >= since and e["kind"] == "restock_delivered")
+        # 112 bounces leave a durable case-less report row (the media
+        # retro-link later attaches case ids to photo rows, so case-less =
+        # redirected): the handover must show them so a human sanity-checks
+        # the gate's judgement the morning after, not never.
+        bounced_112 = q("SELECT COUNT(*) n FROM reports WHERE case_id IS NULL "
+                        "AND received_at >= ?", (since,))[0]["n"]
         accept_times = [r["accepted_at"] - r["created_at"] for r in
                         q("SELECT created_at, accepted_at FROM orders "
                           "WHERE accepted_at IS NOT NULL AND created_at >= ?", (since,))]
         still_open = sum(1 for c in cases if c["status"] not in ("closed", "escalated"))
         return {
+            "bounced_112": bounced_112,
             "window_hours": hours,
             "generated_sim": now,
             "reports_received": len(cases),

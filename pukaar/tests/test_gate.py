@@ -9,6 +9,7 @@ EMERGENCIES = [
     "aadmi behosh hai flyover ke neeche",
     "He is unconscious near the gate",
     "bahut khoon beh raha hai",
+    "zyada khoon beh gaya hai",
     "khoon ruk nahi raha",
     "bleeding heavily from the head",
     "blood everywhere please help",
@@ -68,6 +69,12 @@ NON_EMERGENCIES = [
     "hello",
     # place names and everyday phrases that MUST NOT trip the new patterns
     "labour chowk ke paas ek aadmi hai",
+    # ordinary wound reports in everyday Hindi are KIT RUNS, not 112 bounces
+    # (NGO-ops audit: bouncing these refuses service in the catchment
+    # language while identical English goes to intake)
+    "pair se khoon beh raha hai",
+    "uske haath se khoon aa raha hai",
+    "पैर से खून बह रहा है",
     "daily labour karta hai wo",
     "kit delivery ho gayi thi kal",
     "the food delivery guy saw him near the park",

@@ -178,6 +178,7 @@ def render_shift(s: dict, hours: float) -> str:
   <tr><td>Kits delivered</td><td>{s['kits_delivered']}</td></tr>
   <tr><td>Returned unused (person not found)</td><td>{s['kits_returned_unused']}</td></tr>
   <tr><td>Courier restocks received (recent)</td><td>{s['courier_restocks']}</td></tr>
+  <tr><td>112 redirects (check these by hand each morning)</td><td>{s.get('bounced_112', 0)}</td></tr>
 </table>
 
 <h2>Stock at handover</h2>

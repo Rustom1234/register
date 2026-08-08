@@ -73,7 +73,7 @@ class DispatchEngine:
             open_counts[r["responder_id"]] = r["n"]
         cands = []
         for rid, (lat, lng) in self.positions().items():
-            row = self.store.one("SELECT * FROM responders WHERE id=? AND active=1", (rid,))
+            row = self.store.one("SELECT * FROM responders WHERE id=? AND active=1 AND vetting='verified'", (rid,))
             if not row or rid in exclude:
                 continue
             if open_counts.get(rid, 0) >= self.cfg.responder_open_cap:
@@ -141,7 +141,7 @@ class DispatchEngine:
         if a responder accept wins the compare-and-swap concurrently.
         Recorded as an assignment like any other, provenance actor = human."""
         order = self.store.one("SELECT * FROM orders WHERE id=?", (order_id,))
-        resp = self.store.one("SELECT * FROM responders WHERE id=? AND active=1", (responder_id,))
+        resp = self.store.one("SELECT * FROM responders WHERE id=? AND active=1 AND vetting='verified'", (responder_id,))
         if not order or not resp or order["status"] not in ("needs_coordinator", "queued", "offered"):
             return False
         case = self.store.one("SELECT * FROM cases WHERE id=?", (order["case_id"],))
@@ -188,7 +188,7 @@ class DispatchEngine:
         # sit open for offer_ttl_s, and "stops NEW offers" alone would let a
         # just-benched volunteer accept into a live job.
         active = self.store.one(
-            "SELECT 1 ok FROM responders WHERE id=? AND active=1", (a["responder_id"],))
+            "SELECT 1 ok FROM responders WHERE id=? AND active=1 AND vetting='verified'", (a["responder_id"],))
         if not active:
             self.store.update("assignments", assignment_id, {"responded_at": now, "response": "released"})
             return False
