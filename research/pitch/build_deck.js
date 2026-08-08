@@ -55,7 +55,7 @@ s.addText([
 s.addText("see it, send word.", { x: M, y: 3.55, w: 9, h: 0.55, fontSize: 22, italic: true, color: LAMP, fontFace: SERIF, margin: 0 });
 s.addText("One WhatsApp number turns anyone who stops on the street into the start of a real aid response — no app to download, no face on file, no database of the people it serves. Just a message that gets answered.",
   { x: M, y: 4.25, w: 9.6, h: 1.0, fontSize: 15.5, color: DIM, fontFace: SANS, margin: 0, lineSpacing: 22 });
-[["No cameras", MED], ["No database of the poor", SHEL], ["Working demo · 211 tests", GOOD]].forEach(([t, c], i) => {
+[["No cameras", MED], ["No database of the poor", SHEL], ["Working demo · 217 tests", GOOD]].forEach(([t, c], i) => {
   const x = M + i * 3.42, y0 = 5.55;
   s.addShape("roundRect", { x, y: y0, w: 3.2, h: 0.52, rectRadius: 0.26, fill: { color: SURF }, line: { color: LINE, width: 1 } });
   dot(s, x + 0.22, y0 + 0.19, c, 0.13);
@@ -124,7 +124,7 @@ card(s, 7.15, 2.0, 5.63, 4.55, 0.12);
 s.addText("THE EDGE", { x: 7.5, y: 2.3, w: 5, h: 0.3, fontSize: 10.5, color: LAMP, charSpacing: 2, fontFace: MONO, margin: 0 });
 s.addText("“The sensor isn't a camera.\nIt's a person who already stopped.”",
   { x: 7.5, y: 2.72, w: 4.95, h: 1.55, fontSize: 21, italic: true, color: INK, fontFace: SERIF, margin: 0, lineSpacing: 27 });
-s.addText("Equitech alum. Built the whole system solo — intake pipeline, control room, responder app, 211 automated tests — before asking anyone for a rupee. Every design choice in it cites a real system that came before and failed, for a specific, documented reason.",
+s.addText("Equitech alum. Built the whole system solo — intake pipeline, control room, responder app, 217 automated tests — before asking anyone for a rupee. Every design choice in it cites a real system that came before and failed, for a specific, documented reason.",
   { x: 7.5, y: 4.5, w: 4.95, h: 1.9, fontSize: 12.5, color: DIM, fontFace: SANS, margin: 0, lineSpacing: 17.5 });
 aside(s, "Nothing here requires new behaviour — only a number worth saving.", M, 6.85, 9.5);
 footer(s, 4);
@@ -176,7 +176,7 @@ footer(s, 6);
 s = p.addSlide(); bg(s);
 kicker(s, "04 — See it run");
 title(s, "Not a mockup");
-lede(s, "211 automated tests. Three real surfaces — control room, responder phone, witness phone — running the same loop end to end, offline, with zero paid API calls.", M, 1.95, 11.5, 14);
+lede(s, "217 automated tests. Three real surfaces — control room, responder phone, witness phone — running the same loop end to end, offline, with zero paid API calls.", M, 1.95, 11.5, 14);
 s.addImage({ path: `${ASSETS}/room.png`, x: M, y: 2.55, w: 7.15, h: 4.0, rounding: true });
 s.addText("the control room, mid-shift — dispatch waves, kit stock, coordinator queue, live ops feed",
   { x: M, y: 6.62, w: 7.55, h: 0.3, fontSize: 9.5, color: FAINT, fontFace: MONO, margin: 0 });

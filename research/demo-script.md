@@ -66,7 +66,7 @@ document — I just ran it in front of you."
 ---
 
 **Numbers you may quote** (all measured or sourced, nothing invented):
-194 automated tests · ~0.5 ms per route · kits ₹172 / ₹50 / ₹173
+217 automated tests · ~0.5 ms per route · kits ₹172 / ₹50 / ₹173
 wholesale · ₹6,900 seeds three depots · ≈₹36,500 year-one stock ·
 ≈₹1,250/month realistic pilot run-rate.
 

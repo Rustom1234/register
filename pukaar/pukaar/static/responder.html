@@ -71,9 +71,9 @@ select, button { font: inherit; }
 select { width: 100%; background: var(--surface); color: var(--ink);
          border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin: 10px 0; }
 .big { width: 100%; padding: 15px; border: 0; border-radius: 12px; font-weight: 700;
-       font-size: 16px; cursor: pointer; color: #fff; background: var(--good); }
+       font-size: 16px; cursor: pointer; color: #fff; background: #087f08; }  /* AA 5.0:1 — sunlight-legible; the brighter --good stays for dots/accents */
 .big.off { background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }
-.hn { display: block; font-weight: 500; font-size: 0.82em; opacity: 0.72; margin-top: 1px; }
+.hn { display: block; font-weight: 500; font-size: 0.82em; opacity: 0.9; margin-top: 1px; }
 .hint .hn, p .hn { display: inline; }
 button:focus-visible, select:focus-visible { outline: 2px solid var(--medical); outline-offset: 2px; }
 
@@ -125,10 +125,12 @@ ul.check li::before { content: "☐"; position: absolute; left: 4px; color: var(
 ol.instr { margin: 8px 0 0; padding-left: 20px; color: var(--ink-2); font-size: 13.5px; }
 ol.instr li { margin: 6px 0; line-height: 1.45; }
 
-.outgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.outgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;
+           position: sticky; bottom: 0; z-index: 5; background: var(--page);
+           padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); }
 .outgrid .big { padding: 18px 10px; font-size: 15px; }
-.outgrid .served { background: var(--good); }
-.outgrid .escal { background: var(--medical); }
+.outgrid .served { background: #087f08; }
+.outgrid .escal { background: #2b6cbe; }   /* AA vs 3.6:1 on --medical */
 .outgrid .plain { background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }
 .big.arrived { margin-top: 12px; background: var(--surface); border: 1px solid var(--medical);
   color: #9cc6f5; }
@@ -200,7 +202,7 @@ footer { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--mut
     <section id="scr-idle" hidden>
       <div class="card">
         <h2>On duty</h2>
-        <p id="idle-line" class="hint"><span class="livedot" aria-hidden="true"></span>Waiting for calls near you… · <span class="hn" lang="hi">आस-पास की कॉल का इंतज़ार…</span></p>
+        <p id="idle-line" class="hint"><span class="livedot" aria-hidden="true"></span>Waiting for calls near you…<span class="hn" lang="hi">आस-पास की कॉल का इंतज़ार…</span></p>
         <div class="kitchips" id="kits" aria-label="Kits in stock"></div>
         <p class="hint" id="me-stats"></p>
       </div>
@@ -227,6 +229,6 @@ footer { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--mut
   </footer>
 </div>
 <div id="toast" role="status">✓ recorded</div>
-<script src="/static/responder.js?v=20260805c"></script>
+<script src="/static/responder.js?v=20260805d"></script>
 </body>
 </html>

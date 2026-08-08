@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Wayside — Report someone who needs help</title>
 <link rel="icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/vendor/maplibre-gl.css?v=20260805c">
-<link rel="stylesheet" href="/static/app.css?v=20260805c">
+<link rel="stylesheet" href="/static/vendor/maplibre-gl.css?v=20260805d">
+<link rel="stylesheet" href="/static/app.css?v=20260805d">
 <style>
   /* Standalone witness view: the phone is the point, not a sidebar item. */
   body { display: flex; flex-direction: column; min-height: 100vh; }
@@ -28,8 +28,11 @@
     #wlayout { grid-template-columns: 1fr; }
     /* map first on phones: the chat hint says "tap the map to place the
        pin" — burying the map below the chat + scenario stack made that an
-       instruction about something off-screen */
-    #wmap-col { height: 320px; order: -1; }
+       instruction about something off-screen. Height is viewport-relative
+       so map + thread + composer all share the FIRST screen: a greeting
+       that says "type to begin" must not point at an off-screen box. */
+    #wmap-col { height: clamp(180px, 32vh, 320px); order: -1; }
+    #wleft .phone .phone-msgs { height: 30vh; min-height: 170px; }
   }
 </style>
 </head>
@@ -102,8 +105,8 @@
   <span>Only your number (hashed), the pin, and what you send are kept — nothing else. Photos are deleted when the case closes.</span>
 </footer>
 
-<script src="/static/vendor/maplibre-gl.js?v=20260805c"></script>
-<script src="/static/basemap.js?v=20260805c"></script>
-<script src="/static/witness.js?v=20260805c"></script>
+<script src="/static/vendor/maplibre-gl.js?v=20260805d"></script>
+<script src="/static/basemap.js?v=20260805d"></script>
+<script src="/static/witness.js?v=20260805d"></script>
 </body>
 </html>

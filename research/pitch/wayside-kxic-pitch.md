@@ -15,7 +15,7 @@ it traces back to is [`../kevin-xu-proposal.md`](../kevin-xu-proposal.md).
 
 One WhatsApp number turns anyone who stops on the street into the start of a real aid response — no app to download, no face on file, no database of the people it serves. Just a message that gets answered.
 
-`No cameras` · `No database of the poor` · `Working demo · 211 tests`
+`No cameras` · `No database of the poor` · `Working demo · 217 tests`
 
 *Kevin Xu Innovation Challenge · Rustom Dubash · Equitech alum*
 
@@ -56,7 +56,7 @@ One end of the spectrum watches too much. The other answers too little.
 - **OPERATIONS — Dispatch patterns are proven.** GoodSAM showed that offering a case to several nearby responders at once, first-to-accept, gets a yes inside a minute. India Post's DIGIPIN now gives every stretch of pavement its own short address.
 - **REGULATION — Privacy is now the moat.** India's DPDP Act makes hoarding personal data a liability, not an asset. A system built to never collect a name, a face, or an address is the version regulators and NGOs trust first.
 
-**The edge.** *"The sensor isn't a camera. It's a person who already stopped."* Equitech alum. Built the whole system solo — intake pipeline, control room, responder app, 211 automated tests — before asking anyone for a rupee. Every design choice in it cites a real system that came before and failed, for a specific, documented reason.
+**The edge.** *"The sensor isn't a camera. It's a person who already stopped."* Equitech alum. Built the whole system solo — intake pipeline, control room, responder app, 217 automated tests — before asking anyone for a rupee. Every design choice in it cites a real system that came before and failed, for a specific, documented reason.
 
 *Nothing here requires new behaviour — only a number worth saving.*
 
@@ -88,7 +88,7 @@ Six steps. Most take under a minute. None of them ask the witness to do anything
 
 ## 7 · See it run — Not a mockup (1/2)
 
-211 automated tests. Three real surfaces — control room, responder phone, witness phone — running the same loop end to end, offline, with zero paid API calls.
+217 automated tests. Three real surfaces — control room, responder phone, witness phone — running the same loop end to end, offline, with zero paid API calls.
 
 - **Control room** — live map, dispatch waves, kit stock, kill-criteria dashboard.
 - **Responder app** — offer ping → checklist → outcome, on any phone.

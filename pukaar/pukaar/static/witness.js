@@ -124,7 +124,8 @@ function renderPhone() {
     return ` · ${h}:${mm}`;
   };
   const typing = typingUntil > Date.now();
-  const threadKey = `${activeConv}:${log.length}:${log.length ? log[log.length - 1].ts : 0}:${typing}`;
+  const pend = outbox.filter((e) => e.phone === activeConv);
+  const threadKey = `${activeConv}:${log.length}:${log.length ? log[log.length - 1].ts : 0}:${typing}:${pend.length}`;
   if (msgs.dataset.key !== threadKey) {
     const sameConv = msgs.dataset.conv === activeConv;
     const prevCount = sameConv ? +(msgs.dataset.count || 0) : Infinity;
@@ -137,7 +138,7 @@ function renderPhone() {
       const voice = m.kind === "voice" ? ` voice" data-len="${3 + (m.text || "").length % 7}` : "";
       const hi = /[\u0900-\u097F]/.test(m.text || "") ? ' lang="hi"' : "";
       return `<div class="bubble ${who}${fresh}${voice}"${hi}>${escapeHtml(m.text)}<span class="b-meta">${who === "bot" ? "Wayside" : "you"}${bubbleTime(m.ts)}</span></div>`;
-    }).join("") + (typing ? '<div class="bubble bot typing"><span></span><span></span><span></span></div>' : "");
+    }).join("") + pendingHtml() + (typing ? '<div class="bubble bot typing"><span></span><span></span><span></span></div>' : "");
     msgs.dataset.key = threadKey;
     msgs.dataset.conv = activeConv;
     msgs.dataset.count = String(log.length);
@@ -155,6 +156,17 @@ function renderPhone() {
     quick.querySelectorAll("button").forEach((btn) =>
       btn.addEventListener("click", () => sendInbound("button", { text: btn.dataset.payload })));
   }
+}
+
+function pendingHtml() {
+  // Saved-but-unsent reports, drawn as the witness's own bubbles with an
+  // honest clock — they flush (and vanish from here) when signal returns.
+  return outbox.filter((e) => e.phone === activeConv).map((e) => {
+    const txt = e.kind === "voice" ? "🎤 " + (e.extra.text || "")
+      : e.kind === "photo" ? "📷 photo" : (e.extra.text || "");
+    const hi = /[\u0900-\u097F]/.test(txt) ? ' lang="hi"' : "";
+    return `<div class="bubble witness pending"${hi}>${escapeHtml(txt)}<span class="b-meta">🕓 saved — will send</span></div>`;
+  }).join("");
 }
 
 // --------------------------------------------------------------- outbox --
@@ -235,7 +247,8 @@ let sendBusy = false; // one in-flight report at a time — Enter-mash safe
 async function sendInbound(kind, extra = {}) {
   if (kind === "text" || kind === "button") localEcho(extra.text, kind);
   else if (kind === "voice") localEcho("🎤 " + extra.text, "voice");
-  typingUntil = Date.now() + 900;
+  // typing dots promise a reply — never show them with no signal
+  if (navigator.onLine !== false) typingUntil = Date.now() + 900;
   renderPhone();
   // Order beats latency: while queued reports are waiting (or mid-flush), a
   // new queueable message joins the BACK of the line — sending it direct

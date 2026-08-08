@@ -104,7 +104,7 @@ print this page for the handout</span></div>
 <th>Reported</th><th>Closed</th><th>Outcome</th></tr>{rows}</table>
 
 <h2>Kits remaining</h2>
-<p>{kits or '—'} (partner_1)</p>
+<p>{kits or '—'} — across the three kit depots</p>
 
 <h2>Witness languages (auto-mirrored)</h2>
 <p>{lang_mix}</p>

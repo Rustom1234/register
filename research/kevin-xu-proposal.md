@@ -1,10 +1,10 @@
-# Pukaar — proposal for the Kevin Xu Innovation Challenge
+# Wayside (formerly Pukaar) — proposal for the Kevin Xu Innovation Challenge
 
 > **Status:** submission draft. Items in [square brackets] need your personal details before submitting. Built for the challenge's known shape (up to £25,000 non-dilutive; application → semi-finalist workshops on problem definition, experiment design, business case → live pitch at the Rhodes Forum). Confirm the 2026 theme and dates with Equitech when applications open.
 
 ---
 
-**Project:** Pukaar (Hindi: "the call") — working title
+**Project:** Wayside — see it, send word (developed under the working title Pukaar, Hindi: "the call")
 **One-liner:** An agentic aid network for people on India's streets: any witness sends a WhatsApp; an AI agent structures the report and routes it to a medical, food, or shelter subagent, which places a kit "order" — and the nearest trusted responder from a partner NGO delivers it, in person, with dignity.
 **Applicant:** Rustom Dubash, Equitech Futures alum [cohort/program, 1 line]
 **Ask:** £24,000 over 12 months | **Location:** Delhi, India (zone 1 + winter expansion) — architecture is city- and NGO-agnostic by design
@@ -137,4 +137,4 @@ The pilot's numbers unlock the scale path: India's platforms already run the exa
 
 ---
 
-*Appendix (project repository): landscape research with ~70 sources · critique & scoping · plan deep-dives · solo-buildability analysis · this proposal · **and a working demo**: the `pukaar/` directory contains a running implementation of the full loop — trilingual intake agent (auto language mirroring), 112 gate covering Latin and Devanagari with a 100%-recall blocking test, parallel-wave dispatch, provenance, retention purge, live control room with map dispatch view, and a standalone responder phone app (`/responder`) — 99 automated tests (hardened by an adversarial multi-agent audit), CI, and a recordable demo (`make demo`).*
+*Appendix (project repository): landscape research with ~70 sources · critique & scoping · plan deep-dives · solo-buildability analysis · this proposal · **and a working demo**: the `pukaar/` directory contains a running implementation of the full loop — trilingual intake agent (auto language mirroring), 112 gate covering Latin and Devanagari with a 100%-recall blocking test, parallel-wave dispatch, provenance, retention purge, live control room with map dispatch view, and a standalone responder phone app (`/responder`) — 217 automated tests (hardened by repeated adversarial multi-agent audits), CI, and a recordable demo (`make demo`).*

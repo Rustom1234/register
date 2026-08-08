@@ -724,9 +724,9 @@ function renderRespPanel() {
     dyn["s" + active.id] = statusTxt;
     const outcomeBtns = active.status === "onsite" && me && me.manual ? `
       <div class="btns">
-        <button class="accept" data-act="outcome" data-order="${active.id}" data-out="served">🟢 Diya</button>
-        <button data-act="outcome" data-order="${active.id}" data-out="not_found">Nahi mila</button>
-        <button data-act="outcome" data-order="${active.id}" data-out="declined">Mana kiya</button>
+        <button class="accept" data-act="outcome" data-order="${active.id}" data-out="served">🟢 Help given</button>
+        <button data-act="outcome" data-order="${active.id}" data-out="not_found">Not found</button>
+        <button data-act="outcome" data-order="${active.id}" data-out="declined">Declined</button>
         <button data-act="outcome" data-order="${active.id}" data-out="escalated">🩺 Doctor bulao</button>
       </div>` : (active.status === "onsite" ? `<div class="r-instr">sim will close this — tick "I'm playing" to decide yourself</div>` : "");
     cards.push(`<div class="rcard"><div class="r-head"><b>${active.sku} · ${c.digipin || ""}</b><span class="r-dyn" data-k="s${active.id}">${statusTxt}</span></div>${outcomeBtns}</div>`);

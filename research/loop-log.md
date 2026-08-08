@@ -689,3 +689,29 @@ strip, stock-adjust endpoint, road-distance candidate ranking, mobile
 CSS P1s (sticky outcome bar, AA contrast, witness fold), judge P2 doc
 reconciliation + deck 217 rebuild, STOP-string honesty, investor report
 (still running).
+
+## Overnight round 3 — 2026-08-05 (mobile P1s + judge P2 reconciliation)
+
+Mobile-field P1s, each verified at 360x740 after the fix:
+- Responder outcome buttons sticky at the viewport bottom with safe-area
+  padding — visible without scroll at arrival (was y=848 in a 740px view).
+- AA contrast: primary CTA fills darkened (#087f08 / #2b6cbe, ≥4.5:1 vs
+  3.3-3.6 before); .hn Hindi sublabels opacity 0.72 → 0.9.
+- Witness composer above the fold: map height clamp(180px,32vh,320px) +
+  thread 30vh in the phone block (composer bottom 652 in a 740 viewport).
+- Offline thread honesty: queued reports render as dashed "🕓 saved —
+  will send" bubbles; typing dots gated on navigator.onLine.
+
+Judge P2 reconciliation:
+- Deck + pitch md + proposal + demo scripts now all say 217 tests (was
+  a 99/194/211 spread); proposal header reads "Wayside (formerly
+  Pukaar)"; stale pukaar/demo-script.md replaced with a pointer stub to
+  the current script; report handout drops the "(partner_1)" leak;
+  S-PROGRESS-ACCEPTED loses the scooter emoji for walkers (🟢, all three
+  language mirrors); control-room outcome chips speak the same dialect
+  as the phone (English + Hindi sub); responder idle card loses its
+  wrapped separator dot. Deck rebuilt (13 slides verified).
+
+220 tests green. Cache 20260805d. Investor critic still running; NGO r3
+queue (consent offers, release-and-rewave, night strip, stock adjust,
+road ranking, STOP honesty) next.
