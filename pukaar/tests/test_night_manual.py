@@ -61,7 +61,7 @@ def test_manual_assign_recovers_stuck_order(svc, clock, cfg):
     assert order["status"] == "needs_coordinator"
 
     _seed_responders(svc, [geo.offset_m(*base, 150, 0)])
-    assert svc.dispatch.manual_assign(order["id"], "resp_1")
+    assert svc.dispatch.manual_assign(order["id"], "resp_1", force=True)
     order = svc.store.one("SELECT * FROM orders")
     assert order["status"] == "accepted" and order["responder_id"] == "resp_1"
     asg = svc.store.one("SELECT * FROM assignments WHERE order_id=?", (order["id"],))

@@ -183,7 +183,10 @@ function offerCard(a, order, c) {
   const kit = (state.kit_skus[order.sku] || {}).name || order.sku;
   const wallLeft = Math.max(1, Math.round(left / ((state.sim && state.sim.speed) || 1)));
   const leftTxt = wallLeft < 95 ? `${wallLeft} s left` : `${Math.ceil(wallLeft / 60)} min left`;
+  const story = c && (c.detail || c.landmark_text)
+    ? `<p class="hint">🗒 <b>${(c.id || "").slice(-4).toUpperCase()}</b> · ${escapeHtml((c.detail || c.landmark_text || "").slice(0, 70))}</p>` : "";
   return `<div class="card offer ${order.priority === "P1" ? "p1" : ""}" data-aid="${a.id}">
+    ${story}
     <div class="row1">
       <span class="pill ${order.priority === "P1" ? "p1" : "p2"}">${order.priority}</span>
       <span class="kit">${CAT_ICON[c && c.category] || "•"} ${kit}</span>

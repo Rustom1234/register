@@ -152,6 +152,11 @@ class Sim:
         # cancel lives in service.py, which can't import sim — hook it here.
         svc.kit_settler = self.settle_kit
         svc.dispatch.kit_settler = self.settle_kit
+        if self.graph is not None:
+            def _road_m(rid, alat, alng, blat, blng):
+                mode = self._resp.get(rid, {}).get("mode", "walk")
+                return self.graph.route(alat, alng, blat, blng, mode=mode)[1]
+            svc.dispatch.road_m = _road_m
         self._seed_world()
 
     # -------------------------------------------------------------- setup --
@@ -535,7 +540,7 @@ class Sim:
                 return
             idle.sort()
             rid = idle[0][1]
-            if self.svc.dispatch.manual_assign(order["id"], rid):
+            if self.svc.dispatch.manual_assign(order["id"], rid, force=True):
                 used.add(rid)
 
     def _sync_states(self) -> None:

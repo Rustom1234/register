@@ -54,6 +54,7 @@ class RespAction(BaseModel):
     order_id: str | None = None
     outcome: str | None = None
     responder_id: str | None = None
+    force: bool | None = None   # manual assign: phone-confirmed direct lock
 
 
 class ManualCtl(BaseModel):
@@ -423,7 +424,8 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             # Coordinator unstick: back into the wave cycle, honestly.
             return {"ok": svc.dispatch.release(act.order_id)}
         if act.action == "assign" and act.order_id and act.responder_id:
-            return {"ok": svc.dispatch.manual_assign(act.order_id, act.responder_id)}
+            return {"ok": svc.dispatch.manual_assign(act.order_id, act.responder_id,
+                                         force=bool(act.force))}
         if act.action == "sos" and act.responder_id:
             # Rider safety: one tap reaches the coordinator, loudly. Roster
             # ids only — an unknown id would let any authenticated tab plant
@@ -530,6 +532,33 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         # free. set_duty calls svc.set_active itself for the DB + feed.
         if not sim.set_duty(ctl.responder_id, ctl.active):
             raise HTTPException(404, "no such responder")
+        return {"ok": True}
+
+    class StockAdjust(BaseModel):
+        depot_id: str
+        sku: str
+        delta: int
+        reason: str
+
+    @app.post("/api/stock/adjust")
+    def stock_adjust(ctl: StockAdjust):
+        # Staff control over reality: record a real restock, a damaged kit,
+        # or a count correction — the sim courier stops being the only hand
+        # that can touch the shelf. Audited, clamped at zero.
+        row = svc.store.one("SELECT * FROM inventory WHERE partner_id=? AND sku=?",
+                            (ctl.depot_id, ctl.sku))
+        if not row:
+            raise HTTPException(404, "no such depot/sku")
+        if not (-99 <= ctl.delta <= 99) or not ctl.reason.strip():
+            raise HTTPException(422, "delta within ±99 and a reason are required")
+        svc.store.execute(
+            "UPDATE inventory SET count = MAX(count + ?, 0) WHERE partner_id=? AND sku=?",
+            (ctl.delta, ctl.depot_id, ctl.sku))
+        svc.store.audit("inventory", "stock_adjust", f"{ctl.depot_id}/{ctl.sku}",
+                        "human_coordinator", "", f"{ctl.delta:+d}: {ctl.reason.strip()[:80]}",
+                        ts=sim.sim_now)
+        svc.emit("stock_adjust", {"depot": ctl.depot_id, "sku": ctl.sku,
+                                  "delta": ctl.delta, "reason": ctl.reason.strip()[:80]})
         return {"ok": True}
 
     @app.get("/api/export")

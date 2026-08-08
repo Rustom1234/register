@@ -513,11 +513,15 @@ function feedLine(e) {
     case "restock_needed":
       html = `📦 ${e.sku} low at ${e.depot || "depot"} (${e.count} left) — courier restock requested`; cls = "warn"; break;
     case "restock_delivered":
-      html = `📦 courier delivered +${e.qty} × ${e.sku} to ${e.depot || "depot"}`; cls = "good"; break;
+      html = `📦 courier (simulated) delivered +${e.qty} × ${e.sku} to ${e.depot || "depot"}`; cls = "good"; break;
     case "kit_pickup":
       html = `📦 <b>${e.name ? escapeHtml(e.name) : respName(e.responder_id)}</b> collected the kit at ${escapeHtml(e.depot || "the depot")}`; cls = "good"; break;
     case "kit_return":
       html = `📦 unused ${escapeHtml(e.sku || "")} returned to ${escapeHtml(e.depot || "the depot")}`; break;
+    case "manual_offer":
+      html = `📞 coordinator offered ${short(e.order_id)} to <b>${respName(e.responder_id)}</b> — awaiting their tap`; break;
+    case "stock_adjust":
+      html = `📦 stock ${e.delta > 0 ? "+" + e.delta : e.delta} ${escapeHtml(e.sku)} at ${escapeHtml(e.depot)} — ${escapeHtml(e.reason || "")}`; break;
     case "order_released":
       html = `↩ coordinator released ${short(e.order_id)} from <b>${respName(e.responder_id)}</b> — re-waving`; cls = "warn";
       break;
@@ -870,7 +874,7 @@ function renderCoord() {
     return `<div class="fi warn"><span class="t">${o.sku}</span>
       <span><b>${o.id.slice(-4).toUpperCase()}</b> ${escapeHtml((c.detail || "").slice(0, 30))}</span>
       <span class="act"><select data-order="${o.id}">${opts}</select>
-      <button class="accept" data-assign="${o.id}">assign</button></span></div>`;
+      <button class="accept" data-assign="${o.id}" title="sends a priority offer — the rider still taps to accept">offer to</button></span></div>`;
   }).join("");
   document.querySelectorAll("#coord-body [data-assign]").forEach((b) =>
     b.addEventListener("click", async () => {

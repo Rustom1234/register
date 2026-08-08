@@ -782,3 +782,24 @@ honesty) + investor offer-card story line + ID vocabulary.
 222 tests green (2 new). Cache 20260805g. Remaining queue → r7: consent
 offers for manual_assign, stock-adjust endpoint + UI, road-distance
 candidate ranking, offer-card case story line, ID vocabulary.
+
+## Overnight round 7 — 2026-08-06 (final feature block: consent, road ranking, stock)
+
+- **Consent offers**: a coordinator hand-off now sends a priority offer
+  the rider must still tap (the GoodSAM covenant) — riding the normal
+  wave machinery so a decline honestly returns to the coordinator;
+  force=True keeps the direct lock for phone-confirmed assigns (and the
+  sim's own coordinator). Queue button reads "offer to".
+- **Road-distance candidate ranking**: dispatch ranks by street-graph
+  metres in the rider's own travel mode (haversine fallback when no
+  graph) — beeline ranking had walking Meena outranking scooter Ravi on
+  jobs 2.5× longer by road.
+- **Stock control**: POST /api/stock/adjust (depot, sku, ±delta, reason)
+  with audit row + feed line — staff can finally record real restocks,
+  damage, and corrections; the sim courier is labeled "(simulated)".
+- Offer card now tells the story: case short-id + the witness's first
+  detail line, so the rider knows what they're accepting.
+
+224 tests green (2 new). Cache 20260805h. All five critic reports fully
+processed. Remaining nice-to-haves: ID vocabulary sweep, offer-card
+road-metres display, night-P1 on-call push, per-rider tokens.

@@ -28,6 +28,11 @@ class DispatchEngine:
         self.positions = positions_fn      # live responder positions from the sim
         self.emit = on_event               # feed events for the UI / audit trail
         self.kit_settler = None            # wired by the service (sim.settle_kit)
+        # Optional road-distance fn (rid, alat, alng, blat, blng) -> metres,
+        # wired by the sim from the street graph. Riders judge an app fast
+        # when it lowballs their legs: beeline ranking made walking Meena
+        # outrank scooter Ravi on jobs that route 2.5x longer by road.
+        self.road_m = None
 
     # ------------------------------------------------------------- create
     def create_order(self, case: dict, order: dict, mac: str) -> dict:
@@ -79,7 +84,14 @@ class DispatchEngine:
                 continue
             if open_counts.get(rid, 0) >= self.cfg.responder_open_cap:
                 continue
-            cands.append((geo.haversine_m(case["lat"], case["lng"], lat, lng), rid))
+            if self.road_m is not None:
+                try:
+                    d = self.road_m(rid, lat, lng, case["lat"], case["lng"])
+                except Exception:
+                    d = geo.haversine_m(case["lat"], case["lng"], lat, lng)
+            else:
+                d = geo.haversine_m(case["lat"], case["lng"], lat, lng)
+            cands.append((d, rid))
         cands.sort()
         return [rid for _, rid in cands[:k]]
 
@@ -136,11 +148,15 @@ class DispatchEngine:
         self.store.audit("dispatch", "coordinator_escalation", order["id"], "system", "", reason, ts=self.now())
         self.emit("coordinator_alert", {"order_id": order["id"], "reason": reason})
 
-    def manual_assign(self, order_id: str, responder_id: str) -> bool:
-        """Coordinator override: hand a stuck order to a chosen responder.
-        Refuses pinless (landmark-only) cases — get a pin first — and yields
-        if a responder accept wins the compare-and-swap concurrently.
-        Recorded as an assignment like any other, provenance actor = human."""
+    def manual_assign(self, order_id: str, responder_id: str,
+                      force: bool = False) -> bool:
+        """Coordinator hand-off for a stuck order. Default is a CONSENT
+        OFFER: a priority assignment the chosen rider must still tap to
+        accept — the accept tap is the GoodSAM covenant, and a volunteer
+        walking alone at dusk agrees to each job. force=True keeps the
+        direct lock for assigns already confirmed by phone (and for the
+        sim's own coordinator, whose riders are simulated). Refuses
+        pinless (landmark-only) cases — get a pin first."""
         order = self.store.one("SELECT * FROM orders WHERE id=?", (order_id,))
         resp = self.store.one("SELECT * FROM responders WHERE id=? AND active=1 AND vetting='verified'", (responder_id,))
         if not order or not resp or order["status"] not in ("needs_coordinator", "queued", "offered"):
@@ -152,6 +168,22 @@ class DispatchEngine:
             # otherwise the responder would be locked to an unreachable job.
             return False
         now = self.now()
+        if not force:
+            # Priority offer: rides the normal wave machinery (TTL, decline
+            # -> back to the coordinator), so consent stays a real choice.
+            if self.store.one(
+                    "SELECT 1 x FROM assignments WHERE order_id=? AND responder_id=? "
+                    "AND responded_at IS NULL", (order_id, responder_id)):
+                return True   # already offered and pending — idempotent
+            self.store.insert("assignments", {
+                "id": new_id("asg"), "order_id": order_id, "responder_id": responder_id,
+                "offered_at": now, "responded_at": None, "response": None,
+            })
+            self.store.update("orders", order_id, {"status": "offered"})
+            self.store.audit("dispatch", "manual_offer", order_id, "human_coordinator",
+                             "", f"priority offer to {responder_id}", ts=now)
+            self.emit("manual_offer", {"order_id": order_id, "responder_id": responder_id})
+            return True
         won = self.store.claim(
             "UPDATE orders SET status='accepted', responder_id=?, accepted_at=? "
             "WHERE id=? AND status IN ('needs_coordinator', 'queued', 'offered')",

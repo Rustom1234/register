@@ -172,3 +172,44 @@ def test_stop_deletes_conversation_and_keeps_hashed_audit(svc, clock):
     rows = svc.store.query("SELECT * FROM audit_log WHERE action='witness_stop'")
     assert rows and "+916666" not in str(rows)   # hashed, never the number
     assert svc.wa_inbound("+916666", "text", "wahan phir koi hai")  # re-opens
+
+
+def test_manual_assign_is_a_consent_offer_by_default(svc, clock):
+    """NGO-ops: the accept tap is the covenant — a coordinator hand-off
+    creates a priority offer the rider must still tap, not a fait
+    accompli. force=True remains for phone-confirmed assigns."""
+    svc.store.insert("responders", {
+        "id": "resp_c", "partner_id": "partner_1", "display_name": "C",
+        "medical": 1, "vetting": "verified", "active": 1})
+    svc.positions["resp_c"] = (28.5933, 77.2507)
+    svc.wa_inbound("+917777", "text", "aadmi ghayal hai patti chahiye")
+    svc.wa_inbound("+917777", "location", lat=28.5933, lng=77.2507)
+    svc.wa_inbound("+917777", "button", "fresh:10")
+    order = svc.store.one("SELECT * FROM orders")
+    assert svc.dispatch.manual_assign(order["id"], "resp_c")
+    order = svc.store.one("SELECT * FROM orders")
+    assert order["status"] == "offered" and order["responder_id"] is None
+    a = svc.store.one("SELECT * FROM assignments WHERE responder_id='resp_c' "
+                      "AND responded_at IS NULL")
+    assert a is not None
+    assert svc.dispatch.respond(a["id"], True)   # the rider consents
+    assert svc.store.one("SELECT * FROM orders")["status"] == "accepted"
+
+
+def test_stock_adjust_endpoint(svc, clock):
+    from fastapi.testclient import TestClient
+    from pukaar.api import build_app
+    from pukaar.config import Config
+    cfg = Config(); cfg.backend = "mock"; cfg.sim_ambient = False
+    client = TestClient(build_app(cfg))
+    before = client.get("/api/state").json()["metrics"]["kits"]["MED-1"]
+    r = client.post("/api/stock/adjust", json={
+        "depot_id": "depot_basti", "sku": "MED-1", "delta": 5,
+        "reason": "monthly donation received"})
+    assert r.status_code == 200
+    after = client.get("/api/state").json()["metrics"]["kits"]["MED-1"]
+    assert after == before + 5
+    assert client.post("/api/stock/adjust", json={
+        "depot_id": "depot_basti", "sku": "MED-1", "delta": 2, "reason": " "}).status_code == 422
+    assert client.post("/api/stock/adjust", json={
+        "depot_id": "nope", "sku": "MED-1", "delta": 1, "reason": "x"}).status_code == 404

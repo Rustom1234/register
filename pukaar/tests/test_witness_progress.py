@@ -62,7 +62,7 @@ def test_progress_on_manual_assign_too(svc, clock):
     svc.dispatch.tick()          # no responders -> needs_coordinator
     _seed_responder(svc, *geo.offset_m(*base, 200, 0), name="Fatima")
     order = svc.store.one("SELECT * FROM orders")
-    assert svc.dispatch.manual_assign(order["id"], "resp_1")
+    assert svc.dispatch.manual_assign(order["id"], "resp_1", force=True)
     texts = _bot_texts(svc, "+91-P3")
     assert any("Fatima" in t and "nikal chuka" in t for t in texts)
 
