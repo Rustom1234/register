@@ -621,3 +621,43 @@ first — who can respond and are they vetted.
 card; a fresh sweep of r15; witness data-subject rights note; or another
 feature. The product is deeply mature — 15 rounds, 211 tests, offline,
 bilingual, a11y, photos, shift+roster ops views, deploy-safe, audited 4×.
+
+## Overnight round 1 — 2026-08-05 (persona-critic audit, wave 1)
+
+Five persona critics launched (judge, product skeptic, NGO ops, CTO,
+mobile field); three reports in by round end. Every finding below was
+re-verified against the live app before fixing.
+
+**CTO report (verdict: "would survive due diligence"):**
+- **P1 emergency gate misses fixed** — heart attack, stroke, drowning,
+  choking, childbirth-in-progress, suicide, and the literal "cannot
+  breathe" (the pattern only matched "can't") now trip the 112 gate, in
+  Latin and Devanagari, with "Labour Chowk"-class place names guarded as
+  non-emergencies. Golden set +15 emergencies, +4 non-emergencies.
+- accept-after-bench race: dispatch.respond() re-checks active=1 before
+  the CAS, so a deactivated volunteer can't accept a stale open offer.
+- instruction_ids hardened both ends (allowlist in orders.py, escapeHtml
+  fallback in responder.js) — closes the live-backend XSS vector.
+- sim kinetic state now behind an RLock (tick / set_duty / settle_kit).
+- /api/manual and sos validate responder ids (404, matching roster).
+- straight-line routing fallbacks now warn loudly (once per reason) —
+  matters when real OSM zones with disconnected islands get swapped in.
+- category feed/detail sinks escaped (latent, enum-pinned today).
+
+**Judge report (8/10, "this wins or podiums"):**
+- "26m away" minutes/metres collision fixed — fmtDur says "26 min" now
+  (also flagged independently by the mobile critic; both surfaces).
+- the two-minute dead-air walk: calm boards auto-compress to 24× while a
+  human-played rider is enroute and restore the founder's speed on
+  arrival, with transparent ⏩/⏱ feed lines. Verified live: 6→24→6.
+- ACCEPTANCE tile no longer reads 0% mid-wave (denominator = orders with
+  ≥1 decided offer).
+- "back on duty" on first-ever duty → "on duty".
+
+**Mobile report:** minutes-unit fix shipped this round; the fold/contrast/
+sticky-outcome-bar P1s and the rest of judge P2s (deck reconciliation,
+report.py partner_1 leak, scooter-emoji string, stale demo script) are
+queued for round 2 with the remaining two critic reports.
+
+217 tests green; live calm-flow verified end to end (404s, accept via
+depot, auto-pace round-trip). Cache 20260805c.

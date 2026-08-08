@@ -26,6 +26,23 @@ EMERGENCIES = [
     "ambulance chahiye jaldi",
     "emergency hai please",
     "wo mar raha hai",
+    # CTO-audit additions: the common ways witnesses describe a dying person
+    # that the first pattern set missed
+    "he is having a heart attack",
+    "seene mein dard ho raha hai",
+    "chest pain ho raha hai bahut",
+    "someone is having a stroke",
+    "lakwa maar gaya hai",
+    "a man is drowning in the canal",
+    "baccha paani mein doob raha hai",
+    "he cannot breathe at all",
+    "uska dam ghut raha hai",
+    "he is choking on something",
+    "she is in labour, baby coming now",
+    "labour pain ho raha hai",
+    "baccha aa raha hai abhi",
+    "wo suicide karne ja raha hai",
+    "khudkushi kar raha hai chhat se",
     # Devanagari — a supported witness language must never bypass the gate
     "एक आदमी बेहोश पड़ा है सड़क पर",
     "बहुत खून बह रहा है",
@@ -49,6 +66,11 @@ NON_EMERGENCIES = [
     "chot lagi hai pair par, chal raha hai",
     "khana chahiye",
     "hello",
+    # place names and everyday phrases that MUST NOT trip the new patterns
+    "labour chowk ke paas ek aadmi hai",
+    "daily labour karta hai wo",
+    "kit delivery ho gayi thi kal",
+    "the food delivery guy saw him near the park",
     # Devanagari non-emergencies stay ordinary reports
     "फ्लाईओवर के नीचे एक आदमी है, पैर में पट्टी है",
     "एक बुज़ुर्ग भूखे हैं स्टेशन के पास",

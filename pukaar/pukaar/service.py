@@ -364,7 +364,12 @@ class PukaarService:
         escalated = q("SELECT COUNT(*) n FROM outcomes WHERE escalated=1")[0]["n"]
         # Order-level acceptance (GoodSAM's "% of alerts accepted"): an order
         # counts once no matter how many parallel offers its waves fanned out.
-        offers = q("SELECT COUNT(DISTINCT order_id) n FROM assignments")[0]["n"]
+        # Only orders whose offers have produced at least one DECISION count
+        # in the denominator — an order mid-wave (all offers still pending)
+        # otherwise drags a kill-criterion tile to a false "0%" for the ~30 s
+        # every wave takes to get its first answer.
+        offers = q("SELECT COUNT(DISTINCT order_id) n FROM assignments "
+                   "WHERE responded_at IS NOT NULL")[0]["n"]
         accepts = q("SELECT COUNT(*) n FROM orders WHERE accepted_at IS NOT NULL")[0]["n"]
         accept_times = [r["accepted_at"] - r["created_at"] for r in
                         q("SELECT created_at, accepted_at FROM orders WHERE accepted_at IS NOT NULL")]

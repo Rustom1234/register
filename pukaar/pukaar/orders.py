@@ -39,7 +39,11 @@ def build_order(case: dict, routing: dict, backend: Backend) -> dict:
             a = backend.assess_medical(case)
             clinical_flag = a["clinical_flag"]
             priority = a["priority"]
-            instruction_ids = a["instruction_ids"] or ["GI-1", "MI-1"]
+            # Allowlist to known instruction ids: on the live backend this
+            # field is model output, and downstream surfaces render the raw
+            # id when it's unknown — free-form strings don't get through.
+            instruction_ids = [i for i in (a["instruction_ids"] or [])
+                               if i in strings.INSTRUCTIONS] or ["GI-1", "MI-1"]
             confidence = a["confidence"]
         except BackendError:
             a = None

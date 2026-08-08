@@ -17,7 +17,7 @@ function haversineM(la1, lo1, la2, lo2) {
 }
 function fmtDur(s) {
   if (s == null) return "—";
-  return s < 90 ? `${Math.round(s)}s` : `${Math.round(s / 60)}m`;
+  return s < 90 ? `${Math.round(s)} s` : `${Math.round(s / 60)} min`;
 }
 
 let state = null;
@@ -290,8 +290,10 @@ function renderActive(order) {
   offersKey = "";
   const checklist = kit.contents
     ? `<ul class="check">${kit.contents.split(", ").map((x) => `<li>${x}</li>`).join("")}</ul>` : "";
+  // Unknown ids fall back to the raw string — which on the live backend is
+  // model output, so it must be escaped like any other untrusted text.
   const instr = J(order.instruction_ids, [])
-    .map((i) => `<li>${state.instructions[i] || i}</li>`).join("");
+    .map((i) => `<li>${state.instructions[i] || escapeHtml(i)}</li>`).join("");
   $("scr-active").innerHTML = `
     <div class="banner ${onsite ? "onsite" : "enroute"}">${onsite ? 'AT THE PIN · <span lang="hi">पहुँच गए</span>' : 'EN ROUTE · <span lang="hi">रास्ते में</span>'}</div>
     <div class="card">

@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import math
 import random
+import threading
 import time
 
 from . import geo, routing
@@ -110,6 +111,11 @@ class Sim:
         self.running = True
         self.speed = cfg.sim_speed
         self.ambient = cfg.sim_ambient     # False = calm boot: see config.py
+        # Kinetic state (_resp, manual, _reservations, positions) is touched
+        # by the tick loop (event-loop thread) AND by sync endpoints on the
+        # threadpool (duty flips, outcome settles). SQLite has its own lock
+        # in db.py; this one serializes the in-memory compound updates.
+        self._klock = threading.RLock()
         self.manual: set[str] = set()      # responders a human is playing via the UI
         self.golden: dict[str, str] = {}   # order_id -> chosen responder (scripted clean arc)
         self._restock_flagged: set[tuple[str, str]] = set()          # (depot, sku)
@@ -140,6 +146,7 @@ class Sim:
         # every case on a calm board is one a human actually created.
         self._random_report_at = (self.sim_now + self.rng.uniform(60, 240)
                                   if self.ambient else math.inf)
+        self._pace_hold: float | None = None   # speed to restore after auto-pacing
         self.last_tick_real = time.monotonic()   # /health watchdog signal
         # Every close path must settle the kit ledger; the witness-recheck
         # cancel lives in service.py, which can't import sim — hook it here.
@@ -206,6 +213,10 @@ class Sim:
         r = self._resp.get(rid)
         if not r:
             return False
+        with self._klock:
+            return self._set_duty_locked(r, rid, on, manual)
+
+    def _set_duty_locked(self, r: dict, rid: str, on: bool, manual: bool) -> bool:
         if manual:
             (self.manual.add if on else self.manual.discard)(rid)
             if not on and self.ambient:
@@ -441,6 +452,10 @@ class Sim:
         self.last_tick_real = time.monotonic()   # heartbeat even while paused
         if not self.running:
             return
+        with self._klock:
+            self._tick_locked(real_dt)
+
+    def _tick_locked(self, real_dt: float) -> None:
         dt = real_dt * self.speed
         self.sim_now += dt
 
@@ -454,12 +469,32 @@ class Sim:
         self._responders_decide()
         self._coordinator_plays()
         self._responders_move(dt)
+        self._auto_pace()
         self._complete_escalations()
         self._process_restocks()
         # clock survives PUKAAR_DB restarts (see __init__)
         self.svc.store.execute(
             "INSERT OR REPLACE INTO push_meta (k, v) VALUES ('sim_now', ?)",
             (str(self.sim_now),))
+
+    def _auto_pace(self) -> None:
+        """Calm-board demo pacing: while a human-played rider is enroute,
+        compress time so the audience never watches a dot walk for two real
+        minutes; give the clock back the moment they arrive. The founder's
+        own speed choice always wins — changing the speed dropdown clears
+        the hold (api sim_ctl) instead of being clobbered on arrival."""
+        if self.ambient:
+            return
+        travelling = any(r["state"] == "enroute" and r["id"] in self.manual
+                         for r in self._resp.values())
+        if travelling and self._pace_hold is None and self.speed < 24:
+            self._pace_hold = self.speed
+            self.speed = 24.0
+            self.svc.emit("pace", {"on": True})
+        elif not travelling and self._pace_hold is not None:
+            self.speed = self._pace_hold
+            self._pace_hold = None
+            self.svc.emit("pace", {"on": False})
 
     def _coordinator_plays(self) -> None:
         """The human terminal rung, simulated: every ~90 sim-s the
@@ -740,7 +775,12 @@ class Sim:
         """Settle an order's kit reservation on close — SHARED by the sim's
         auto-close and every external close path (responder app, supervisor
         UI). Stock left the depot at accept; a not_found/declined outcome
-        puts it back, a served/escalated one keeps it consumed."""
+        puts it back, a served/escalated one keeps it consumed. RLock: safe
+        both from inside the tick and from threadpool endpoints."""
+        with self._klock:
+            self._settle_kit_locked(order_id, outcome)
+
+    def _settle_kit_locked(self, order_id: str, outcome: str) -> None:
         res = self._reservations.pop(order_id, None)
         if res:
             self._save_ledger()

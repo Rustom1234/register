@@ -380,6 +380,7 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             sim.running = True
         elif ctl.action == "speed" and ctl.value:
             sim.speed = max(0.5, min(60.0, ctl.value))
+            sim._pace_hold = None   # an explicit choice ends any auto-pacing hold
         return {"running": sim.running, "speed": sim.speed}
 
     @app.post("/api/purge")
@@ -410,9 +411,13 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         if act.action == "assign" and act.order_id and act.responder_id:
             return {"ok": svc.dispatch.manual_assign(act.order_id, act.responder_id)}
         if act.action == "sos" and act.responder_id:
-            # Rider safety: one tap reaches the coordinator, loudly.
+            # Rider safety: one tap reaches the coordinator, loudly. Roster
+            # ids only — an unknown id would let any authenticated tab plant
+            # fake safety alarms in the feed.
             name = next((r["name"] for r in sim.snapshot()["responders"]
-                         if r["id"] == act.responder_id), act.responder_id)
+                         if r["id"] == act.responder_id), None)
+            if name is None:
+                raise HTTPException(404, "no such responder")
             svc.emit("sos", {"responder_id": act.responder_id, "name": name})
             return {"ok": True}
         raise HTTPException(400, "bad action")
@@ -453,8 +458,10 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         # The rider app's duty button. Taking over a rider also puts them
         # on duty (their pin appears at their home spot and they join the
         # candidate pool); releasing them takes them off the board — the
-        # calm-mode "I'm ready" flow is exactly this call.
-        sim.set_duty(ctl.responder_id, ctl.manual, manual=True)
+        # calm-mode "I'm ready" flow is exactly this call. Unknown ids 404
+        # (matching /api/roster/active) instead of pretending success.
+        if not sim.set_duty(ctl.responder_id, ctl.manual, manual=True):
+            raise HTTPException(404, "no such responder")
         return {"manual": sorted(sim.manual)}
 
     @app.get("/api/metrics/daily")

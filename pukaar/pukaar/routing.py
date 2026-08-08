@@ -176,11 +176,13 @@ class RoadGraph:
         s = self._snap(lat1, lng1, speeds)
         g = self._snap(lat2, lng2, speeds)
         if s is None or g is None:
+            self._note_direct("no snappable edge for mode")
             wp, d, t = self._direct(lat1, lng1, lat2, lng2, speeds)
             return wp, d, t, [""] * len(wp)
 
         path = self._astar(s, g, speeds)
         if path is None:  # disconnected for this mode — never strand the demo
+            self._note_direct("disconnected graph components")
             wp, d, t = self._direct(lat1, lng1, lat2, lng2, speeds)
             return wp, d, t, [""] * len(wp)
 
@@ -225,6 +227,21 @@ class RoadGraph:
             waypoints.append((lat2, lng2))
             names.append("")              # road-to-door approach leg
         return waypoints, total_m, total_s, names
+
+    def _note_direct(self, reason: str) -> None:
+        """A straight-line fallback means a rider will visibly cross ground
+        that isn't road — silent on the shipped (fully connected) zone, but
+        real OSM imports are frequently disconnected. Warn loudly, once per
+        reason, so the failure is a log line instead of a demo mystery."""
+        seen = getattr(self, "_direct_warned", None)
+        if seen is None:
+            seen = self._direct_warned = set()
+        if reason not in seen:
+            seen.add(reason)
+            import sys
+            print(f"routing: straight-line fallback in use ({reason}) — "
+                  "check the zone with tools/fetch_real_roads.py's "
+                  "connectivity report", file=sys.stderr)
 
     def _direct(self, lat1, lng1, lat2, lng2, speeds) -> tuple[list[tuple[float, float]], float, float]:
         """Straight-line fallback for degenerate cases (no legal edges, or

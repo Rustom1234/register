@@ -184,6 +184,14 @@ class DispatchEngine:
         if not accepted:
             self.store.update("assignments", assignment_id, {"responded_at": now, "response": "declined"})
             return True
+        # Deactivation must also void offers already in flight: an offer can
+        # sit open for offer_ttl_s, and "stops NEW offers" alone would let a
+        # just-benched volunteer accept into a live job.
+        active = self.store.one(
+            "SELECT 1 ok FROM responders WHERE id=? AND active=1", (a["responder_id"],))
+        if not active:
+            self.store.update("assignments", assignment_id, {"responded_at": now, "response": "released"})
+            return False
         won = self.store.claim(
             "UPDATE orders SET status='accepted', responder_id=?, accepted_at=? "
             "WHERE id=? AND status='offered'",

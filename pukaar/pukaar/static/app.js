@@ -425,7 +425,7 @@ function syncMap() {
 // ---------------------------------------------------------------- tiles --
 function fmtDur(s) {
   if (s == null) return "—";
-  return s < 90 ? `${Math.round(s)}s` : `${Math.round(s / 60)}m`;
+  return s < 90 ? `${Math.round(s)} s` : `${Math.round(s / 60)} min`;
 }
 
 function renderTiles() {
@@ -470,7 +470,7 @@ function feedLine(e) {
   switch (e.kind) {
     case "case_created": {
       const icon = CAT_ICON[e.category] || "❓";
-      html = `${icon} new case <b>${short(e.case_id)}</b> · ${e.category || "uncategorised"}`; break;
+      html = `${icon} new case <b>${short(e.case_id)}</b> · ${escapeHtml(e.category) || "uncategorised"}`; break;
     }
     case "case_merged":
       html = `👥 witness #${e.witnesses} merged into <b>${short(e.case_id)}</b> (dedup)`; break;
@@ -515,8 +515,11 @@ function feedLine(e) {
       html = `📦 <b>${e.name ? escapeHtml(e.name) : respName(e.responder_id)}</b> collected the kit at ${escapeHtml(e.depot || "the depot")}`; cls = "good"; break;
     case "kit_return":
       html = `📦 unused ${escapeHtml(e.sku || "")} returned to ${escapeHtml(e.depot || "the depot")}`; break;
+    case "pace":
+      html = e.on ? "⏩ time compressed while the rider travels" : "⏱ back to normal speed";
+      break;
     case "roster_change":
-      html = `👤 <b>${respName(e.responder_id)}</b> ${e.active ? "back on duty" : "taken off duty"}`;
+      html = `👤 <b>${respName(e.responder_id)}</b> ${e.active ? "on duty" : "off duty"}`;
       cls = e.active ? "good" : "warn"; break;
     case "recheck_sent":
       html = `🤔 asked the witness of <b>${short(e.case_id)}</b>: still there?`; break;
@@ -638,7 +641,7 @@ function renderDetail() {
         <span style="color:var(--muted)">(deleted at case close)</span></div>`
     : "";
   const kv = `<div class="kv">
-    <div>category</div><div>${CAT_ICON[c.category] || ""} ${c.category || "—"} ${c.urgency === "high" ? "· <b style='color:var(--critical)'>P1 ⚠</b>" : ""}</div>
+    <div>category</div><div>${CAT_ICON[c.category] || ""} ${escapeHtml(c.category) || "—"} ${c.urgency === "high" ? "· <b style='color:var(--critical)'>P1 ⚠</b>" : ""}</div>
     <div>DIGIPIN</div><div>${c.digipin || "—"}</div>
     <div>witnesses</div><div>${c.merged_witnesses}${c.merged_witnesses > 1 ? " (deduped)" : ""}</div>
     <div>detail</div><div>${escapeHtml((c.detail || c.landmark_text || "—").slice(0, 70))}</div>${mediaRow}
