@@ -26,11 +26,13 @@ ETA is honest about how they're moving: walking, cycling, or scooter.
 paid key, so we build the closest thing: the same open street data that
 powers most map apps (OpenStreetMap), restyled to Google's visual
 language, with our own routing engine over the pilot zone's street
-network. The demo ships with representative built-in geometry (206 named
-road segments) so it runs anywhere with zero setup; one command on your
-machine (`tools/fetch_real_roads.py`) swaps in the real Nizamuddin
-streets from OpenStreetMap. Side by side with Google Maps, it should
-read as the same species.
+network. The demo ships with the **real Nizamuddin streets** — 1,432 road
+segments surveyed by OpenStreetMap contributors and imported by
+`tools/fetch_real_roads.py`, plus the real building footprints, the
+railway, Humayun's Tomb and Sunder Nursery — and the real arterials of
+Delhi around them for 10 km in every direction. Riders route on the
+streets that are actually there. Side by side with Google Maps, it should
+read as the same species, because underneath it is the same survey.
 
 ## Phase 2 — The rider side becomes a real mobile app
 

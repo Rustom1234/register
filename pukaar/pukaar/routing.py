@@ -1,8 +1,8 @@
 """Offline routing over the demo zone's road graph.
 
 v2: routes run over real road geometry loaded from a GeoJSON
-FeatureCollection (pukaar/data/demo_zone.geojson — representative
-Nizamuddin-inspired streets, swappable for surveyed OSM data via
+FeatureCollection (pukaar/data/demo_zone.geojson — the surveyed streets of
+Nizamuddin, Delhi, imported from OpenStreetMap by
 tools/fetch_real_roads.py). Every consecutive coordinate pair of a road
 LineString becomes an undirected edge carrying its haversine length and
 road class; per-mode speeds (walk / cycle / scooter) turn lengths into
@@ -37,6 +37,7 @@ SPEEDS_KMH: dict[str, dict[str, float]] = {
 
 _APPROACH_KMH = 5.0   # door-to-road legs are always on foot (wheel the scooter over)
 _M_PER_DEG_LAT = 111_320.0
+_GRID_M = 120.0       # snap-index cell size; see RoadGraph._index
 
 _DEFAULT_DATA_PATH = Path(__file__).resolve().parent / "data" / "demo_zone.geojson"
 
@@ -117,17 +118,97 @@ class RoadGraph:
                 self.adj[b].append((a, d, cls))
                 self.edges.append((a, b, d, cls, name))
                 self._edge_name[pair] = name
+        self._index()
+
+    # ------------------------------------------------------------- index --
+    def _index(self) -> None:
+        """Bucket every edge into a ~120 m grid so snapping is local.
+
+        Real OSM streets make this necessary: the surveyed pilot zone has
+        ~7.6k edges where the old hand-drawn one had a few hundred, and
+        _snap runs twice per route while dispatch routes every candidate
+        rider against every open case. A linear scan turned that into the
+        dominant cost of the whole system (300-case ingest went from ~20 s
+        to ~38 s); bucketing puts it back to a handful of cells."""
+        self._classes = {e[3] for e in self.edges}
+        self._grid: dict[tuple[int, int], list[int]] = {}
+        if not self.edges:
+            self._grid_bounds = (0, -1, 0, -1)
+            self._m_lng = _M_PER_DEG_LAT
+            return
+        lat0 = sum(n[0] for n in self.nodes) / len(self.nodes)
+        self._m_lng = _M_PER_DEG_LAT * max(0.2, math.cos(math.radians(lat0)))
+        for i, (a, b, _len, _cls, _name) in enumerate(self.edges):
+            (ai, aj), (bi, bj) = self._cell(*a), self._cell(*b)
+            for gi in range(min(ai, bi), max(ai, bi) + 1):
+                for gj in range(min(aj, bj), max(aj, bj) + 1):
+                    self._grid.setdefault((gi, gj), []).append(i)
+        gis = [c[0] for c in self._grid]
+        gjs = [c[1] for c in self._grid]
+        self._grid_bounds = (min(gis), max(gis), min(gjs), max(gjs))
+
+    def _cell(self, lat: float, lng: float) -> tuple[int, int]:
+        return (int(math.floor(lng * self._m_lng / _GRID_M)),
+                int(math.floor(lat * _M_PER_DEG_LAT / _GRID_M)))
+
+    @staticmethod
+    def _ring(gi: int, gj: int, r: int):
+        if r == 0:
+            yield (gi, gj)
+            return
+        for i in range(gi - r, gi + r + 1):
+            yield (i, gj - r)
+            yield (i, gj + r)
+        for j in range(gj - r + 1, gj + r):
+            yield (gi - r, j)
+            yield (gi + r, j)
 
     # -------------------------------------------------------------- snap --
     def _snap(self, lat: float, lng: float, mode_speeds: dict[str, float]) -> _Snap | None:
         """Project (lat, lng) onto the nearest edge legal for this mode.
 
-        Uses a local equirectangular frame centred on the query point —
-        exact enough at zone scale (~1.5 km) — and clamps the projection
-        to the segment. Returns None when the mode has no legal edges."""
-        m_lng = _M_PER_DEG_LAT * max(0.2, math.cos(math.radians(lat)))
+        Searches the grid outward from the query point's own cell and stops
+        as soon as the next ring cannot hold anything closer than the best
+        hit so far — the answer is identical to scanning every edge, which
+        test_routing pins. Returns None when the mode has no legal edges."""
+        if not any(cls in mode_speeds for cls in self._classes):
+            return None                       # e.g. a scooter on a footway-only graph
+        gi, gj = self._cell(lat, lng)
+        # Ring far enough to reach every occupied cell — measured FROM this
+        # query, so a point well outside the zone (a rider off the edge of
+        # the map) still finds the nearest street instead of falling back
+        # to a straight line.
+        lo_i, hi_i, lo_j, hi_j = self._grid_bounds
+        max_r = max(abs(gi - lo_i), abs(gi - hi_i),
+                    abs(gj - lo_j), abs(gj - hi_j))
         best: _Snap | None = None
-        for i, (a, b, length, cls, _name) in enumerate(self.edges):
+        seen: set[int] = set()
+        r = 0
+        while r <= max_r:
+            batch = []
+            for cell in self._ring(gi, gj, r):
+                for i in self._grid.get(cell, ()):
+                    if i not in seen:        # an edge spans several cells
+                        seen.add(i)
+                        batch.append(i)
+            if batch:
+                best = self._snap_into(lat, lng, mode_speeds, batch, best)
+            # cells beyond ring r sit at least r * _GRID_M away, so once the
+            # best hit is nearer than that, no further ring can beat it
+            if best is not None and best.approach_m <= r * _GRID_M:
+                break
+            r += 1
+        return best
+
+    def _snap_into(self, lat: float, lng: float, mode_speeds: dict[str, float],
+                   indices, best: _Snap | None) -> _Snap | None:
+        """Project onto each candidate edge, keeping the nearest.
+
+        A local equirectangular frame centred on the query point — exact
+        enough at zone scale — with the projection clamped to the segment."""
+        m_lng = _M_PER_DEG_LAT * max(0.2, math.cos(math.radians(lat)))
+        for i in indices:
+            a, b, length, cls, _name = self.edges[i]
             if cls not in mode_speeds:
                 continue
             ax, ay = (a[1] - lng) * m_lng, (a[0] - lat) * _M_PER_DEG_LAT

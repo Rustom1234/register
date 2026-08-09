@@ -177,3 +177,36 @@ def test_route_is_deterministic(graph):
     first = graph.route(*q, mode="cycle")
     for _ in range(3):
         assert graph.route(*q, mode="cycle") == first
+
+
+# --------------------------------------------------------- snap index --
+def test_snap_index_agrees_with_scanning_every_edge(graph):
+    """Snapping is answered from a grid index (RoadGraph._index) so that a
+    real OSM zone's ~7.6k edges are not rescanned twice per route. The
+    index is an optimisation ONLY: it must return exactly what the linear
+    scan returns, including for points off the edge of the map — a rider
+    outside the zone must still snap to the nearest street rather than
+    fall through to straight-line routing."""
+    import random
+
+    rng = random.Random(11)
+    box = (min(n[0] for n in graph.nodes), max(n[0] for n in graph.nodes),
+           min(n[1] for n in graph.nodes), max(n[1] for n in graph.nodes))
+    pts = [(rng.uniform(box[0], box[1]), rng.uniform(box[2], box[3]))
+           for _ in range(120)]
+    # and well outside it, in every direction
+    span = max(box[1] - box[0], box[3] - box[2]) or 0.01
+    pts += [(rng.uniform(box[0] - 40 * span, box[1] + 40 * span),
+             rng.uniform(box[2] - 40 * span, box[3] + 40 * span))
+            for _ in range(120)]
+
+    for mode, speeds in SPEEDS_KMH.items():
+        for lat, lng in pts:
+            fast = graph._snap(lat, lng, speeds)
+            slow = graph._snap_into(lat, lng, speeds, range(len(graph.edges)), None)
+            assert (fast is None) == (slow is None), (mode, lat, lng)
+            if fast is not None:
+                assert fast.approach_m == pytest.approx(slow.approach_m, abs=1e-9), \
+                    (mode, lat, lng)
+                assert fast.edge_i == slow.edge_i or \
+                    fast.approach_m == pytest.approx(slow.approach_m, abs=1e-9)

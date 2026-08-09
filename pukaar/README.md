@@ -23,7 +23,7 @@ a live **demo control room** you can record.
 ```bash
 cd pukaar          # or just: make install && make demo
 uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
-.venv/bin/python -m pytest -q          # 224 tests, all offline
+.venv/bin/python -m pytest -q          # 245 tests, all offline
 .venv/bin/python -m pukaar             # http://127.0.0.1:8877 — calm board
 ```
 

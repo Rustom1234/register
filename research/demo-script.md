@@ -66,14 +66,18 @@ document — I just ran it in front of you."
 ---
 
 **Numbers you may quote** (all measured or sourced, nothing invented):
-217 automated tests · ~0.5 ms per route · kits ₹172 / ₹50 / ₹173
+245 automated tests · ~0.5 ms per route · kits ₹172 / ₹50 / ₹173
 wholesale · ₹6,900 seeds three depots · ≈₹36,500 year-one stock ·
 ≈₹1,250/month realistic pilot run-rate.
 
+**You may now claim the map.** The streets are real: OpenStreetMap's
+survey of Nizamuddin, imported by `tools/fetch_real_roads.py`. Riders
+route on Mathura Road and Lodhi Road because those are the roads. Credit
+OpenStreetMap contributors (ODbL) if asked — the attribution is on every
+map surface.
+
 **Do not claim:** any NGO partnership (conversations start with this
-demo), real WhatsApp integration (the witness page IS the line today),
-or surveyed map data (the geometry is representative; the import tool
-for real OSM streets exists and is one command).
+demo), or real WhatsApp integration (the witness page IS the line today).
 
 ---
 
@@ -82,7 +86,7 @@ for real OSM streets exists and is one command).
 **Before you leave the house**
 1. `git pull` in your clone — ten overnight rounds shipped; you want
    commit `31ee9657d` or later. Then `cd pukaar` and run
-   `.venv/bin/python -m pytest -q` once: 224 passed = you're on the
+   `.venv/bin/python -m pytest -q` once: 245 passed = you're on the
    right build.
 2. Boot with **no flags**: `.venv/bin/python -m pukaar` — the calm
    board IS the pitch mode. (`PUKAAR_SEED_DEMO=1` is only for the busy

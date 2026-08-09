@@ -83,10 +83,11 @@ function playNewFeedSounds() {
 // from this app, and they're the SAME streets the router drives on.
 let mapTheme = localStorage.getItem("pukaar_map_theme") || "day";
 
-// Half-extent of the generated surroundings, in metres — must match
-// CITY_HALF_M in tools/make_city_surrounds.py (R_CITY). The camera is
-// clamped to exactly the area that has streets in it, so every direction
-// the founder pans or zooms out to is rendered, and none of it is void.
+// Half-extent of the surrounding street data, in metres — must match the
+// "city" profile's outer radius in tools/fetch_real_roads.py, which clips
+// real OSM arterials to exactly this square. The camera is clamped to
+// exactly the area that has streets in it, so every direction the founder
+// pans or zooms out to is rendered, and none of it is void.
 const CITY_HALF_M = 10000;
 
 function cameraClamp(zone) {
@@ -107,7 +108,7 @@ function initMap(zone) {
     minZoom: 11.5,
     maxZoom: 17.5,   // data density is tuned to z17 — deeper is a flat void
     maxBounds: cameraClamp(zone),
-    attributionControl: { compact: true, customAttribution: "demo geometry — representative, not surveyed" },
+    attributionControl: { compact: true, customAttribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' },
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
   map.on("style.load", ensureOverlays);

@@ -14,6 +14,7 @@ from collections import deque
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -97,6 +98,13 @@ def build_app(cfg: Config | None = None) -> FastAPI:
 
     app = FastAPI(title="Wayside demo", lifespan=lifespan)
     app.state.svc, app.state.sim = svc, sim
+
+    # Real surveyed streets are heavier than the invented map they
+    # replaced (~1.8 MB of GeoJSON across the two tiers), and the control
+    # room polls /api/state once a second. GeoJSON and JSON both compress
+    # ~10x, which puts the whole map back under 200 kB on the wire — the
+    # difference between a usable and an unusable first load on a phone.
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
 
     # ---- staff gate (hosted deploys) -----------------------------------
     # With PUKAAR_ADMIN_TOKEN set, everything is staff-only EXCEPT the
@@ -687,15 +695,16 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     @app.get("/data/demo_zone.geojson")
     def zone_geojson():
         # The basemap and the router read the same file — the streets you
-        # see are exactly the streets riders are routed on.
+        # see are exactly the streets riders are routed on, and they are
+        # the real ones: OpenStreetMap's survey of Nizamuddin.
         return FileResponse(STATIC.parent / "data" / "demo_zone.geojson",
                             media_type="application/geo+json")
 
     @app.get("/data/demo_city.geojson")
     def city_geojson():
-        # Scenery only: the procedurally generated city AROUND the pilot
-        # zone, so panning or zooming out shows streets instead of a void.
-        # The router never reads this — riders travel the zone file above.
+        # Scenery only: real OSM arterials AROUND the pilot zone, so
+        # panning or zooming out shows Delhi instead of a void. The router
+        # never reads this — riders travel the zone file above.
         return FileResponse(STATIC.parent / "data" / "demo_city.geojson",
                             media_type="application/geo+json")
 

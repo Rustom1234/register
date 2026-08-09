@@ -1,14 +1,16 @@
 """The wider city around the pilot zone, and the data the map needs to make
 riders glide.
 
-demo_city.geojson is procedurally generated scenery (tools/make_city_surrounds.py)
-so that panning or zooming out shows streets instead of a void. Two things
-must stay true forever:
+demo_city.geojson is real OpenStreetMap arterial road data (imported by
+tools/fetch_real_roads.py, "city" profile) so that panning or zooming out
+shows Delhi instead of a void. Two things must stay true forever:
 
-  * it is SCENERY. The router builds its graph from demo_zone.geojson alone,
-    so nothing here can ever put a rider on an invented street.
-  * it never overdraws the hand-built pilot zone, and it stays small enough
-    to ship on every page load.
+  * it is SCENERY. The router builds its graph from demo_zone.geojson
+    alone, so nothing here can ever put a rider on a street the dispatch
+    engine has not measured.
+  * it TILES with the pilot zone rather than overdrawing it — the city
+    tier is clipped to the camera-clamp square minus the zone's disc — and
+    it stays small enough to ship on every page load.
 
 The responder payload's speed_mps is the other half of the smooth-motion
 work: the map dead-reckons between 1 Hz polls with exactly this number, so
@@ -21,7 +23,7 @@ from pathlib import Path
 
 import pytest
 
-from pukaar import routing
+from pukaar import geo, routing
 from pukaar.config import Config
 from pukaar.db import Store
 from pukaar.service import PukaarService
@@ -64,11 +66,13 @@ def _pts(f):
 # ------------------------------------------------------------- the file --
 def test_city_file_exists_and_is_honest(city):
     assert city["type"] == "FeatureCollection"
-    note = city["note"].lower()
-    # The map's attribution says "representative, not surveyed"; the file
-    # itself must never claim otherwise.
-    assert "not surveyed" in note
-    assert "invented" in note
+    # The map's attribution control credits OpenStreetMap; the file itself
+    # must carry the same credit, because ODbL requires it to travel with
+    # the data and not just with the rendering.
+    assert "OpenStreetMap" in city["note"]
+    assert "OpenStreetMap contributors" in city["attribution"]
+    assert "ODbL" in city["license"]
+    assert city["source"]["profile"] == "city"
     assert city["features"]
 
 
@@ -91,7 +95,10 @@ def test_city_schema_matches_the_zone(city):
 
 def test_city_covers_every_direction_out_to_the_camera_clamp(city):
     """app.js clamps the camera to +/-10 km; there must be geometry in all
-    four quadrants out near that edge, or panning still finds a void."""
+    four quadrants out near that edge, or panning still finds a void.
+
+    This is why the city tier is clipped to that SQUARE and not to a disc:
+    a 10 km disc leaves the corners of what the founder can pan to empty."""
     far = {}
     for f in city["features"]:
         if f["properties"]["kind"] != "road":
@@ -105,37 +112,30 @@ def test_city_covers_every_direction_out_to_the_camera_clamp(city):
         assert reach > 7000, f"quadrant {q} only reaches {reach:.0f} m"
 
 
-def test_city_never_overdraws_the_pilot_zone(city, zone):
-    """Generated streets must keep clear of the hand-built network: the zone
-    is the real map, the city is scenery around it."""
-    zone_pts = []
-    for f in zone["features"]:
-        if f["properties"]["kind"] == "road":
-            zone_pts += [_metres(*c) for c in f["geometry"]["coordinates"]]
-    # coarse spatial index at 100 m so this stays fast
-    grid = {}
-    for x, y in zone_pts:
-        grid.setdefault((int(x // 100), int(y // 100)), []).append((x, y))
+def test_the_two_tiers_tile_instead_of_overlapping(city, zone):
+    """Both tiers are now the SAME survey, so drawing them on top of each
+    other would double every arterial — Mathura Road rendered twice, once
+    per source, with the seam showing as a thicker line. The importer gives
+    the city tier a hole exactly where the zone tier is, so the boundary is
+    a join and not an overlap."""
+    ZONE_R = 1600.0                      # PROFILES["zone"] outer radius
 
-    def nearest(px, py):
-        gi, gj = int(px // 100), int(py // 100)
-        best = 1e9
-        for di in (-1, 0, 1):
-            for dj in (-1, 0, 1):
-                for qx, qy in grid.get((gi + di, gj + dj), ()):
-                    best = min(best, math.hypot(px - qx, py - qy))
-        return best
+    def radius(lng, lat):                # the same measure the importer clips by
+        return geo.haversine_m(CLAT, CLNG, lat, lng)
 
-    worst = 1e9
-    for f in city["features"]:
-        if f["properties"]["kind"] != "road":
-            continue
-        co = f["geometry"]["coordinates"]
-        # endpoints are deliberately SNAPPED onto zone junctions (that is the
-        # seam join) — the interior of a city road is what must stay clear
-        for lng, lat in co[1:-1]:
-            worst = min(worst, nearest(*_metres(lng, lat)))
-    assert worst > 60, f"city street runs {worst:.0f} m from a pilot-zone road"
+    zone_reach = max(
+        radius(lng, lat)
+        for f in zone["features"] if f["properties"]["kind"] == "road"
+        for lng, lat in f["geometry"]["coordinates"])
+    assert zone_reach <= ZONE_R + 1, f"zone roads reach {zone_reach:.0f} m"
+
+    nearest_city = min(
+        radius(lng, lat)
+        for f in city["features"] if f["properties"]["kind"] == "road"
+        for lng, lat in f["geometry"]["coordinates"])
+    assert nearest_city >= ZONE_R - 1, (
+        f"a city street runs {nearest_city:.0f} m from the centre, inside "
+        "the pilot zone the router owns")
 
 
 def test_city_is_not_routable(city):
@@ -159,17 +159,17 @@ def test_city_is_not_routable(city):
     assert city_reach > 8000
 
 
-def test_generator_is_deterministic(tmp_path):
-    """Re-running the tool must reproduce the committed file byte-for-byte,
-    so a regenerate never shows up as a mystery diff."""
-    import importlib.util
-    tools = Path(__file__).resolve().parents[1] / "tools"
-    spec = importlib.util.spec_from_file_location(
-        "make_city_surrounds", tools / "make_city_surrounds.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    fc = mod.build()
-    assert json.dumps(fc, separators=(",", ":")) == CITY.read_text(encoding="utf-8")
+def test_the_import_is_reproducible_in_order_if_not_in_bytes():
+    """A generated map could be pinned byte-for-byte. A real one cannot:
+    OSM changes whenever a surveyor edits Nizamuddin, and pinning bytes
+    would mean the suite goes red because someone in Delhi mapped a lane.
+
+    What IS pinned is that the importer emits a stable ORDER, so a
+    re-fetch diffs as the map changing and not as features shuffling."""
+    fc = json.loads(CITY.read_text(encoding="utf-8"))
+    keys = [(f["properties"]["kind"], f["properties"].get("name") or "",
+             json.dumps(f["geometry"]["coordinates"])) for f in fc["features"]]
+    assert keys == sorted(keys)
 
 
 # ------------------------------------------------------------- basemap --

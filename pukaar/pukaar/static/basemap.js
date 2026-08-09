@@ -7,17 +7,23 @@
  * which returns a complete MapLibre GL style reading from up to two GeoJSON
  * sources that share one schema:
  *
- *   "zone"  the hand-built pilot area (demo_zone.geojson) — the SAME streets
- *           the router drives riders on
- *   "city"  procedurally generated surroundings (demo_city.geojson) so that
- *           panning or zooming out shows a coherent city instead of a void.
- *           Scenery only: nothing in it is routable.
+ *   "zone"  the pilot area (demo_zone.geojson) — real OpenStreetMap streets,
+ *           and the SAME ones the router drives riders on
+ *   "city"  the real arterials around it (demo_city.geojson) so that panning
+ *           or zooming out shows Delhi instead of a void. Scenery only:
+ *           nothing in it is routable.
+ *
+ * Both files are imported from OSM by tools/fetch_real_roads.py.
+ * © OpenStreetMap contributors, ODbL — the attribution control on every map
+ * carries the credit, and it must stay there.
  *
  * Schema for both:
  *   roads:     properties.kind === "road", properties.class in
  *              primary | secondary | residential | lane | footway,
  *              optional properties.name
- *   areas:     properties.kind in park | water | rail | campus | building
+ *   areas:     properties.kind in park | water | rail | campus | building.
+ *              "rail" is a Polygon where OSM maps railway land use and a
+ *              LineString for the tracks themselves — both are drawn
  *   landmarks: properties.kind === "landmark", properties.name,
  *              properties.icon in rail | monument | mosque | park |
  *              hospital | market
@@ -44,6 +50,8 @@
       parkOutline: "#a9d2a6",
       water: "#a6d8f5",
       rail: "#e4e2dd",
+      railLine: "#b9b5ab",
+      railTie: "#f2f0eb",
       building: "#e8e4dc",
       buildingOutline: "#dcd7cd",
       minorCasing: "#d5d3cc",
@@ -72,6 +80,8 @@
       parkOutline: "#213528",
       water: "#12283a",
       rail: "#1a1d24",
+      railLine: "#3d4356",
+      railTie: "#14161c",
       building: "#1c1f27",
       buildingOutline: "#242834",
       minorCasing: "#383e52",
@@ -204,8 +214,42 @@
         id: "rail" + sfx,
         type: "fill",
         source: src,
-        filter: kindIs("rail"),
+        filter: ["all", kindIs("rail"), ["==", ["geometry-type"], "Polygon"]],
         paint: { "fill-color": t.rail }
+      },
+      // Railways are LINEAR in OSM: a corridor polygon exists only where a
+      // surveyor mapped the land use (yards, depots). The tracks themselves
+      // are centrelines, drawn with the classic hatched casing — a solid
+      // bed under a light dashed sleeper line — so Nizamuddin's junction
+      // reads as a railway and not as a road a rider could be sent down.
+      {
+        id: "rail-bed" + sfx,
+        type: "line",
+        source: src,
+        filter: ["all", kindIs("rail"), ["==", ["geometry-type"], "LineString"]],
+        layout: { "line-cap": "butt" },
+        paint: {
+          "line-color": t.railLine,
+          "line-width": [
+            "interpolate", ["linear"], ["zoom"], 11, 1.2, 14, 2.4, 17, 4
+          ],
+          "line-opacity": 0.9
+        }
+      },
+      {
+        id: "rail-ties" + sfx,
+        type: "line",
+        source: src,
+        minzoom: 13,
+        filter: ["all", kindIs("rail"), ["==", ["geometry-type"], "LineString"]],
+        paint: {
+          "line-color": t.railTie,
+          "line-width": [
+            "interpolate", ["linear"], ["zoom"], 13, 0.8, 17, 2.2
+          ],
+          "line-dasharray": [2, 3],
+          "line-opacity": 0.85
+        }
       },
 
       // ---- building footprints (fade in from z14.2, Google-style) ----

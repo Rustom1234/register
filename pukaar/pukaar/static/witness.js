@@ -57,8 +57,8 @@ function escapeHtml(s) {
 // ------------------------------------------------------------------ map --
 // Same Google-style local basemap the supervisor sees — day theme, since a
 // witness is a member of the public, not an ops room.
-// Half-extent of the generated surroundings — keep in step with app.js
-// CITY_HALF_M and tools/make_city_surrounds.py R_CITY.
+// Half-extent of the surrounding street data — keep in step with app.js
+// CITY_HALF_M and the "city" profile in tools/fetch_real_roads.py.
 const CITY_HALF_M = 10000;
 
 function initMap(zone) {
@@ -76,7 +76,7 @@ function initMap(zone) {
       minZoom: 11.5,
       maxZoom: 17.5,  // matches the data's detail ceiling (see app.js)
       maxBounds: [[zone.lng - dLng, zone.lat - dLat], [zone.lng + dLng, zone.lat + dLat]],
-      attributionControl: { compact: true, customAttribution: "demo geometry — representative, not surveyed" },
+      attributionControl: { compact: true, customAttribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' },
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
     map.on("style.load", () => {

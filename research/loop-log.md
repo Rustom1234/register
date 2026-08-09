@@ -948,3 +948,82 @@ Deliberately deferred (P3 polish): scenario-button thread-switch cue,
 distance jump explanation, vocab sweep, pan rubber-band feedback.
 
 Suite: **225 passed** (was 224; +1 regression test). Cache `20260805l`.
+
+---
+
+## 2026-08-09 · the map became real: OSM Nizamuddin replaces the invented city
+
+Network access arrived, so the long-standing swap finally happened. Both
+committed map files are now **real OpenStreetMap data**, imported by an
+extended `tools/fetch_real_roads.py` — the tool that had been written
+against a sandbox that could never run it.
+
+**What the router drives on** (`pukaar/data/demo_zone.geojson`, 811 kB):
+1,432 road segments, 1,829 building footprints, 98 railway centrelines,
+69 parks, 57 landmarks — Humayun's Tomb, Sunder Nursery, Nizamuddin
+Dargah, Isa Khan's Tomb, Sabz Burj, Hazrat Nizamuddin Junction. Riders
+now route on Mathura Road and Lodhi Road because those are their names.
+Turn-by-turn reads like Delhi: *Mathura Road → Jathedar Harbans Singh
+Bhogal Marg*. A walking route can be **shorter** than the scooter route
+over the same pair of points because pedestrians may cross on "FOB 2", a
+real footbridge — the kind of truth invented geometry cannot produce.
+
+**What surrounds it** (`demo_city.geojson`, 994 kB): real arterials,
+parks, water and 348 real neighbourhood labels — Connaught Place, Lodhi
+Colony, Saket, Mayur Vihar — clipped to the ±10 km camera-clamp **square**
+minus the zone's disc. A square, not a disc: the camera clamps to a
+square, so disc-clipped data would leave the corners of what the founder
+can pan to empty. The two tiers now tile instead of overlapping.
+
+**The importer had to earn the data.** Real streets do not arrive
+routable. New passes, each unit-tested:
+- *clip* to a region predicate, interpolating the boundary crossing, so a
+  street ends ON the edge and a road that leaves and returns becomes two
+  roads rather than one with a phantom shortcut;
+- *weld* vertices within 1.2 m — surveyors put two nodes at one junction,
+  which read as two dead ends and left sub-metre edges;
+- *thin* redundant vertices while never dropping a shared one (thinning a
+  junction away on one side silently disconnects the network);
+- *prune* to the largest driveable component, then keep only footways
+  hanging off it — an orphaned block would be answered with a straight
+  line, a rider flying over the city. Connectivity report: **0 %**
+  straight-line fallback on walk, cycle and scooter.
+
+**Two consequences worth naming.**
+*Speed:* the graph went from a few hundred edges to 7,607, and `_snap`
+scanned all of them twice per route — 300-case ingest blew its 30 s
+budget at 38.5 s. Added a 120 m grid index to `RoadGraph`; snapping now
+searches outward and stops when no further ring can beat the best hit.
+Verified identical to brute force on 1,350 random queries across all
+three modes; routing is 2.4× faster and ingest is back inside budget.
+The first cut of that index had a real bug, caught by probing rather than
+by the suite: it capped the outward search at the grid's own span, so a
+query more than ~10 km off the map returned "no snappable edge" and fell
+through to straight-line routing — the exact failure the index was meant
+to protect. The ring is now bounded from the QUERY to the grid, and a
+regression test in `test_routing.py` pins the index to the linear scan
+for points on and far off the map.
+*Weight:* real data is heavier, so `GZipMiddleware` is now on. The zone
+file is 100 kB on the wire instead of 811 kB — the whole map is lighter
+compressed than the invented one was uncompressed.
+
+**Honesty moves the other way for once.** The map attribution changed
+from "demo geometry — representative, not surveyed" to
+"© OpenStreetMap contributors", ODbL credit travels inside both files,
+and `demo-script.md` gained a *you may now claim the map* note where it
+used to warn against exactly that. Railways render as lines (OSM maps no
+corridor polygon here) with a hatched bed-and-ties style, and the one
+rail invariant that still means something is tested end to end: no
+railway vertex is ever a routable node.
+
+Retired `tools/make_demo_zone.py` and `tools/make_city_surrounds.py` with
+the invented geometry they produced. Byte-for-byte generator
+reproducibility went with them — a real map cannot be pinned to bytes,
+because OSM changes whenever someone surveys a lane in Delhi. What is
+pinned instead is stable feature ORDER, so a re-fetch diffs as the city
+changing rather than as features shuffling.
+
+Verified live: control room, witness map, both themes, zoomed to the
+clamp — real streets everywhere, no void, no console errors.
+
+Suite: **245 passed** (was 225). Cache `20260809a`.

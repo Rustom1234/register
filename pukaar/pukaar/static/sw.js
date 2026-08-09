@@ -5,21 +5,21 @@
    worse than a spinner — but the shell itself never 404s offline. */
 "use strict";
 
-const CACHE = "wayside-20260805m";
+const CACHE = "wayside-20260809a";
 const SHELL = [
   "/responder",
-  "/static/responder.js?v=20260805m",
+  "/static/responder.js?v=20260809a",
   "/static/manifest.webmanifest",
   "/static/icons/icon-192.png",
   "/static/icons/icon-512.png",
   // witness shell: a reporter with no signal still gets the page (with an
   // honest "didn't send" state) instead of the browser's dinosaur
   "/witness",
-  "/static/witness.js?v=20260805m",
-  "/static/app.css?v=20260805m",
-  "/static/basemap.js?v=20260805m",
-  "/static/vendor/maplibre-gl.js?v=20260805m",
-  "/static/vendor/maplibre-gl.css?v=20260805m",
+  "/static/witness.js?v=20260809a",
+  "/static/app.css?v=20260809a",
+  "/static/basemap.js?v=20260809a",
+  "/static/vendor/maplibre-gl.js?v=20260809a",
+  "/static/vendor/maplibre-gl.css?v=20260809a",
   "/data/demo_zone.geojson",
   // the surrounding city, so an offline witness map is not a void either
   "/data/demo_city.geojson",
