@@ -95,7 +95,7 @@ function initMap(zone) {
     center: [zone.lng, zone.lat],
     zoom: 14.9,
     minZoom: 13.2,
-    maxZoom: 18.5,
+    maxZoom: 17.5,   // data density is tuned to z17 — deeper is a flat void
     maxBounds: [[zone.lng - dLng, zone.lat - dLat], [zone.lng + dLng, zone.lat + dLat]],
     attributionControl: { compact: true, customAttribution: "demo geometry — representative, not surveyed" },
   });
@@ -105,11 +105,17 @@ function initMap(zone) {
   // elements live in the canvas container, so their clicks bubble here
   // and would silently teleport the pin (a later "share location" then
   // files the report at the marker, not where the witness meant).
+  // Fused against dblclick-zoom: each half of a double-click arrives as a
+  // click, and un-fused they teleported the witness pin (dispatch location).
+  let pinFuse = null;
   map.on("click", (e) => {
     if (e.originalEvent && e.originalEvent.target === map.getCanvas()) {
-      placeWitnessPin(e.lngLat.lat, e.lngLat.lng);
+      clearTimeout(pinFuse);
+      const { lat, lng } = e.lngLat;
+      pinFuse = setTimeout(() => placeWitnessPin(lat, lng), 300);
     }
   });
+  map.on("dblclick", () => clearTimeout(pinFuse));
   // Any user camera gesture releases the follow-cam: MapLibre sets
   // originalEvent only for user-initiated moves (drag, wheel, keyboard,
   // pinch), so our own panTo never self-cancels here.
@@ -1090,6 +1096,11 @@ function wire() {
     cellsOn = !cellsOn;
     cellsBtn.classList.toggle("on", cellsOn);
     cellsBtn.setAttribute("aria-pressed", String(cellsOn));
+    // empty isn't broken — say so, or the privacy story looks like a dead
+    // button on a fresh board (cells aggregate only as closed cases age)
+    if (cellsOn && !(state && state.cells && state.cells.length)) {
+      flashRespToast("no 90-day aggregates yet — cells appear as closed cases age");
+    }
     drawCells();
   });
   document.getElementById("btn-follow").addEventListener("click", () => {

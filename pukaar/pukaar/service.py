@@ -209,6 +209,11 @@ class PukaarService:
             self._handle_recheck_reply(conv, reply)
         if conv.state["stage"] == "emergency_redirect":
             self.emit("emergency_redirect", {"phone_hash": phone_hash})
+            # durable marker: the shift handover counts THESE, not every
+            # case-less report row (abandoned half-intakes are not 112s)
+            self.store.audit("intake", "emergency_redirect", phone_hash,
+                             "system", "", "gate redirected to 112",
+                             ts=self.now())
             self._record_report(conv, kind, shown, case_id=None, media_ref=media_ref)
             conv.state["stage"] = "need_location"  # allow a normal report after
         elif conv.state.get("ready_case"):
@@ -474,12 +479,13 @@ class PukaarService:
         kits_out = sum(1 for o in outs if o["served"] or o["escalated"])
         returns = sum(1 for o in outs if not o["served"] and not o["escalated"])
         restocks = sum(1 for e in list(self.feed) if e["ts"] >= since and e["kind"] == "restock_delivered")
-        # 112 bounces leave a durable case-less report row (the media
-        # retro-link later attaches case ids to photo rows, so case-less =
-        # redirected): the handover must show them so a human sanity-checks
-        # the gate's judgement the morning after, not never.
-        bounced_112 = q("SELECT COUNT(*) n FROM reports WHERE case_id IS NULL "
-                        "AND received_at >= ?", (since,))[0]["n"]
+        # Count actual gate redirects (each writes an audit row), not every
+        # case-less report row — abandoned half-intakes and pre-case chat
+        # also leave case-less rows, and this is the number the handover
+        # tells a human to hand-check every morning.
+        bounced_112 = q("SELECT COUNT(*) n FROM audit_log "
+                        "WHERE action='emergency_redirect' AND ts >= ?",
+                        (since,))[0]["n"]
         accept_times = [r["accepted_at"] - r["created_at"] for r in
                         q("SELECT created_at, accepted_at FROM orders "
                           "WHERE accepted_at IS NOT NULL AND created_at >= ?", (since,))]

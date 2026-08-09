@@ -173,7 +173,11 @@ ol.instr li { margin: 6px 0; line-height: 1.45; }
 }
 a { color: var(--medical); }
 footer { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--muted);
-         font-size: 11px; display: flex; justify-content: space-between; }
+         font-size: 11px; display: flex; justify-content: space-between;
+         align-items: center; gap: 10px; }
+/* narrow phones: the SOS pill owns the middle — the tagline was wrapping
+   underneath it and colliding */
+@media (max-width: 430px) { footer .tagline { display: none; } }
 </style>
 </head>
 <body>
@@ -225,10 +229,10 @@ footer { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--mut
     <button id="sos-btn" hidden
             style="background:#2a1215;border:1px solid #d03b3b;color:#ff9d99;border-radius:999px;padding:11px 18px;min-height:44px;font-size:12px;font-weight:700;cursor:pointer"
             title="Alert the coordinator that you need help">🆘 SOS</button>
-    <span>first accept wins · every pinned case closes</span>
+    <span class="tagline">first accept wins · every pinned case closes</span>
   </footer>
 </div>
 <div id="toast" role="status">✓ recorded</div>
-<script src="/static/responder.js?v=20260805k"></script>
+<script src="/static/responder.js?v=20260805l"></script>
 </body>
 </html>

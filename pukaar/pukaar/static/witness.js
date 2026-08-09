@@ -67,7 +67,7 @@ function initMap(zone) {
       center: [zone.lng, zone.lat],
       zoom: 14.9,
       minZoom: 13.2,
-      maxZoom: 18.5,
+      maxZoom: 17.5,  // matches the data's detail ceiling (see app.js)
       maxBounds: [[zone.lng - dLng, zone.lat - dLat], [zone.lng + dLng, zone.lat + dLat]],
       attributionControl: { compact: true, customAttribution: "demo geometry — representative, not surveyed" },
     });
@@ -89,7 +89,16 @@ function initMap(zone) {
         paint: { "line-color": "#6b6a66", "line-opacity": 0.7, "line-width": 1.2,
                  "line-dasharray": [2, 2.4] } });
     });
-    map.on("click", (e) => placeWitnessPin(e.lngLat.lat, e.lngLat.lng));
+    // A double-tap to zoom fires two clicks first — placing the pin on a
+    // short fuse and cancelling on dblclick keeps the universal phone
+    // gesture from silently teleporting the dispatch location.
+    let pinFuse = null;
+    map.on("click", (e) => {
+      clearTimeout(pinFuse);
+      const { lat, lng } = e.lngLat;
+      pinFuse = setTimeout(() => placeWitnessPin(lat, lng), 300);
+    });
+    map.on("dblclick", () => clearTimeout(pinFuse));
   } catch {
     $("map").innerHTML = '<div style="display:grid;place-items:center;height:100%;color:#898781">map unavailable — you can still type a landmark</div>';
     map = "failed";
@@ -305,17 +314,14 @@ function wire() {
   $("btn-send").addEventListener("click", sendText);
   $("msg-in").addEventListener("keydown", (e) => { if (e.key === "Enter") sendText(); });
   $("btn-loc").addEventListener("click", () => {
-    let lat, lng;
-    if (witnessPin) ({ lat, lng } = witnessPin.getLngLat());
-    else if (state) {
-      const z = state.zone;
-      lat = z.lat + (Math.random() - 0.5) * 0.012; lng = z.lng + (Math.random() - 0.5) * 0.012;
-      if (map && map !== "failed") placeWitnessPin(lat, lng);
-    } else {
-      // offline boot with no cached zone: don't dead-end silently
-      netNote("⚠ No signal — tap the map to drop a pin, or describe a landmark in the chat.");
+    // Only ever share a pin the witness actually placed. Inventing a
+    // random nearby point here sent riders to a spot no human chose —
+    // the one datum this product treats as sacred.
+    if (!witnessPin) {
+      netNote("📍 Tap the map where the person is first — then send the pin.");
       return;
     }
+    const { lat, lng } = witnessPin.getLngLat();
     sendInbound("location", { lat, lng });
   });
   const photoMenu = $("photo-menu");

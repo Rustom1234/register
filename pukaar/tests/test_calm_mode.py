@@ -196,6 +196,19 @@ def test_manual_assign_is_a_consent_offer_by_default(svc, clock):
     assert svc.store.one("SELECT * FROM orders")["status"] == "accepted"
 
 
+def test_shift_counts_only_real_112_redirects(svc, clock):
+    """Reviewer P2: the handover's '112 redirects — check by hand' row was
+    counting every case-less report row (abandoned half-intakes included).
+    Only actual gate trips may count, via their durable audit rows."""
+    svc.wa_inbound("+918881", "text", "ek aadmi hai station ke paas")  # half-intake
+    assert svc.shift_summary(svc.now())["bounced_112"] == 0
+    svc.wa_inbound("+918882", "text", "bahut khoon beh raha hai jaldi aao")
+    assert svc.shift_summary(svc.now())["bounced_112"] == 1
+    rows = svc.store.query(
+        "SELECT * FROM audit_log WHERE action='emergency_redirect'")
+    assert rows and "+918882" not in str(rows)   # hashed, never the number
+
+
 def test_stock_adjust_endpoint(svc, clock):
     from fastapi.testclient import TestClient
     from pukaar.api import build_app

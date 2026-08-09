@@ -905,3 +905,46 @@ Wrote the founder-facing overnight summary at the top of this log (pull
 target, headline changes by theme, artifact links, checklist pointer)
 and caught the deck's stale title chip — build_deck.js + pitch md said
 217 tests; now 224, deck rebuilt. 224 tests green.
+
+---
+
+## 2026-08-09 · founder session: demo video, map frame, live review
+
+**Demo video** (`research/pitch/wayside-demo.mp4`, 50s, fully English):
+the founder's storyboard shot live with Playwright — witness
+message → pin → photo (the photo files the report) → control-room ping →
+rider accepts → depot medkit run on streets → outcome served → witness
+closure. Phone surfaces composed in a device bezel; title/close cards.
+
+**Founder bug ("map doesn't render when I scroll out") — fixed** in
+`45f0ae120`: beyond the zone's GeoJSON the world was bare background
+color. `buildStyle` now dims outside a ~1.12×-radius disc and labels the
+boundary "WAYSIDE PILOT ZONE", both maps, both themes. An independent
+reviewer agent reproduced the pre-fix symptom live and verified the fix.
+
+**Sim pacing** (same commit): auto-pace re-engaged every tick, clobbering
+a manually chosen slower speed mid-drive back to 24×. Now edge-triggered
+on travel start — the founder's speed pick sticks.
+
+**Live human-style review** (background agent, 94 screenshots, full
+witness→rider→closure loop three ways): report verified and processed —
+- P1 double-click/double-tap zoom teleported the witness pin (the
+  dispatch location) — click now places on a 300 ms fuse that a dblclick
+  cancels, witness + control room.
+- P2 📍-with-no-pin fabricated a random location and shared it silently —
+  now an honest nudge, nothing sent.
+- P2 rider "Recent activity" pinned to the session's six oldest events
+  (`slice(-6)` on a newest-first feed) — now `slice(0, 6)`.
+- P2 /shift "112 redirects" counted every case-less report row (phantom
+  emergencies on the one number a human hand-checks) — redirects now
+  write an `emergency_redirect` audit row and the handover counts those.
+  New regression test.
+- P2 90-day cells toggle was a silent no-op on an empty board — now
+  toasts "no aggregates yet" so the privacy story never looks broken.
+- P3 maxZoom 18.5 overzoomed past data density (flat void) — 17.5.
+- P3 rider footer tagline collided with the SOS pill ≤430px — hidden.
+Deliberately deferred (P3 polish): scenario-button thread-switch cue,
+"routed" chip on wave-exhausted orders, autoDuty consent cue, post-accept
+distance jump explanation, vocab sweep, pan rubber-band feedback.
+
+Suite: **225 passed** (was 224; +1 regression test). Cache `20260805l`.

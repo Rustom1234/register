@@ -150,7 +150,9 @@ const AF_ICON = {
 function renderIdleFeed() {
   const el = $("idle-feed");
   if (!el) return;
-  const kept = (state.feed || []).filter((e) => AF_ICON[e.kind]).slice(-6).reverse();
+  // /api/state serves the feed newest-first; slice(-6) was pinning this
+  // panel to the session's six OLDEST events forever.
+  const kept = (state.feed || []).filter((e) => AF_ICON[e.kind]).slice(0, 6);
   if (!kept.length) return;   // keep the "quiet" placeholder
   const t = (ts) => `${String(Math.floor((ts % 86400) / 3600)).padStart(2, "0")}:` +
                     `${String(Math.floor((ts % 3600) / 60)).padStart(2, "0")}`;
