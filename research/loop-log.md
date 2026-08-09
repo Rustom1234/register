@@ -1,3 +1,48 @@
+# ⭐ Overnight summary for the founder (read this first)
+
+**Pull first:** `git pull` → you want commit `35139f34c` or later.
+Then `cd pukaar && .venv/bin/python -m pytest -q` → **224 passed** means
+you're on tonight's build. Boot with NO flags — the calm board is the
+pitch mode. Full walkthrough + final checklist: `research/demo-script.md`.
+
+**What happened tonight (12 rounds, all pushed):** your five persona
+critics (competition judge, product skeptic, NGO operations director,
+skeptical CTO, mobile field reviewer) audited the product; every P0/P1
+and nearly every P2 they found was verified live and fixed:
+
+- **Safety:** the 112 gate now catches heart attack, stroke, drowning,
+  choking, childbirth, suicide and "cannot breathe" — and no longer
+  bounces ordinary Hindi wound reports ("pair se khoon beh raha hai")
+  away with nothing filed; bounces are counted on the shift handover.
+- **Nobody gets lost:** a witness whose landmark isn't understood is
+  filed as a landmark-only case for your request-pin rail instead of
+  being asked "where?" forever; a food report near a medical case stays
+  a separate case; STOP now truly deletes the thread.
+- **Coordinator rails:** hand-offs are consent offers (the rider still
+  taps), stuck jobs release-and-re-wave honestly instead of being closed
+  with a lie, night holds are visible, stock is staff-adjustable, and
+  vetting actually gates dispatch.
+- **The demo feels right:** the golden button self-arms on a cold board,
+  travel time auto-compresses (⏩) and hands your speed back, riders hug
+  streets to sub-pixel accuracy at 30x, offer cards carry the witness's
+  words + road-true metres + honest countdowns, declines/assigns/pauses
+  all speak instead of failing silently.
+- **Phone-ready:** outcome buttons sticky above the fold, AA contrast
+  for sunlight, composer on the first screen, offline sends shown as
+  honest pending bubbles, 44px touch targets.
+- **Paper trail:** one test count (224) across deck/README/proposal/
+  artifacts; the demo-tour and guide artifacts rebuilt on the current
+  product; the deck's rename caveat replaced with the provenance story.
+
+**Links:** guide (pitch script + feature map):
+claude.ai/code/artifact/630a49b0-fe6d-406c-8561-a4b7179ccd6c · tour
+(shareable six-frame walkthrough):
+claude.ai/code/artifact/5ab77ba7-51bd-4da7-ac11-1eb3c46c82c3
+
+Round-by-round detail below.
+
+---
+
 # Wayside improvement loop — round log
 
 Self-paced loop started 2026-08-02 on the founder's instruction: research,
@@ -853,3 +898,10 @@ founder's final pre-demo checklist to research/demo-script.md: pull
 first (31ee9657d+), plain boot, three-screen setup, auto-pace and
 golden-button instincts, the release rail as the honest unstick, the
 purge closer, and key rotation after the demo. 224 tests green.
+
+## Overnight round 12 — 2026-08-06 (founder summary + deck 224)
+
+Wrote the founder-facing overnight summary at the top of this log (pull
+target, headline changes by theme, artifact links, checklist pointer)
+and caught the deck's stale title chip — build_deck.js + pitch md said
+217 tests; now 224, deck rebuilt. 224 tests green.
