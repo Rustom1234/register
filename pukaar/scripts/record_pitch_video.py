@@ -301,17 +301,23 @@ def main():
         # The case goes ~450 m beyond the DEPOT, not beyond the rider: the
         # kit run is rider -> depot -> pin, and putting the pin past the
         # depot keeps the whole trip on screen and roughly a minute long.
+        # ...and it goes 450 m from the depot TOWARDS the zone centre, so
+        # the hand-over happens among streets and homes rather than in the
+        # middle of a park — which is both the better shot and the likelier
+        # place to find someone sleeping rough.
         page.evaluate(
             "async (o) => {"
-            "const lat = o.lat + 450/111320,"
-            "      lng = o.lng + 450/(111320*Math.cos(o.lat*Math.PI/180));"
+            "const ky = 111320, kx = 111320*Math.cos(o.lat*Math.PI/180);"
+            "let dy = (o.zlat - o.lat)*ky, dx = (o.zlng - o.lng)*kx;"
+            "const n = Math.hypot(dx, dy) || 1; dx /= n; dy /= n;"
+            "const lat = o.lat + 450*dy/ky, lng = o.lng + 450*dx/kx;"
             "const post = (u,b) => fetch(u,{method:'POST',"
             "  headers:{'content-type':'application/json'}, body:JSON.stringify(b)});"
             "await post('/api/wa/inbound',{phone:'+91-FIELD',kind:'text',"
             "  text:'ek aadmi ghayal hai, pair se khoon nikal raha hai'});"
             "await post('/api/wa/inbound',{phone:'+91-FIELD',kind:'location',lat,lng});"
             "await post('/api/wa/inbound',{phone:'+91-FIELD',kind:'button',text:'fresh:10'});"
-            "}", pick)
+            "}", {**pick, "zlat": 28.5933, "zlng": 77.2507})
         beat("offer_wait")
         cap("The ping: what happened, which kit, and <b>how far by road</b> — "
             "measured on the real street graph, not as the crow flies")
@@ -329,18 +335,30 @@ def main():
         # follows her rather than watching from orbit.
         beat("drive")
         page.select_option("#speed", "12")
-        try:
-            glide_click("#btn-follow", settle=200)
-        except Exception:
-            pass
+        # Keep the camera ON the rider who accepted. #btn-follow is the
+        # GOLDEN-RUN follow camera and does nothing for an ordinary case —
+        # the first cut of this film left the rider off-frame for the whole
+        # delivery while three idle riders sat in shot. Poll her position
+        # in the page (not over the wire per frame) and ease the map to it.
+        page.evaluate(
+            """(rid) => {
+              window.__follow = setInterval(async () => {
+                try {
+                  const s = await (await fetch('/api/state')).json();
+                  const r = s.sim.responders.find(x => x.id === rid);
+                  if (r) map.easeTo({center: [r.lng, r.lat], duration: 900});
+                } catch (e) {}
+              }, 1000);
+            }""", rid)
+        jump(28.5933, 77.2507, 15.9)
         cap("Routed <b>via the depot</b> first: the kit lives on the NGO's "
             "shelf, not in a rider's bag")
         page.wait_for_timeout(7000)
-        cap("She travels the actual streets — no dot floating over rooftops. "
-            "1,432 surveyed road segments underneath her.")
+        cap("Watch the dot: the rider is on the actual streets, not "
+            "floating over rooftops. 1,432 surveyed segments underneath.")
         page.wait_for_timeout(7000)
-        cap("Kit collected. Stock just decremented on that depot's tile — "
-            "and if she can't find him, it goes back on the shelf.")
+        cap("Kit collected at the depot. Stock just decremented on that "
+            "tile — and if they can't find him, it goes back on the shelf.")
         page.wait_for_timeout(7000)
         cap("Turn by turn, on roads with real names: Mathura Road, "
             "Sabz Burj Circle, Lodhi Road.")
@@ -349,7 +367,12 @@ def main():
         except Exception:
             pass
         beat("onsite")
-        cap("At the pin: kit checklist, then the outcome", 2800)
+        page.evaluate("() => { clearInterval(window.__follow); }")
+        # Come home for the closing beats — the pin can sit somewhere quiet,
+        # and the last thing on screen should be the city, not a hedge.
+        fly(28.5933, 77.2507, 14.6, 1800)
+        cap("Arrived at the pin — the kit is handed over, and the "
+            "outcome is recorded", 3000)
         try:
             phone.locator('[data-out="served"]').first.click()
         except Exception:

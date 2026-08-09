@@ -1060,3 +1060,28 @@ which is exactly the problem — the new film carries a real drive on real
 streets, and shipping both would show investors a map we no longer have.
 
 Suite still 245. Cache `20260809a`.
+
+### Fix: the delivery was happening off-camera
+
+Founder review of the first cut: "we didn't see the responder go and
+deliver". Correct, and the frames prove it — mid-drive the map sat on
+Humayun's Tomb showing three IDLE riders while Imran, the one who had
+actually accepted, was off-frame for the entire run. The phone panel was
+narrating a delivery the map never showed.
+
+Cause: the shoot clicked `#btn-follow`, which is the GOLDEN-RUN follow
+camera and does nothing for an ordinary case. Replaced with a follow loop
+injected into the page — it polls the accepted rider's position once a
+second and eases the map to them, so the camera stays on the rider with
+the route line trailing behind, all the way to the green arrived-ring at
+the pin. Camera released on arrival and flown home so the closure and
+privacy beats end on the city rather than on a hedge.
+
+Also moved the case: 450 m from the depot TOWARDS the zone centre instead
+of due north-east, which had been dropping the hand-over in the middle of
+Baansera park. It now happens by Hazrat Nizamuddin Junction, among
+streets and homes — the better shot and the likelier place to find
+someone sleeping rough. And the drive captions no longer call the rider
+"she" when the shoot picks the rider at run time.
+
+1:45. Suite still 245.
