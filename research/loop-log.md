@@ -828,3 +828,17 @@ jobs that route 2-3x longer. /api/state now attaches the street-graph
 road distance (rider's own travel mode) to every PENDING offer, and the
 card says "1952 m by road" instead of "735 m" — verified live. Beeline
 remains only as the no-graph fallback. 224 tests green. Cache 20260805j.
+
+## Overnight round 10 — 2026-08-06 (demo-tour artifact rebuilt)
+
+Another container reset caught and recovered by the round-start
+fetch/ff protocol (workspace was back at c61585695; origin had all
+nine rounds). Founder flow re-verified live on the real build.
+
+The shared "Wayside — Demo Tour" artifact still showed the pre-calm-mode
+product (busy seeded board, old claims). Rebuilt it from six fresh
+screenshots captured this round on commit f020b10e0: calm boot → rider
+on shift → the offer with the witness's words and road-true metres →
+the depot kit run on real streets → dignity at the pin → the closed
+loop. Same URL, current truth (224 tests, road-true routing chips).
+No code changes this round; suite green at 224.
