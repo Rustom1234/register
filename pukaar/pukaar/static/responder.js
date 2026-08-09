@@ -184,7 +184,7 @@ function offerCard(a, order, c) {
   const wallLeft = Math.max(1, Math.round(left / ((state.sim && state.sim.speed) || 1)));
   const leftTxt = wallLeft < 95 ? `${wallLeft} s left` : `${Math.ceil(wallLeft / 60)} min left`;
   const story = c && (c.detail || c.landmark_text)
-    ? `<p class="hint">🗒 <b>${(c.id || "").slice(-4).toUpperCase()}</b> · ${escapeHtml((c.detail || c.landmark_text || "").slice(0, 70))}</p>` : "";
+    ? `<p class="hint">🗒 <b>${(c.id || "").slice(-4).toUpperCase()}</b> · ${escapeHtml(((c.detail || c.landmark_text || "").slice(0, 70)) + ((c.detail || c.landmark_text || "").length > 70 ? "…" : ""))}</p>` : "";
   return `<div class="card offer ${order.priority === "P1" ? "p1" : ""}" data-aid="${a.id}">
     ${story}
     <div class="row1">

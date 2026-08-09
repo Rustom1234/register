@@ -803,3 +803,20 @@ candidate ranking, offer-card case story line, ID vocabulary.
 224 tests green (2 new). Cache 20260805h. All five critic reports fully
 processed. Remaining nice-to-haves: ID vocabulary sweep, offer-card
 road-metres display, night-P1 on-call push, per-rider tokens.
+
+## Overnight round 8 — 2026-08-06 (workspace recovery + freshness)
+
+The container restarted between rounds and came back with a checkout at
+c61585695 (pre-overnight) — first probes made rounds 3-7 look "lost".
+git fetch showed ALL overnight commits safe on origin; fast-forwarded and
+re-verified every marker (glide, night chip, consent offers, sticky
+outcomes, contrast, story line) present at 67ad1922e. Lesson encoded in
+the loop prompts: every round now starts with fetch + ff-only before
+touching anything.
+
+Live re-run of the founder flow on the real build: offer card now shows
+case id + the witness's words with an honest 30 s wall-clock countdown
+(added a truncation ellipsis while eyeballing). README quickstart and
+the founder guide artifact refreshed to 224 tests + the new coordinator
+rails (consent offers, release-and-rewave, request-pin). Cache 20260805i.
+224 tests green.
