@@ -91,7 +91,7 @@ function initMap(zone) {
   const dLng = dLat / Math.cos(zone.lat * Math.PI / 180);
   map = new maplibregl.Map({
     container: "map",
-    style: WaysideBasemap.buildStyle("/data/demo_zone.geojson", mapTheme),
+    style: WaysideBasemap.buildStyle("/data/demo_zone.geojson", mapTheme, zone),
     center: [zone.lng, zone.lat],
     zoom: 14.9,
     minZoom: 13.2,
@@ -122,7 +122,8 @@ function setMapTheme(theme) {
   mapTheme = theme;
   localStorage.setItem("pukaar_map_theme", theme);
   if (map && map !== "failed") {
-    map.setStyle(WaysideBasemap.buildStyle("/data/demo_zone.geojson", theme));
+    map.setStyle(WaysideBasemap.buildStyle("/data/demo_zone.geojson", theme,
+                                           state && state.zone));
     // ensureOverlays re-adds our sources/layers on the style.load that follows
   }
   const b = document.getElementById("theme-toggle");

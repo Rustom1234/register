@@ -42,7 +42,10 @@
       roadLabelHalo: "#ffffff",
       landmarkText: "#4a4a45",
       landmarkHalo: "#ffffff",
-      landmarkDot: "#7a7a72"
+      landmarkDot: "#7a7a72",
+      outsideMask: "rgba(84, 80, 70, 0.16)",
+      frameLabel: "#8b8778",
+      frameLabelHalo: "#f2f0eb"
     },
     night: {
       // Harmonizes with the app's dark UI (page background #0b0c10).
@@ -63,7 +66,10 @@
       roadLabelHalo: "#0b0c10",
       landmarkText: "#9a998f",
       landmarkHalo: "#0b0c10",
-      landmarkDot: "#5c6270"
+      landmarkDot: "#5c6270",
+      outsideMask: "rgba(3, 4, 7, 0.52)",
+      frameLabel: "#7c8291",
+      frameLabelHalo: "#0b0c10"
     }
   };
 
@@ -120,10 +126,27 @@
     ];
   }
 
+  // A lat/lng circle as a coordinate ring (used for the pilot-zone frame).
+  function circleRing(zone, radiusM, n) {
+    var pts = [];
+    var cosLat = Math.cos(zone.lat * Math.PI / 180);
+    for (var i = 0; i <= n; i++) {
+      var a = (i / n) * 2 * Math.PI;
+      pts.push([
+        zone.lng + (radiusM * Math.sin(a)) / (111320 * cosLat),
+        zone.lat + (radiusM * Math.cos(a)) / 111320
+      ]);
+    }
+    return pts;
+  }
+
   // ---------------------------------------------------------------------
   // Style builder
   // ---------------------------------------------------------------------
-  function buildStyle(dataUrl, theme) {
+  // zone ({lat, lng, radius_m}, optional): frames the pilot zone — dims the
+  // empty world outside it and labels the boundary, so a zoomed-out view
+  // reads as a deliberate coverage disc instead of an unrendered void.
+  function buildStyle(dataUrl, theme, zone) {
     var t = THEMES[theme === "night" ? "night" : "day"];
 
     // Same-origin only: glyphs are served from this app's own statics.
@@ -260,6 +283,39 @@
         }
       },
 
+      // ---- pilot-zone frame (only when a zone is provided) -----------
+      // inserted here so outside geometry dims but labels stay crisp
+      {
+        id: "zone-outside",
+        type: "fill",
+        source: "frame",
+        filter: kindIs("outside"),
+        paint: { "fill-color": t.outsideMask }
+      },
+      {
+        id: "zone-frame-label",
+        type: "symbol",
+        source: "frame",
+        filter: kindIs("edge"),
+        layout: {
+          "symbol-placement": "line",
+          "symbol-spacing": 420,
+          "text-field": "WAYSIDE PILOT ZONE",
+          "text-font": FONT_STACK,
+          "text-size": [
+            "interpolate", ["linear"], ["zoom"],
+            13, 10.5,
+            16, 12.5
+          ],
+          "text-letter-spacing": 0.25
+        },
+        paint: {
+          "text-color": t.frameLabel,
+          "text-halo-color": t.frameLabelHalo,
+          "text-halo-width": 1.2
+        }
+      },
+
       // ---- landmarks: dot under the label ----------------------------
       {
         id: "landmark-dot",
@@ -352,14 +408,46 @@
       }
     ];
 
+    var sources = { zone: { type: "geojson", data: dataUrl } };
+    if (zone && zone.radius_m) {
+      // world rectangle with a hole punched at ~1.12x the zone radius: the
+      // dashed ring the pages draw sits just inside the dimmed edge
+      var hole = circleRing(zone, zone.radius_m * 1.12, 96);
+      sources.frame = {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              properties: { kind: "outside" },
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [[-179.9, -85], [179.9, -85], [179.9, 85],
+                   [-179.9, 85], [-179.9, -85]],
+                  hole
+                ]
+              }
+            },
+            {
+              type: "Feature",
+              properties: { kind: "edge" },
+              geometry: { type: "LineString", coordinates: hole }
+            }
+          ]
+        }
+      };
+    } else {
+      layers = layers.filter(function (l) { return l.source !== "frame"; });
+    }
+
     return {
       version: 8,
       name: "Wayside " + (theme === "night" ? "Night" : "Day"),
       metadata: { "wayside:theme": theme === "night" ? "night" : "day" },
       glyphs: glyphs,
-      sources: {
-        zone: { type: "geojson", data: dataUrl }
-      },
+      sources: sources,
       layers: layers
     };
   }

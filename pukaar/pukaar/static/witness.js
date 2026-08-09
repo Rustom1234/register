@@ -63,7 +63,7 @@ function initMap(zone) {
     const dLng = dLat / Math.cos(zone.lat * Math.PI / 180);
     map = new maplibregl.Map({
       container: "map",
-      style: WaysideBasemap.buildStyle("/data/demo_zone.geojson", "day"),
+      style: WaysideBasemap.buildStyle("/data/demo_zone.geojson", "day", zone),
       center: [zone.lng, zone.lat],
       zoom: 14.9,
       minZoom: 13.2,

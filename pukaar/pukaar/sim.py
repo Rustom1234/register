@@ -147,6 +147,7 @@ class Sim:
         self._random_report_at = (self.sim_now + self.rng.uniform(60, 240)
                                   if self.ambient else math.inf)
         self._pace_hold: float | None = None   # speed to restore after auto-pacing
+        self._pace_travelling = False          # edge: engage once per departure
         self.last_tick_real = time.monotonic()   # /health watchdog signal
         # Every close path must settle the kit ledger; the witness-recheck
         # cancel lives in service.py, which can't import sim — hook it here.
@@ -502,7 +503,11 @@ class Sim:
         if self.ambient:
             return
         travelling = any(r["state"] == "enroute" for r in self._resp.values())
-        if travelling and self._pace_hold is None and self.speed < 24:
+        # Edge-triggered: engage only when travel STARTS. Re-engaging every
+        # tick would clobber a founder's mid-drive speed pick right back to
+        # 24 — the hold-clear in sim_ctl exists so their choice sticks.
+        if (travelling and not self._pace_travelling
+                and self._pace_hold is None and self.speed < 24):
             self._pace_hold = self.speed
             self.speed = 24.0
             self.svc.emit("pace", {"on": True})
@@ -510,6 +515,7 @@ class Sim:
             self.speed = self._pace_hold
             self._pace_hold = None
             self.svc.emit("pace", {"on": False})
+        self._pace_travelling = travelling
 
     def _coordinator_plays(self) -> None:
         """The human terminal rung, simulated: every ~90 sim-s the
