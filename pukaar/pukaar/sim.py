@@ -928,10 +928,22 @@ class Sim:
                     if covered < acc:
                         step_i = i
                         break
+        # Metres per SIM-second this rider is actually covering right now.
+        # The map dead-reckons between 1 Hz polls with exactly this number
+        # (× sim speed), so a glide that never stalls needs it to be the
+        # same figure _responders_move uses — including the 0.4 idle-drift
+        # factor and the flat zero of a rider standing still.
+        if r["state"] == "enroute" and r["target"]:
+            speed_mps = r["speed"]
+        elif r["state"] == "idle" and self.ambient and r.get("on_duty", True):
+            speed_mps = r["speed"] * 0.4
+        else:
+            speed_mps = 0.0
         return {
             "id": r["id"], "name": r["name"], "medical": r["medical"], "mode": r["mode"],
             "lat": r["lat"], "lng": r["lng"], "state": r["state"], "order_id": r["order_id"],
             "manual": r["id"] in self.manual, "route": route_out, "eta_s": eta_s, "dist_m": dist_m,
+            "speed_mps": speed_mps,
             "depot": r.get("depot_name"), "picked_up": bool(r.get("picked_up", True)),
             "steps": steps, "step_i": step_i, "on_duty": bool(r.get("on_duty", True)),
         }

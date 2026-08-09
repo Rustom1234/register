@@ -16,7 +16,6 @@ const OUTCOME_TXT = {
 
 let state = null, map, witnessPin = null, selectedCase = null, wired = false;
 const caseMarkers = new Map(), respMarkers = new Map(), depotMarkers = new Map();
-const respTrails = new Map();   // responder movement trails (drawn via the trails source)
 let followGolden = false;                                // 🎥 camera follows the golden run
 let activeConv = "+91-DEMO";
 let selectedResp = "resp_1";
@@ -84,19 +83,30 @@ function playNewFeedSounds() {
 // from this app, and they're the SAME streets the router drives on.
 let mapTheme = localStorage.getItem("pukaar_map_theme") || "day";
 
-function initMap(zone) {
-  // Zoom/pan clamps: the world outside the zone is empty canvas — never
-  // let the camera get lost in it.
-  const dLat = (zone.radius_m * 2.6) / 111320;
+// Half-extent of the generated surroundings, in metres — must match
+// CITY_HALF_M in tools/make_city_surrounds.py (R_CITY). The camera is
+// clamped to exactly the area that has streets in it, so every direction
+// the founder pans or zooms out to is rendered, and none of it is void.
+const CITY_HALF_M = 10000;
+
+function cameraClamp(zone) {
+  const dLat = CITY_HALF_M / 111320;
   const dLng = dLat / Math.cos(zone.lat * Math.PI / 180);
+  return [[zone.lng - dLng, zone.lat - dLat], [zone.lng + dLng, zone.lat + dLat]];
+}
+
+function initMap(zone) {
   map = new maplibregl.Map({
     container: "map",
-    style: WaysideBasemap.buildStyle("/data/demo_zone.geojson", mapTheme, zone),
+    style: WaysideBasemap.buildStyle("/data/demo_zone.geojson", mapTheme, zone,
+                                     "/data/demo_city.geojson"),
     center: [zone.lng, zone.lat],
     zoom: 14.9,
-    minZoom: 13.2,
+    // MapLibre derives the real zoom-out floor from maxBounds, so the view
+    // can never be wider than the city we drew; 11.5 is just a backstop.
+    minZoom: 11.5,
     maxZoom: 17.5,   // data density is tuned to z17 — deeper is a flat void
-    maxBounds: [[zone.lng - dLng, zone.lat - dLat], [zone.lng + dLng, zone.lat + dLat]],
+    maxBounds: cameraClamp(zone),
     attributionControl: { compact: true, customAttribution: "demo geometry — representative, not surveyed" },
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
@@ -129,7 +139,8 @@ function setMapTheme(theme) {
   localStorage.setItem("pukaar_map_theme", theme);
   if (map && map !== "failed") {
     map.setStyle(WaysideBasemap.buildStyle("/data/demo_zone.geojson", theme,
-                                           state && state.zone));
+                                           state && state.zone,
+                                           "/data/demo_city.geojson"));
     // ensureOverlays re-adds our sources/layers on the style.load that follows
   }
   const b = document.getElementById("theme-toggle");
@@ -184,7 +195,12 @@ function domMarker(html, lngLat, z) {
   const el = document.createElement("div");
   el.innerHTML = html;
   if (z) el.style.zIndex = z;
-  return new maplibregl.Marker({ element: el, anchor: "center" })
+  // subpixelPositioning: MapLibre otherwise ROUNDS every marker to a whole
+  // screen pixel, so a rider crossing 4 px/s sits frozen for ~4 frames and
+  // then hops a pixel — the "jumping" look, entirely independent of how
+  // smooth the interpolation underneath is. Sub-pixel transforms make the
+  // same motion continuous.
+  return new maplibregl.Marker({ element: el, anchor: "center", subpixelPositioning: true })
     .setLngLat(lngLat).addTo(map);
 }
 
@@ -199,40 +215,111 @@ function placeWitnessPin(lat, lng) {
 }
 
 // ------------------------------------------------------ smooth motion --
-// The UI polls at 1 Hz, so raw positions arrive as 1-second jumps. Responder
-// markers glide between polls via one rAF loop (their attached route line
-// rides along). A straight lerp between polls would cut corners — at 12×
-// a scooter covers ~80 m per poll, a whole block — so an enroute marker
-// glides ALONG its route polyline: the waypoints it passed between two
-// polls are recovered by matching the previous poll's remaining route
-// against this poll's, and the tween walks them at constant speed.
+// Riders must FLOW like a car in a ride-hailing app, not step once a second.
+//
+// Truth arrives at 1 Hz (the sim ticks once a real second; the UI polls at
+// the same rate), so the map cannot wait for it — instead every rider keeps
+// a client-side dead-reckoning model and one rAF loop advances all of them
+// every frame:
+//
+//   path   the rider's road polyline in [lng,lat], built up poll by poll:
+//          history behind it, the polled position, then the remaining route
+//          ahead. The rendered dot is ALWAYS a point on this polyline, so
+//          "stays on the road" is structural, not a tolerance.
+//   s = truthS - v * (truthT - tau)
+//          truthS/truthT are the along-road metres and the SIM CLOCK of the
+//          last polled position, v the rider's metres per sim-second. Both
+//          come from the sim, and the sim moved the rider by exactly
+//          v * (truthT - prev truthT) — so truthS - v*truthT is invariant
+//          across polls and s is CONTINUOUS through every poll boundary, no
+//          matter how the poll and the server tick drift against each other.
+//   tau    render time: a locally-run sim clock held one poll behind truth,
+//          so the dot always interpolates data we have instead of inventing
+//          it. Constant-rate clock, constant offset => constant velocity.
+//
+// The old approach re-started a fixed 950 ms tween on every poll arrival.
+// Because a poll lands every ~1000-1100 ms, the tween ALWAYS finished early
+// and the marker froze until the next one — a measured 1 Hz stall-then-surge
+// (speed CV 0.33, peaks 2.6x the median). Nothing here restarts on a poll.
 // Reduced-motion users get instant snaps.
 const REDUCED_MOTION = window.matchMedia
   && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const respTweens = new Map();   // id -> {m, path: [[lng,lat]...], cum, total, start}
+const respMotion = new Map();   // id -> {path, cum, truthS, truthT, truthIdx, s, v, bearing}
 const respRoutesAhead = new Map();   // id -> last polled remaining route ([[lat,lng]...])
-let tweenRaf = null;
+let motionRaf = null, motionLast = 0;
+let simClock = null, simRate = 0, simRunning = true, lagSim = 0, clockErr = 0;
 
-function pathMetrics(path) {
-  const cum = [0];
-  let total = 0;
-  const kx = Math.cos((path[0][1] * Math.PI) / 180);   // planar approx — fine at zone scale
-  for (let i = 1; i < path.length; i++) {
-    const dx = (path[i][0] - path[i - 1][0]) * kx, dy = path[i][1] - path[i - 1][1];
-    total += Math.hypot(dx, dy);
-    cum.push(total);
+// Hold the render this far behind truth, in REAL seconds: one poll plus a
+// margin. A fifth of a second of extra lag is invisible; the stutter it buys
+// out of is not. lagSim eases toward LAG_S x sim speed so that changing the
+// speed dropdown deepens the buffer smoothly instead of yanking the dot.
+const LAG_S = 1.2;
+const PREDICT_S = 0.4;    // coast at most this long past truth if a poll is late
+const TRAIL_M = 240;      // how far the movement trail reaches back down the road
+const TRAIL_KEEP_M = 400; // history kept behind the dot before the path is trimmed
+
+function pathMetrics(path, from) {
+  // Cumulative METRES along path (planar approx — exact enough at city scale).
+  const cum = from && from.length ? from.slice(0, path.length) : [0];
+  const kx = Math.cos((path[0][1] * Math.PI) / 180) * 111320;
+  for (let i = cum.length; i < path.length; i++) {
+    const dx = (path[i][0] - path[i - 1][0]) * kx;
+    const dy = (path[i][1] - path[i - 1][1]) * 111320;
+    cum.push(cum[i - 1] + Math.hypot(dx, dy));
   }
-  return { cum, total };
+  return cum;
 }
 
-function glideMarker(id, m, toLngLat, routeAhead) {
-  // Returns the [lng,lat] corner points passed since the last poll, so the
-  // movement trail can hug the same streets the dot does.
+function pointAt(path, cum, s) {
+  // Position + heading at distance s along the polyline. Never leaves it.
+  const last = cum.length - 1;
+  if (s <= 0) return { p: path[0], i: 1 };
+  if (s >= cum[last]) return { p: path[last], i: Math.max(1, last) };
+  let i = 1;
+  while (i < last && cum[i] < s) i++;
+  const seg = cum[i] - cum[i - 1] || 1;
+  const f = (s - cum[i - 1]) / seg;
+  return {
+    p: [path[i - 1][0] + (path[i][0] - path[i - 1][0]) * f,
+        path[i - 1][1] + (path[i][1] - path[i - 1][1]) * f],
+    i,
+  };
+}
+
+function segBearing(a, b) {
+  const kx = Math.cos((a[1] * Math.PI) / 180);
+  return (Math.atan2((b[0] - a[0]) * kx, b[1] - a[1]) * 180) / Math.PI;
+}
+
+// Fold the server clock into the local one, once per poll. sim_now arrives
+// as a 1 Hz staircase while simClock runs continuously, so the difference
+// always carries up to a tick of phase noise: correct it WEAKLY, and never
+// as a step — an instant nudge of even 6% of a tick lands entirely inside
+// one frame and shows up as a single double-length hop (measured: a lone
+// 1.8x spike every poll). It is queued here and bled off by motionTick at a
+// capped rate instead. The gain only sets how fast the render buffer
+// settles, never the rider's velocity (truthS/truthT carry that), so slow
+// is free.
+function syncSimClock(sim) {
+  simRate = sim.running ? (sim.speed || 0) : 0;
+  simRunning = !!sim.running;
+  const t = sim.sim_now;
+  if (simClock === null || Math.abs(t - simClock) > Math.max(60, 8 * (sim.speed || 1))) {
+    simClock = t;              // first poll, a resume, or a scenario jump
+    lagSim = LAG_S * simRate;
+    clockErr = 0;
+  } else {
+    clockErr += (t - (simClock + clockErr)) * 0.06;
+  }
+}
+
+function glideMarker(id, m, toLngLat, routeAhead, speedMps, simNow) {
+  // Fold this poll's truth into the rider's path model. Returns the
+  // [lng,lat] corners passed since the last poll so the movement trail can
+  // hug the same streets the dot does.
   const prevAhead = respRoutesAhead.get(id);
   respRoutesAhead.set(id, routeAhead || null);
   if (REDUCED_MOTION || !map || map === "failed") { m.setLngLat(toLngLat); return []; }
-  const cur = m.getLngLat();
-  if (cur.lng === toLngLat[0] && cur.lat === toLngLat[1]) { respTweens.delete(id); return []; }
 
   // Corners passed = prefix of the previous remaining route that is no
   // longer ahead now. Identical vertex arrays make the match exact. A
@@ -247,32 +334,142 @@ function glideMarker(id, m, toLngLat, routeAhead) {
     for (const wp of prevAhead) {
       if (nextAhead && wp[0] === nextAhead[0] && wp[1] === nextAhead[1]) { matched = true; break; }
       passed.push([wp[1], wp[0]]);                    // [lat,lng] -> [lng,lat]
-      if (passed.length > 48) break;                  // hard bound, never hit in practice
+      if (passed.length > 400) { passed.length = 0; break; }   // absurd: treat as a new trip
     }
     if (!matched) passed.length = 0;
   }
-  const path = [[cur.lng, cur.lat], ...passed, toLngLat];
-  const { cum, total } = pathMetrics(path);
-  if (!total) { respTweens.delete(id); return passed; }
-  respTweens.set(id, { m, path, cum, total, start: performance.now() });
-  if (!tweenRaf) tweenRaf = requestAnimationFrame(tweenTick);
+  const ahead = (routeAhead || []).map(([lat, lng]) => [lng, lat]);
+  const cur = m.getLngLat();
+  let st = respMotion.get(id);
+
+  // A rider whose truth has moved further than a poll could plausibly carry
+  // them, with no route overlap to explain it, has been re-routed, dragged
+  // by a human, or just appeared: re-seed rather than fake a road between.
+  const jump = st ? Math.hypot((toLngLat[0] - cur.lng) * Math.cos(cur.lat * Math.PI / 180),
+                               toLngLat[1] - cur.lat) * 111320 : 0;
+  const reseed = !st || (!passed.length && jump > Math.max(150, (speedMps || 0) * 4 * (simRate || 1)));
+
+  if (reseed) {
+    const path = [toLngLat, ...ahead];
+    respMotion.set(id, {
+      path, cum: pathMetrics(path), truthS: 0, truthT: simNow, truthIdx: 0,
+      s: 0, v: speedMps || 0, bearing: st ? st.bearing : null,
+    });
+    if (!motionRaf) { motionLast = performance.now(); motionRaf = requestAnimationFrame(motionTick); }
+    return passed;
+  }
+
+  // Extend the model: keep everything up to the previous truth as history,
+  // then append the corners crossed, the new truth, and the road ahead.
+  // Duplicate vertices are dropped — a rider standing still would otherwise
+  // grow its path by one zero-length segment every second, forever.
+  st.path.length = st.truthIdx + 1;
+  st.cum.length = st.truthIdx + 1;
+  for (const c of passed) st.path.push(c);
+  const tail = st.path[st.path.length - 1];
+  if (tail[0] !== toLngLat[0] || tail[1] !== toLngLat[1]) st.path.push(toLngLat);
+  st.truthIdx = st.path.length - 1;
+  for (const a of ahead) st.path.push(a);
+  st.cum = pathMetrics(st.path, st.cum);
+  st.truthS = st.cum[st.truthIdx];
+  st.truthT = simNow;
+  st.v = speedMps || 0;
+
+  // Trim the tail so a long shift never grows the array without bound.
+  if (st.s > TRAIL_KEEP_M) {
+    let drop = 0;
+    while (drop < st.path.length - 2 && st.cum[drop + 1] < st.s - TRAIL_KEEP_M) drop++;
+    if (drop > 0) {
+      const off = st.cum[drop];
+      st.path = st.path.slice(drop);
+      st.cum = st.cum.slice(drop).map((c) => c - off);
+      st.s -= off; st.truthS -= off; st.truthIdx -= drop;
+    }
+  }
+  if (!motionRaf) { motionLast = performance.now(); motionRaf = requestAnimationFrame(motionTick); }
   return passed;
 }
 
-function tweenTick(now) {
-  for (const [id, t] of respTweens) {
-    const k = Math.min(1, (now - t.start) / 950);   // ~one poll interval
-    const s = k * t.total;
-    let i = 1;
-    while (i < t.cum.length - 1 && t.cum[i] < s) i++;
-    const seg = t.cum[i] - t.cum[i - 1] || 1;
-    const f = (s - t.cum[i - 1]) / seg;
-    t.m.setLngLat([t.path[i - 1][0] + (t.path[i][0] - t.path[i - 1][0]) * f,
-                   t.path[i - 1][1] + (t.path[i][1] - t.path[i - 1][1]) * f]);
-    if (k >= 1) respTweens.delete(id);
+function motionTick(now) {
+  // Position is a function of an ABSOLUTE clock, so a long frame is not a
+  // hazard — it simply advances the clock by what really elapsed and the dot
+  // lands where it belongs. Clamping this tightly is what turns a browser
+  // hitch into a visible slow-frame-then-catch-up pair; only a genuinely
+  // backgrounded tab (seconds, resynced by the next poll anyway) is capped.
+  const dt = Math.min(now - motionLast, 1000) / 1000;
+  motionLast = now;
+  if (simClock === null) { motionRaf = requestAnimationFrame(motionTick); return; }
+  if (simRunning) simClock += dt * simRate;
+  // Bleed the queued clock correction in at <=4% of the world's rate, so
+  // re-phasing is a shade of speed nobody can see rather than a hop.
+  if (clockErr) {
+    const cap = 0.04 * simRate * dt;
+    const step = Math.sign(clockErr) * Math.min(Math.abs(clockErr), cap);
+    simClock += step;
+    clockErr -= step;
   }
-  if (respTweens.size && routePaths.size) pushRoutes();   // line rides the dot
-  tweenRaf = respTweens.size ? requestAnimationFrame(tweenTick) : null;
+  // Ease the buffer depth: on a speed change (or the auto-pace kick) the
+  // render time must fall further behind, and doing that over ~a second
+  // reads as the world speeding up, not as the dot hiccuping.
+  lagSim += (LAG_S * simRate - lagSim) * Math.min(1, dt * 1.5);
+  const tau = simClock - lagSim;
+
+  let live = false;
+  for (const [id, st] of respMotion) {
+    const m = respMarkers.get(id);
+    if (!m) { respMotion.delete(id); continue; }
+    live = true;
+    // The whole engine, one line: where the rider was at render time tau.
+    let s = st.truthS - st.v * (st.truthT - tau);
+    s = Math.max(0, Math.min(s, st.truthS + st.v * PREDICT_S * simRate,
+                             st.cum[st.cum.length - 1]));
+    // Monotonic: the dot walks forward down the road, it never reverses.
+    st.s = Math.max(st.s || 0, s);
+    const at = pointAt(st.path, st.cum, st.s);
+    m.setLngLat(at.p);
+    st.at = at;
+
+    // Heading: turn toward the segment being driven, shortest arc, eased —
+    // an Uber car rotates into a corner, it does not snap around it.
+    const a = st.path[at.i - 1], b = st.path[at.i];
+    if (a && b && (a[0] !== b[0] || a[1] !== b[1]) && st.v > 0) {
+      const want = segBearing(a, b);
+      if (st.bearing == null) st.bearing = want;
+      else {
+        let d = ((want - st.bearing + 540) % 360) - 180;
+        st.bearing += d * Math.min(1, dt * 7);
+      }
+    }
+    const el = m.getElement().querySelector(".resp-dir");
+    if (el && st.bearing != null) el.style.transform = `rotate(${st.bearing.toFixed(2)}deg)`;
+
+    // Trail length breathes: full while working, evaporating once stopped.
+    const want = st.v > 0 ? TRAIL_M : 0;
+    st.trailM = (st.trailM || 0) + (want - (st.trailM || 0)) * Math.min(1, dt * 1.1);
+  }
+  if (live) { pushTrails(); if (routePaths.size) pushRoutes(); }
+  motionRaf = live ? requestAnimationFrame(motionTick) : null;
+}
+
+// The travelled-road trail, read straight off the motion model: the slice of
+// the rider's own path between (dot - trailM) and the dot. Road-exact by
+// construction, and it can never run ahead of the marker.
+function pushTrails() {
+  const feats = [];
+  for (const st of respMotion.values()) {
+    if (!st.at || !st.trailM || st.trailM < 6) continue;
+    const from = Math.max(0, st.s - st.trailM);
+    if (st.s - from < 4) continue;
+    const a = pointAt(st.path, st.cum, from);
+    const pts = [a.p];
+    for (let i = a.i; i < st.at.i; i++) pts.push(st.path[i]);
+    pts.push(st.at.p);
+    if (pts.length > 1) {
+      feats.push({ type: "Feature", properties: {},
+                   geometry: { type: "LineString", coordinates: pts } });
+    }
+  }
+  setSrc("trails", { type: "FeatureCollection", features: feats });
 }
 
 const MODE_GLYPH = { walk: "🚶", cycle: "🚲", scooter: "🛵" };
@@ -288,23 +485,35 @@ function caseHtml(c) {
 
 function respHtml(r) {
   const eta = r.state === "enroute" && r.eta_s != null ? ` · ${fmtDur(r.eta_s)}` : "";
-  return `<div class="resp-wrap"><div class="resp-marker ${r.state}">${r.name[0]}</div>` +
+  // The heading chevron only exists while travelling; motionTick rotates it.
+  const dir = r.state === "enroute" ? '<div class="resp-dir"></div>' : "";
+  return `<div class="resp-wrap"><div class="resp-dot"><div class="resp-marker ${r.state}">` +
+    `${r.name[0]}</div>${dir}</div>` +
     `<div class="resp-tag">${MODE_GLYPH[r.mode] || ""} ${escapeHtml(r.name)}${eta}</div></div>`;
 }
 
-// remaining road path per enroute responder — the tween loop reads this to
-// keep each route line glued to its gliding marker
+// remaining road per enroute responder, in colour. The motion loop redraws
+// this every frame so the line starts exactly under the gliding dot.
 const routePaths = new Map();   // id -> {path: [[lng, lat], ...], color}
 
 function pushRoutes() {
   setSrc("routes", {
     type: "FeatureCollection",
     features: [...routePaths.entries()].map(([id, t]) => {
-      const mk = respMarkers.get(id);
-      const from = mk ? mk.getLngLat() : null;
-      return from && {
+      // Prefer the motion model: it knows which corners are still AHEAD of
+      // the dot, so the line never doubles back over road already driven.
+      const st = respMotion.get(id);
+      let coords = null;
+      if (st && st.at) {
+        coords = [st.at.p, ...st.path.slice(st.at.i)];
+      } else {
+        const mk = respMarkers.get(id);
+        const from = mk ? mk.getLngLat() : null;
+        if (from) coords = [[from.lng, from.lat], ...t.path];
+      }
+      return coords && coords.length > 1 && {
         type: "Feature", properties: { color: t.color },
-        geometry: { type: "LineString", coordinates: [[from.lng, from.lat], ...t.path] },
+        geometry: { type: "LineString", coordinates: coords },
       };
     }).filter(Boolean),
   });
@@ -357,18 +566,17 @@ function syncMap() {
   }
   for (const [id, m] of caseMarkers) if (!liveIds.has(id)) { m.remove(); caseMarkers.delete(id); }
 
-  const trailFeatures = [];
   for (const r of state.sim.responders) {
     // Off-duty riders aren't on the streets — no pin, no trail. (They still
     // appear in the roster panel and the rider app's identity picker.)
     if (r.on_duty === false) {
       const gone = respMarkers.get(r.id);
       if (gone) { gone.remove(); respMarkers.delete(r.id); }
-      respTrails.delete(r.id);
+      respMotion.delete(r.id);
+      respRoutesAhead.delete(r.id);
       continue;
     }
     const key = `${r.state}|${r.eta_s == null ? "" : fmtDur(r.eta_s)}`;
-    let corners = [];
     if (!respMarkers.has(r.id)) {
       const m = domMarker(respHtml(r), [r.lng, r.lat], "500");
       m.__key = key;
@@ -376,29 +584,15 @@ function syncMap() {
       respRoutesAhead.set(r.id, r.route || null);
     } else {
       const m = respMarkers.get(r.id);
-      corners = glideMarker(r.id, m, [r.lng, r.lat], r.route) || [];
+      glideMarker(r.id, m, [r.lng, r.lat], r.route, r.speed_mps, state.sim.sim_now);
       // swap the pin DOM only when its content actually changes — replacing
       // it every poll flickers and would cut any in-flight glide
       if (m.__key !== key) { m.getElement().innerHTML = respHtml(r); m.__key = key; }
     }
-    // movement trail: passed corners first so the line hugs the streets the
-    // dot just glided along; keep the last ~24 points while working
-    const trail = respTrails.get(r.id) || [];
-    for (const c of corners) {
-      const lastc = trail[trail.length - 1];
-      if (!lastc || lastc[0] !== c[0] || lastc[1] !== c[1]) trail.push(c);
-    }
-    const last = trail[trail.length - 1];
-    if (!last || last[0] !== r.lng || last[1] !== r.lat) trail.push([r.lng, r.lat]);
-    while (trail.length > 24) trail.shift();
-    if (r.state === "idle" && trail.length > 2) trail.splice(0, 2);   // idle: trail evaporates
-    respTrails.set(r.id, trail);
-    if (trail.length > 1) {
-      trailFeatures.push({ type: "Feature", properties: {},
-                           geometry: { type: "LineString", coordinates: trail } });
-    }
   }
-  setSrc("trails", { type: "FeatureCollection", features: trailFeatures });
+  // Movement trails are drawn from the same motion model, every frame, by
+  // pushTrails() — so they hug the exact streets the dot drove and always
+  // end underneath it rather than a poll ahead of it.
 
   // 🎥 follow the golden run's responder while its order is live
   if (followGolden && (state.sim.golden || []).length) {
@@ -1234,6 +1428,7 @@ async function refresh() {
   document.getElementById("foot-backend").textContent = state.backend;
   document.getElementById("prov-note").textContent =
     state.prov_ephemeral ? "demo HMAC key (ephemeral) — set PUKAAR_HMAC_KEY for persistent provenance" : "persistent HMAC provenance key";
+  syncSimClock(state.sim);   // must precede syncMap: the glide anchors on it
   syncMap(); renderTiles(); renderFeed(); renderCases(); renderPhone(); renderDetail();
   renderRespPanel(); renderCoord(); renderRoster(); drawCells(); playNewFeedSounds();
   applyCaseDeepLink();

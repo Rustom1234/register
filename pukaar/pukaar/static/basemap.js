@@ -1,18 +1,31 @@
 /*
- * Wayside basemap — Google-style light/dark cartography for the demo zone.
+ * Wayside basemap — Google-style light/dark cartography for the demo zone
+ * and the wider city around it.
  *
  * Plain script (no ES module). Loaded via <script src="/static/basemap.js">.
- * Exposes window.WaysideBasemap.buildStyle(dataUrl, theme) which returns a
- * complete MapLibre GL style object reading every layer from a single
- * GeoJSON source ("zone") that follows the demo_zone.geojson schema:
+ * Exposes window.WaysideBasemap.buildStyle(dataUrl, theme, zone, cityUrl),
+ * which returns a complete MapLibre GL style reading from up to two GeoJSON
+ * sources that share one schema:
  *
+ *   "zone"  the hand-built pilot area (demo_zone.geojson) — the SAME streets
+ *           the router drives riders on
+ *   "city"  procedurally generated surroundings (demo_city.geojson) so that
+ *           panning or zooming out shows a coherent city instead of a void.
+ *           Scenery only: nothing in it is routable.
+ *
+ * Schema for both:
  *   roads:     properties.kind === "road", properties.class in
  *              primary | secondary | residential | lane | footway,
  *              optional properties.name
- *   areas:     properties.kind in park | water | rail | campus
+ *   areas:     properties.kind in park | water | rail | campus | building
  *   landmarks: properties.kind === "landmark", properties.name,
  *              properties.icon in rail | monument | mosque | park |
  *              hospital | market
+ *   places:    properties.kind === "place", properties.name,
+ *              properties.rank 1 (district) or 2 (neighbourhood)
+ *
+ * Every road/area layer is generated once per source by terrainLayers(), so
+ * the two render identically and the seam between them is invisible.
  *
  * Glyph PBFs are vendored under /static/vendor/glyphs/Noto Sans Regular/
  * so no external requests are ever made at runtime.
@@ -43,7 +56,11 @@
       landmarkText: "#4a4a45",
       landmarkHalo: "#ffffff",
       landmarkDot: "#7a7a72",
-      outsideMask: "rgba(84, 80, 70, 0.16)",
+      placeText: "#7c7a70",
+      placeHoodText: "#8d8b80",
+      // Light touch now that real streets are drawn outside: the mask marks
+      // where Wayside operates without hiding the city around it.
+      outsideMask: "rgba(120, 112, 96, 0.065)",
       frameLabel: "#8b8778",
       frameLabelHalo: "#f2f0eb"
     },
@@ -67,7 +84,9 @@
       landmarkText: "#9a998f",
       landmarkHalo: "#0b0c10",
       landmarkDot: "#5c6270",
-      outsideMask: "rgba(3, 4, 7, 0.52)",
+      placeText: "#8b91a0",
+      placeHoodText: "#767c8b",
+      outsideMask: "rgba(3, 4, 7, 0.30)",
       frameLabel: "#7c8291",
       frameLabelHalo: "#0b0c10"
     }
@@ -141,46 +160,32 @@
   }
 
   // ---------------------------------------------------------------------
-  // Style builder
+  // Terrain layers — the whole cartography for ONE source, generated so the
+  // pilot zone and the surrounding city are drawn by identical rules and the
+  // seam between them cannot show a style difference.
   // ---------------------------------------------------------------------
-  // zone ({lat, lng, radius_m}, optional): frames the pilot zone — dims the
-  // empty world outside it and labels the boundary, so a zoomed-out view
-  // reads as a deliberate coverage disc instead of an unrendered void.
-  function buildStyle(dataUrl, theme, zone) {
-    var t = THEMES[theme === "night" ? "night" : "day"];
-
-    // Same-origin only: glyphs are served from this app's own statics.
-    var origin = typeof location !== "undefined" && location.origin &&
-      location.origin !== "null" ? location.origin : "";
-    var glyphs = origin + "/static/vendor/glyphs/{fontstack}/{range}.pbf";
-
-    var layers = [
-      // ---- land ------------------------------------------------------
-      {
-        id: "land",
-        type: "background",
-        paint: { "background-color": t.land }
-      },
-
+  function terrainLayers(src, t) {
+    var sfx = src === "zone" ? "" : "-" + src;
+    return [
       // ---- area fills ------------------------------------------------
       {
-        id: "campus",
+        id: "campus" + sfx,
         type: "fill",
-        source: "zone",
+        source: src,
         filter: kindIs("campus"),
         paint: { "fill-color": t.campus }
       },
       {
-        id: "park",
+        id: "park" + sfx,
         type: "fill",
-        source: "zone",
+        source: src,
         filter: kindIs("park"),
         paint: { "fill-color": t.parkFill }
       },
       {
-        id: "park-outline",
+        id: "park-outline" + sfx,
         type: "line",
-        source: "zone",
+        source: src,
         filter: kindIs("park"),
         paint: {
           "line-color": t.parkOutline,
@@ -189,25 +194,25 @@
         }
       },
       {
-        id: "water",
+        id: "water" + sfx,
         type: "fill",
-        source: "zone",
+        source: src,
         filter: kindIs("water"),
         paint: { "fill-color": t.water }
       },
       {
-        id: "rail",
+        id: "rail" + sfx,
         type: "fill",
-        source: "zone",
+        source: src,
         filter: kindIs("rail"),
         paint: { "fill-color": t.rail }
       },
 
       // ---- building footprints (fade in from z14.2, Google-style) ----
       {
-        id: "building",
+        id: "building" + sfx,
         type: "fill",
-        source: "zone",
+        source: src,
         minzoom: 14.2,
         filter: kindIs("building"),
         paint: {
@@ -222,9 +227,9 @@
 
       // ---- footways (thin dashed, no casing) -------------------------
       {
-        id: "road-footway",
+        id: "road-footway" + sfx,
         type: "line",
-        source: "zone",
+        source: src,
         minzoom: 13,
         filter: roadClassIn(["footway"]),
         layout: { "line-join": "round", "line-cap": "butt" },
@@ -237,10 +242,13 @@
 
       // ---- casings under fills (minor first, majors above) -----------
       {
-        id: "road-minor-casing",
+        id: "road-minor-casing" + sfx,
         type: "line",
-        source: "zone",
-        minzoom: 13,
+        source: src,
+        // 12.4, not 13: at the far zoom the pilot zone is almost all minor
+        // streets, and holding them back to 13 made it read as a clearing
+        // punched in the surrounding city.
+        minzoom: 12.4,
         filter: roadClassIn(["residential", "lane"]),
         layout: { "line-join": "round", "line-cap": "round" },
         paint: {
@@ -249,10 +257,10 @@
         }
       },
       {
-        id: "road-minor",
+        id: "road-minor" + sfx,
         type: "line",
-        source: "zone",
-        minzoom: 13,
+        source: src,
+        minzoom: 12.4,
         filter: roadClassIn(["residential", "lane"]),
         layout: { "line-join": "round", "line-cap": "round" },
         paint: {
@@ -261,9 +269,9 @@
         }
       },
       {
-        id: "road-major-casing",
+        id: "road-major-casing" + sfx,
         type: "line",
-        source: "zone",
+        source: src,
         filter: roadClassIn(["primary", "secondary"]),
         layout: { "line-join": "round", "line-cap": "round" },
         paint: {
@@ -272,17 +280,108 @@
         }
       },
       {
-        id: "road-major",
+        id: "road-major" + sfx,
         type: "line",
-        source: "zone",
+        source: src,
         filter: roadClassIn(["primary", "secondary"]),
         layout: { "line-join": "round", "line-cap": "round" },
         paint: {
           "line-color": t.majorFill,
           "line-width": majorWidth(0)
         }
-      },
+      }
+    ];
+  }
 
+  // Road-name labels for one source.
+  function labelLayers(src, t) {
+    var sfx = src === "zone" ? "" : "-" + src;
+    return [
+      {
+        id: "road-label" + sfx,
+        type: "symbol",
+        source: src,
+        minzoom: 14,
+        filter: [
+          "all",
+          roadClassIn(["primary", "secondary", "residential"]),
+          ["has", "name"]
+        ],
+        layout: {
+          "symbol-placement": "line",
+          "text-field": ["get", "name"],
+          "text-font": FONT_STACK,
+          "text-size": [
+            "interpolate", ["linear"], ["zoom"],
+            14, 11,
+            16, 12
+          ],
+          "text-letter-spacing": 0.02,
+          "text-max-angle": 30
+        },
+        paint: {
+          "text-color": t.roadLabel,
+          "text-halo-color": t.roadLabelHalo,
+          "text-halo-width": 1.2
+        }
+      },
+      {
+        id: "road-label-lane" + sfx,
+        type: "symbol",
+        source: src,
+        minzoom: 16,
+        filter: [
+          "all",
+          roadClassIn(["lane", "footway"]),
+          ["has", "name"]
+        ],
+        layout: {
+          "symbol-placement": "line",
+          "text-field": ["get", "name"],
+          "text-font": FONT_STACK,
+          "text-size": 11,
+          "text-letter-spacing": 0.02,
+          "text-max-angle": 30
+        },
+        paint: {
+          "text-color": t.roadLabel,
+          "text-halo-color": t.roadLabelHalo,
+          "text-halo-width": 1.2
+        }
+      }
+    ];
+  }
+
+  // ---------------------------------------------------------------------
+  // Style builder
+  // ---------------------------------------------------------------------
+  // zone ({lat, lng, radius_m}, optional): frames the pilot zone — marks
+  // where Wayside actually operates, so the surrounding city reads as
+  // context rather than as coverage.
+  // cityUrl (optional): the wider surroundings; omit for the zone alone.
+  function buildStyle(dataUrl, theme, zone, cityUrl) {
+    var t = THEMES[theme === "night" ? "night" : "day"];
+
+    // Same-origin only: glyphs are served from this app's own statics.
+    var origin = typeof location !== "undefined" && location.origin &&
+      location.origin !== "null" ? location.origin : "";
+    var glyphs = origin + "/static/vendor/glyphs/{fontstack}/{range}.pbf";
+
+    var layers = [
+      // ---- land ------------------------------------------------------
+      {
+        id: "land",
+        type: "background",
+        paint: { "background-color": t.land }
+      }
+    ];
+
+    // City underneath, pilot zone on top: where they touch, the hand-built
+    // geometry wins.
+    if (cityUrl) layers = layers.concat(terrainLayers("city", t));
+    layers = layers.concat(terrainLayers("zone", t));
+
+    layers = layers.concat([
       // ---- pilot-zone frame (only when a zone is provided) -----------
       // inserted here so outside geometry dims but labels stay crisp
       {
@@ -329,86 +428,88 @@
           "circle-stroke-width": 1,
           "circle-stroke-color": t.landmarkHalo
         }
-      },
+      }
+    ]);
 
-      // ---- road name labels (along the line) -------------------------
-      {
-        id: "road-label",
+    // ---- district / neighbourhood names in the wider city -------------
+    // These are what make a zoomed-out view read as a city rather than as a
+    // diagram: rank 1 districts hold from the furthest zoom, rank 2
+    // neighbourhoods join once the streets under them are legible.
+    if (cityUrl) {
+      layers.push({
+        id: "place-district",
         type: "symbol",
-        source: "zone",
-        minzoom: 14,
-        filter: [
-          "all",
-          roadClassIn(["primary", "secondary", "residential"]),
-          ["has", "name"]
-        ],
+        source: "city",
+        filter: ["all", kindIs("place"), ["==", ["get", "rank"], 1]],
         layout: {
-          "symbol-placement": "line",
           "text-field": ["get", "name"],
           "text-font": FONT_STACK,
           "text-size": [
             "interpolate", ["linear"], ["zoom"],
-            14, 11,
-            16, 12
+            11, 11, 13, 13, 15.5, 15
           ],
-          "text-letter-spacing": 0.02,
-          "text-max-angle": 30
+          "text-letter-spacing": 0.14,
+          "text-transform": "uppercase",
+          "text-max-width": 9,
+          "text-padding": 6
         },
         paint: {
-          "text-color": t.roadLabel,
-          "text-halo-color": t.roadLabelHalo,
-          "text-halo-width": 1.2
-        }
-      },
-      {
-        id: "road-label-lane",
-        type: "symbol",
-        source: "zone",
-        minzoom: 16,
-        filter: [
-          "all",
-          roadClassIn(["lane", "footway"]),
-          ["has", "name"]
-        ],
-        layout: {
-          "symbol-placement": "line",
-          "text-field": ["get", "name"],
-          "text-font": FONT_STACK,
-          "text-size": 11,
-          "text-letter-spacing": 0.02,
-          "text-max-angle": 30
-        },
-        paint: {
-          "text-color": t.roadLabel,
-          "text-halo-color": t.roadLabelHalo,
-          "text-halo-width": 1.2
-        }
-      },
-
-      // ---- landmark labels -------------------------------------------
-      {
-        id: "landmark-label",
-        type: "symbol",
-        source: "zone",
-        minzoom: 13,
-        filter: ["all", kindIs("landmark"), ["has", "name"]],
-        layout: {
-          "text-field": ["get", "name"],
-          "text-font": FONT_STACK,
-          "text-size": 12,
-          "text-anchor": "top",
-          "text-offset": [0, 0.5],
-          "text-max-width": 8
-        },
-        paint: {
-          "text-color": t.landmarkText,
+          "text-color": t.placeText,
           "text-halo-color": t.landmarkHalo,
-          "text-halo-width": 1.2
+          "text-halo-width": 1.4
         }
+      });
+      layers.push({
+        id: "place-hood",
+        type: "symbol",
+        source: "city",
+        minzoom: 12.6,
+        filter: ["all", kindIs("place"), ["!=", ["get", "rank"], 1]],
+        layout: {
+          "text-field": ["get", "name"],
+          "text-font": FONT_STACK,
+          "text-size": [
+            "interpolate", ["linear"], ["zoom"],
+            12.6, 10.5, 15, 12.5
+          ],
+          "text-letter-spacing": 0.04,
+          "text-max-width": 9,
+          "text-padding": 4
+        },
+        paint: {
+          "text-color": t.placeHoodText,
+          "text-halo-color": t.landmarkHalo,
+          "text-halo-width": 1.3
+        }
+      });
+      layers = layers.concat(labelLayers("city", t));
+    }
+    layers = layers.concat(labelLayers("zone", t));
+
+    layers.push({
+      // ---- landmark labels -------------------------------------------
+      id: "landmark-label",
+      type: "symbol",
+      source: "zone",
+      minzoom: 13,
+      filter: ["all", kindIs("landmark"), ["has", "name"]],
+      layout: {
+        "text-field": ["get", "name"],
+        "text-font": FONT_STACK,
+        "text-size": 12,
+        "text-anchor": "top",
+        "text-offset": [0, 0.5],
+        "text-max-width": 8
+      },
+      paint: {
+        "text-color": t.landmarkText,
+        "text-halo-color": t.landmarkHalo,
+        "text-halo-width": 1.2
       }
-    ];
+    });
 
     var sources = { zone: { type: "geojson", data: dataUrl } };
+    if (cityUrl) sources.city = { type: "geojson", data: cityUrl };
     if (zone && zone.radius_m) {
       // world rectangle with a hole punched at ~1.12x the zone radius: the
       // dashed ring the pages draw sits just inside the dimmed edge

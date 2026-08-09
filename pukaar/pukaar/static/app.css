@@ -302,6 +302,21 @@ body.no-left #layout { grid-template-columns: 1fr 380px; }
 }
 .resp-marker.enroute { background: #fff; box-shadow: 0 0 0 3px var(--medical); }
 .resp-marker.onsite { box-shadow: 0 0 0 3px var(--good); }
+/* Heading chevron: rotated around the dot's centre by the motion loop, so a
+   rider leans into a corner the way a car does instead of sliding sideways.
+   Only rendered while enroute. */
+/* z-index so a chevron pointing south stays on top of the name tag below it */
+.resp-dot { position: relative; display: grid; place-items: center; z-index: 2; }
+.resp-dir {
+  position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+  pointer-events: none; will-change: transform;
+}
+.resp-dir::before {
+  content: ""; position: absolute; left: -5px; top: -20px;
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+  border-bottom: 7px solid var(--medical);
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.9));
+}
 .witness-pin { font-size: 22px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
 /* Google-style always-visible marker labels: mode + name (+ ETA enroute) */
 .resp-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }

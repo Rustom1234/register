@@ -57,16 +57,23 @@ function escapeHtml(s) {
 // ------------------------------------------------------------------ map --
 // Same Google-style local basemap the supervisor sees — day theme, since a
 // witness is a member of the public, not an ops room.
+// Half-extent of the generated surroundings — keep in step with app.js
+// CITY_HALF_M and tools/make_city_surrounds.py R_CITY.
+const CITY_HALF_M = 10000;
+
 function initMap(zone) {
   try {
-    const dLat = (zone.radius_m * 2.6) / 111320;
+    const dLat = CITY_HALF_M / 111320;
     const dLng = dLat / Math.cos(zone.lat * Math.PI / 180);
     map = new maplibregl.Map({
       container: "map",
-      style: WaysideBasemap.buildStyle("/data/demo_zone.geojson", "day", zone),
+      style: WaysideBasemap.buildStyle("/data/demo_zone.geojson", "day", zone,
+                                       "/data/demo_city.geojson"),
       center: [zone.lng, zone.lat],
       zoom: 14.9,
-      minZoom: 13.2,
+      // maxBounds is the real zoom-out floor (MapLibre derives it), so the
+      // witness can pull back to the whole drawn city and no further.
+      minZoom: 11.5,
       maxZoom: 17.5,  // matches the data's detail ceiling (see app.js)
       maxBounds: [[zone.lng - dLng, zone.lat - dLat], [zone.lng + dLng, zone.lat + dLat]],
       attributionControl: { compact: true, customAttribution: "demo geometry — representative, not surveyed" },

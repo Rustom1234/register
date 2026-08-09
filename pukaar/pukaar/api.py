@@ -691,5 +691,13 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         return FileResponse(STATIC.parent / "data" / "demo_zone.geojson",
                             media_type="application/geo+json")
 
+    @app.get("/data/demo_city.geojson")
+    def city_geojson():
+        # Scenery only: the procedurally generated city AROUND the pilot
+        # zone, so panning or zooming out shows streets instead of a void.
+        # The router never reads this — riders travel the zone file above.
+        return FileResponse(STATIC.parent / "data" / "demo_city.geojson",
+                            media_type="application/geo+json")
+
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
     return app
