@@ -20,8 +20,12 @@ services:
         value: /tmp/wayside.db
       - key: PUKAAR_HMAC_KEY
         generateValue: true        # signs the provenance/audit trail
-      - key: PUKAAR_ADMIN_TOKEN
-        generateValue: true        # staff gate: control room /login
+      # PUKAAR_ADMIN_TOKEN deliberately unset: the demo board is open so a
+      # judge or investor can just open the link — no token to hand out.
+      # Set it (any random string) in the Render dashboard the moment real
+      # witness reports exist: it gates the control room, supervisor, rider
+      # app, exports and media, while /witness stays public either way so
+      # witnesses never need a login.
       - key: ANTHROPIC_API_KEY
         sync: false                # paste in the Render dashboard, never in git
       - key: PUKAAR_TELEGRAM_TOKEN
