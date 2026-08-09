@@ -842,3 +842,14 @@ on shift → the offer with the witness's words and road-true metres →
 the depot kit run on real streets → dignity at the pin → the closed
 loop. Same URL, current truth (224 tests, road-true routing chips).
 No code changes this round; suite green at 224.
+
+## Overnight round 11 — 2026-08-06 (release rail live-proof + pre-demo checklist)
+
+Live probe of the coordinator release rail on a calm board with two
+riders: released mid-drive → rider stands down to idle, order re-waves
+to the other on-duty rider (and the released one, by design — a dead
+phone simply times out), feed narrates, audit row written. Appended the
+founder's final pre-demo checklist to research/demo-script.md: pull
+first (31ee9657d+), plain boot, three-screen setup, auto-pace and
+golden-button instincts, the release rail as the honest unstick, the
+purge closer, and key rotation after the demo. 224 tests green.

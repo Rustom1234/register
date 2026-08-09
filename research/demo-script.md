@@ -74,3 +74,40 @@ wholesale · ₹6,900 seeds three depots · ≈₹36,500 year-one stock ·
 demo), real WhatsApp integration (the witness page IS the line today),
 or surveyed map data (the geometry is representative; the import tool
 for real OSM streets exists and is one command).
+
+---
+
+## Final pre-demo checklist (added overnight, r11)
+
+**Before you leave the house**
+1. `git pull` in your clone — ten overnight rounds shipped; you want
+   commit `31ee9657d` or later. Then `cd pukaar` and run
+   `.venv/bin/python -m pytest -q` once: 224 passed = you're on the
+   right build.
+2. Boot with **no flags**: `.venv/bin/python -m pukaar` — the calm
+   board IS the pitch mode. (`PUKAAR_SEED_DEMO=1` is only for the busy
+   self-running showcase.)
+3. Hard-refresh every open tab once (Cmd+Shift+R) so the newest static
+   assets load.
+
+**The three-screen setup**
+- Laptop: control room at `http://127.0.0.1:8877/`.
+- Your phone: `/responder` — pick Meena, ON DUTY.
+- Second phone (or window): `/witness`.
+- Same-wifi phones: start with `PUKAAR_HOST=0.0.0.0` and use
+  `http://<laptop-ip>:8877/...` (find the ip: `ipconfig getifaddr en0`).
+
+**Mid-demo instincts**
+- Travel time compresses itself (⏩ in the clock) and hands back your
+  speed on arrival — you don't need to touch the dropdown.
+- The golden button works on a cold board — it brings a medical rider
+  on shift by itself.
+- If a job ever looks stuck: open the case → "release & re-wave". It
+  stands the rider down honestly and re-offers; never close with a fake
+  outcome.
+- The closer: ▦ 90-day cells, then the purge (it asks first now).
+
+**After the demo**
+- If you used your API key anywhere, rotate it at
+  console.anthropic.com → API Keys. It exists only in your shell env —
+  keep it that way.
