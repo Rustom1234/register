@@ -98,11 +98,39 @@ def test_webhook_post_feeds_pipeline():
             r = _signed_post(client, _wrap(
                 {"from": "919876543210", "type": "text", "text": {"body": "ek aadmi ghayal hai"}}))
             assert r.status_code == 200
-            assert r.json() == {"handled": 1, "sending": False}
+            assert r.json() == {"handled": 1, "sending": False,
+                                "send_failures": 0}
             state = client.get("/api/state").json()
             assert any("919876" in p for p in state["conversations"])
     finally:
         del os.environ["WA_APP_SECRET"]
+
+
+def test_webhook_survives_outbound_send_failure(monkeypatch):
+    """Meta dev tokens expire every 24h; a dead outbound path must not 500
+    the webhook (the report is filed — a non-200 makes Meta re-deliver and
+    eventually disable the endpoint)."""
+    os.environ.update({"WA_APP_SECRET": "test-secret",
+                       "WA_TOKEN": "expired-token", "WA_PHONE_ID": "12345"})
+    try:
+        from pukaar import whatsapp
+
+        def boom(self, payload):
+            raise RuntimeError("401 expired access token")
+        monkeypatch.setattr(whatsapp.CloudApi, "_post", boom)
+        with _client() as client:
+            r = _signed_post(client, _wrap(
+                {"from": "919811112222", "type": "text",
+                 "text": {"body": "ek aadmi ghayal hai"}}))
+            assert r.status_code == 200
+            body = r.json()
+            assert body["handled"] == 1 and body["sending"] is True
+            assert body["send_failures"] >= 1
+            state = client.get("/api/state").json()   # the report still landed
+            assert any("919811" in p for p in state["conversations"])
+    finally:
+        for k in ("WA_APP_SECRET", "WA_TOKEN", "WA_PHONE_ID"):
+            os.environ.pop(k, None)
 
 
 def test_webhook_voice_flows_as_voice_kind():

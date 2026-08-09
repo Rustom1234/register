@@ -626,6 +626,7 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             raise HTTPException(403, "bad signature")
         payload = await request.json()
         handled = 0
+        send_failures = 0
         for m in parse_webhook(payload):
             if m["kind"] == "voice":
                 # Voice notes over the real transport: STT (Sarvam bake-off)
@@ -640,8 +641,18 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             handled += 1
             if cloud.configured:
                 for r in replies:
-                    cloud.reply(m["phone"], r)
-        return {"handled": handled, "sending": cloud.configured}
+                    try:
+                        cloud.reply(m["phone"], r)
+                    except Exception as e:  # noqa: BLE001 — any send failure
+                        # An outbound failure (expired dev token, Meta blip)
+                        # must never 500 the webhook: the report is already
+                        # filed, and a non-200 makes Meta re-deliver — then
+                        # eventually disable the endpoint. Log, answer 200.
+                        send_failures += 1
+                        print(f"WARNING: WhatsApp send failed "
+                              f"({getattr(r, 'string_id', None) or 'text'}): {e}")
+        return {"handled": handled, "sending": cloud.configured,
+                "send_failures": send_failures}
 
     # -------------------------------------------------------------- static --
     @app.get("/")
