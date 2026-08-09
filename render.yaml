@@ -1,0 +1,36 @@
+# Render Blueprint — deploy Wayside with one click from this repo.
+# render.com → New → Blueprint → pick this repository.
+#
+# The free plan runs the whole app at ₹0/month with two honest limits:
+# it sleeps after ~15 idle minutes (first visitor waits ~1 min; a free
+# cron-job.org pinger on /health keeps it awake) and the SQLite file is
+# wiped on every deploy/restart (fine for demos; move to a paid disk or
+# a small VM for a real pilot — see DEPLOY.md).
+
+services:
+  - type: web
+    name: wayside
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PUKAAR_HOST
+        value: 0.0.0.0
+      - key: PUKAAR_DB
+        value: /tmp/wayside.db
+      - key: PUKAAR_HMAC_KEY
+        generateValue: true        # signs the provenance/audit trail
+      - key: PUKAAR_ADMIN_TOKEN
+        generateValue: true        # staff gate: control room /login
+      - key: ANTHROPIC_API_KEY
+        sync: false                # paste in the Render dashboard, never in git
+      - key: PUKAAR_TELEGRAM_TOKEN
+        sync: false                # optional: free chat line via @BotFather
+      - key: WA_TOKEN
+        sync: false                # optional: WhatsApp Cloud API (see WHATSAPP-SETUP.md)
+      - key: WA_PHONE_ID
+        sync: false
+      - key: WA_APP_SECRET
+        sync: false
+      - key: WA_VERIFY_TOKEN
+        sync: false

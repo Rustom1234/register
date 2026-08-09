@@ -13,6 +13,11 @@ decision there (the deterministic 112 gate, ≤4-step intake, parallel-wave
 dispatch, retention TTLs, channel provenance) is executable code here, plus
 a live **demo control room** you can record.
 
+> **Deploying for real people?** [`../DEPLOY.md`](../DEPLOY.md) has the
+> ₹0-to-₹400/month hosting options (one-click Render blueprint included)
+> and [`../WHATSAPP-SETUP.md`](../WHATSAPP-SETUP.md) connects a real
+> WhatsApp number. The free Telegram line is one env var.
+
 ## Quickstart (demo, no keys needed)
 
 ```bash
