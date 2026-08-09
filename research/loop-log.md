@@ -1027,3 +1027,36 @@ Verified live: control room, witness map, both themes, zoomed to the
 clamp — real streets everywhere, no void, no console errors.
 
 Suite: **245 passed** (was 225). Cache `20260809a`.
+
+## 2026-08-09 · the demo film, reshot on the real map
+
+`research/pitch/wayside-demo.mp4` — 1:48, shot live from the running
+system by the new `pukaar/scripts/record_pitch_video.py`. The map is the
+thesis now, so the film opens and closes on it: the real streets of
+Nizamuddin with their monuments named, then ten kilometres of real Delhi
+around them, then the loop — witness reports and pins → the offer ping
+quoting road-true metres → accept on a phone → the kit run to the depot
+and out to the pin, on real roads → outcome → the witness told how it
+ended → what survives 90 days.
+
+The recorder is a tool, not a one-off. It marks each storyboard beat with
+a timestamp as it shoots, then cuts the film from those marks: a beat
+over budget is sped up as far as its cap allows and only then trimmed.
+Sim-imposed waiting (a dispatch wave timing out) runs at 3.5x; clicks,
+replies and the arrival play at 1x, so nothing looks staged.
+`PUKAAR_RECUT=<raw.webm>` re-edits an existing capture, which is how the
+pacing was tuned without reshooting three minutes of sim each time.
+
+Two things the shoot taught us. The rider is chosen by cost now — nearest
+idle rider to any depot, scooter preferred — because the first cut drew a
+walker across the zone and turned a 30-second beat into a 65-minute kit
+run. And the map segments take 18 s of wall clock for 11 s of scripted
+action: MapLibre re-rendering 3,499 real features blocks `page.evaluate`.
+Trimming those tails silently ate a whole caption; speeding them up keeps
+every word.
+
+Deleted `wayside-live-drive.mp4`: a fine screencast of the invented city,
+which is exactly the problem — the new film carries a real drive on real
+streets, and shipping both would show investors a map we no longer have.
+
+Suite still 245. Cache `20260809a`.

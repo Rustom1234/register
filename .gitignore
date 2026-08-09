@@ -140,6 +140,10 @@ dist
 # setuptools build artifacts
 pukaar/build/
 
+# raw screencast + beat marks from scripts/record_pitch_video.py — build
+# scratch for the cut; only the finished mp4 is committed
+research/pitch/.capture/
+
 # uploaded witness photos (retention-managed runtime data, never committed)
 pukaar-media/
 pukaar/pukaar-media/
