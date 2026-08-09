@@ -820,3 +820,11 @@ case id + the witness's words with an honest 30 s wall-clock countdown
 the founder guide artifact refreshed to 224 tests + the new coordinator
 rails (consent offers, release-and-rewave, request-pin). Cache 20260805i.
 224 tests green.
+
+## Overnight round 9 — 2026-08-06 (road-true offer cards)
+
+The last flagged number lie: the offer card quoted beeline metres for
+jobs that route 2-3x longer. /api/state now attaches the street-graph
+road distance (rider's own travel mode) to every PENDING offer, and the
+card says "1952 m by road" instead of "735 m" — verified live. Beeline
+remains only as the no-graph fallback. 224 tests green. Cache 20260805j.

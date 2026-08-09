@@ -322,6 +322,29 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             "conversations": {phone: own} if phone else {},
         }
 
+    def _assignments_with_road() -> list[dict]:
+        """Assignments, with the true road distance attached to PENDING
+        offers — the offer card was quoting beeline metres for jobs that
+        route 2-3x longer, which teaches riders to distrust the number."""
+        rows = svc.store.query(
+            "SELECT * FROM assignments ORDER BY offered_at DESC LIMIT 40")
+        road = getattr(svc.dispatch, "road_m", None)
+        for a in rows:
+            if a.get("responded_at") is not None:
+                continue
+            pos = svc.positions.get(a["responder_id"])
+            order = svc.store.one("SELECT case_id FROM orders WHERE id=?", (a["order_id"],))
+            case = svc.store.one("SELECT lat, lng FROM cases WHERE id=?",
+                                 (order["case_id"],)) if order else None
+            if pos and case and case["lat"] is not None:
+                try:
+                    d = (road(a["responder_id"], pos[0], pos[1], case["lat"], case["lng"])
+                         if road else geo.haversine_m(pos[0], pos[1], case["lat"], case["lng"]))
+                    a["road_m"] = round(d)
+                except Exception:
+                    pass
+        return rows
+
     # ------------------------------------------------------------- state --
     @app.get("/api/state")
     def state():
@@ -343,8 +366,7 @@ def build_app(cfg: Config | None = None) -> FastAPI:
             "media": _case_media(),
             "cases": cases,
             "orders": orders,
-            "assignments": svc.store.query(
-                "SELECT * FROM assignments ORDER BY offered_at DESC LIMIT 40"),
+            "assignments": _assignments_with_road(),
             "feed": list(svc.feed)[-45:][::-1],
             "metrics": svc.metrics(),
             "instructions": strings.INSTRUCTIONS,

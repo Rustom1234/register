@@ -176,7 +176,10 @@ function renderIdleFeed() {
 
 function offerCard(a, order, c) {
   const m = me();
-  const dist = c && c.lat != null && m
+  // Server-computed road metres when available — the beeline number
+  // lowballed real legs by 2-3x and riders learn that fast.
+  const dist = a.road_m != null ? `${Math.round(a.road_m)} m by road`
+    : c && c.lat != null && m
     ? `${Math.round(haversineM(m.lat, m.lng, c.lat, c.lng))} m` : "—";
   const ttl = (state.config && state.config.offer_ttl_s) || 180;
   const left = Math.max(0, a.offered_at + ttl - state.sim.sim_now);
