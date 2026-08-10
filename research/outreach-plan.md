@@ -686,3 +686,386 @@ Xu of MIT/Context Labs" appears to be a confusion with the Kevin Xu
 Innovation Challenge, and is unreliable. Also worth contacting instead:
 the **Humanitarian OpenStreetMap Team (HOT)**, since Wayside is built
 entirely on OSM.
+
+---
+
+## 12. What three adversarial reviews said
+
+Three reviews were run against this plan: an NGO programme director who
+has been burned by student technologists, a grant assessor who funds 8 of
+400 applications a year, and an ethics/safeguarding reviewer. Their
+verdicts are summarised here because they change what you should do next
+more than any contact list does.
+
+### 12a · The NGO director: "delete, not a pilot partnership"
+
+Their verdict on the original pilot-ask email was that they would not
+reply. The reasons were fair and are now fixed in `outreach-emails.md`:
+
+- **"I am not asking you for money" is false.** Two to five outreach
+  workers for eight weeks is 80–120 staff hours plus supervision, shelf
+  space, legal review and reputational risk. They costed it at
+  **₹105,000–155,000 of the NGO's resources.** No cash changes hands,
+  which is not the same as free. Saying "very little" marks you as
+  someone who has never run a programme.
+- **A demo does not answer their question,** which is not "does it work"
+  but "will you still be answering email in month four".
+- **The kill line reads as an exit ramp,** not as accountability — "if
+  the numbers don't work, I have a public reason to leave."
+- **The sequencing is backwards from their chair:** being asked to commit
+  staff before the kits are funded is being asked to carry your risk.
+
+**The fix — and this is the single most important change in this
+document: the first email to an NGO no longer asks for a pilot. It asks
+for their criticism.** That ask is honest, costs them twenty minutes
+instead of a hundred hours, and is the one thing they can give a stranger.
+The pilot ask comes second, to someone who has already replied.
+
+Their other demand — "come back when you have piloted elsewhere" — is a
+chicken-and-egg trap that cannot be satisfied, so do not try. What you
+*can* do is remove every other reason to say no.
+
+### 12b · The grant assessor: fund a sprint, not the pilot
+
+- **The ₹430-per-person figure is not what it claims.** It is cost per
+  *report processed*, not per person actually helped. If 200 reports
+  yield 80 served people, the real figure is ~₹1,900. **Stop quoting
+  ₹430 as "per person served" until the denominator is defined.** This
+  is the most dangerous number in your deck, because a funder who spots
+  it will assume the rest is equally loose.
+- **Measure these instead:** contact rate (of reports, how many reached
+  the person — StreetLink's reported ~9% is the cautionary comparison),
+  acceptance rate (of those, how many took the kit), and cost per kit
+  actually delivered.
+- **The budget is a lower bound.** Missing entirely: responder stipends
+  at a realistic rate, a safeguarding supervisor's time, insurance,
+  responder mobile data, kit wastage and theft, the legal opinion, and
+  your own labour valued at zero. Their realistic figure is
+  **₹2.2–2.8 lakh, not ₹1.55 lakh.**
+- **Tighten the kill line to ₹650–700** and say *who decides* when it is
+  crossed. A threshold at 2× your projected cost can never bind.
+- **What they would actually fund:** not the eight-week pilot. A
+  **₹50,000, four-week pre-pilot sprint** — secure an NGO partner, get
+  the DPDP legal opinion, run 10–20 real reports with no kits, publish
+  what happened. Then the pilot funds itself on evidence.
+
+**Change your ask accordingly.** A ₹50,000 sprint is more winnable, more
+honest, and produces the thing that unlocks everything else.
+
+### 12c · The safeguarding reviewer: the gap that must close first
+
+Most of this review is about things you can fix. One part is not
+optional, and it is the biggest hole in the system as built.
+
+**Wayside has no defence against a malicious witness.** The reviewer's
+scenarios are concrete and the system currently permits every one:
+
+- A shopkeeper repeatedly reports the person sleeping outside their
+  shop, using Wayside as a polite mechanism to move them on.
+- A witness reports someone based on how they look, and a stranger is
+  approached because of a prejudice.
+- **An abusive ex-partner reports their partner's location as a "person
+  in need". A worker is dispatched, and the system has just told an
+  abuser where someone fled to.** There is nothing in the code that
+  makes this harder.
+- A person is reported fifteen times, declines every time, and quietly
+  acquires a reputation as a "chronic non-engager" without ever having
+  been asked.
+
+**Minimum defences to build before the first real report:**
+1. **Witness rate-limiting** — one report per location per witness per
+   day; flag any witness whose reports repeatedly end in no-contact.
+2. **Responder attestation** — "contact made" and "no contact possible"
+   must be different recorded outcomes, because they mean different
+   things and today they blur.
+3. **Cross-witness deduplication** — five reports of one location in two
+   hours is one case, not five visits.
+4. **An incident field on every case** — "anything concerning about this
+   report?" — reviewed weekly. This is how patterns become visible.
+5. **A witness notice at intake** — what happens to their report, that
+   it expires, and that false reports are escalated.
+
+**Also required before a first report, in rough order:**
+- **The data MOU, written.** Default answer to a police request is no,
+  absent a court order naming an individual and dates; escalation path;
+  termination clause if the partner breaks it; annual public reporting of
+  any request received. The plan currently says "contractual" — that is
+  an intention, not a protection.
+- **Photos: detect faces and reject them, and strip EXIF before
+  storage.** The intake should say "photograph the place, not the
+  person". Today a witness can upload a face and the system keeps it for
+  72 hours with its GPS metadata intact.
+- **Responder safety protocol**, signed by the partner: vetting,
+  de-escalation training, single-vs-pairs rules by time of day, live
+  check-in, and what happens when a worker feels unsafe. Workers are
+  being sent to a stranger's location on an anonymous stranger's word.
+- **Responder anonymity from the witness**, and the system — not the
+  worker — sends the outcome message back.
+- **Dignity protocol:** listen first, ask before giving, accept a refusal
+  without persuading, never imply the kit enrols anyone in anything.
+
+**On consent, the honest position.** The reviewer's conclusion is that
+the current mitigations are good privacy engineering but are *not*
+consent, and that no amount of data minimisation makes them so. There
+are only two defensible positions and you must pick one in writing:
+either you accept this as harm-reduction and say so plainly, or you build
+the version where the responder asks the person before anything is
+recorded. Do not let it stay ambiguous — that ambiguity is what the
+critique in §11 will attack.
+
+### 12d · What this means for the next four weeks
+
+The reviews agree, from three different chairs, on the same reordering:
+
+1. **Do not send a pilot ask yet.** Send the Track D criticism emails in
+   `outreach-emails.md`.
+2. **Get the DPDP legal opinion.** It is a blocker for everything, it is
+   cheap relative to the risk, and a funder will pay for it.
+3. **Build the malicious-witness defences.** They are days of work, not
+   weeks, and they close the worst hole.
+4. **Redefine the metrics** so "served" means served, and re-quote the
+   unit economics honestly.
+5. **Change the funding ask** from an eight-week pilot to a four-week
+   pre-pilot sprint.
+
+---
+
+## 13. Foundations — and the structural fact that governs all of them
+
+A second research pass covered foundations and grant-makers, separate
+from the prizes and accelerators in §9. It produced one finding that
+matters more than the list:
+
+> **Roughly 95% of foundations cannot give money to an individual.** They
+> require a registered nonprofit — a Section 8 company in India, a
+> 501(c)(3) in the US, or equivalent. You have no entity, and (see §14)
+> you may have good reasons not to create one yet.
+
+This is not a dead end. It is a reason to **make the NGO partner the
+grantee.** That structure is better on every axis: it is what funders are
+set up to receive, it removes your visa exposure from the money entirely,
+it gives the NGO a reason to care about the pilot beyond goodwill, and it
+answers the key-person question a funder will otherwise ask. Route the
+money to them and let them buy the kits.
+
+### Can pay an individual (rare — start here)
+
+| Funder | Size | Notes |
+|---|---|---|
+| **The Pollination Project** | $500–1,000, rolling daily | Funds individuals and grassroots changemakers directly, no entity. Apply at thepollinationproject.org/apply · `apply@thepollinationproject.org` · **Honest caveat: their published cause areas skew to animal welfare and storytelling; street aid is not obviously in scope.** Cheap to try, do not count on it |
+| **Awesome Foundation** | $1,000/month per chapter, no strings | Perfect mechanics — individuals, no reporting. **No India chapter exists.** Chapters are in the US, Canada, UK, Australia, NL, Singapore and others. Only useful if you are somewhere with a chapter, or start one |
+| **Emergent Ventures, 1517** | see §9 | Still the best individual-friendly money for you |
+
+### Needs the NGO partner as grantee (the real path)
+
+| Funder | Size | Why it fits |
+|---|---|---|
+| **Azim Premji Foundation** | lakhs, multi-year | **Explicitly names homelessness and shelter among its focus areas, and takes unsolicited rolling applications** — a rare combination. Best foundation fit found. azimpremjifoundation.org/apply-for-a-grant |
+| **GlobalGiving** | $5k–20k | Platform, doubles as a donation rail. Existing India street-aid projects listed. Needs a registered NGO |
+| **Global Fund for Children** | $5k–20k/yr | Small grants, youth focus, India partnerships already exist |
+| **Infosys Foundation** | unclear | Funds homeless shelters and urban rehabilitation; application route is opaque — needs a phone call |
+| **EdelGive** | varies | Grassroots grantmaking; partnership-driven rather than open |
+| **Open Road Alliance** | fast, flexible | For an organisation hitting an unexpected roadblock — a year-two instrument, not a launch one |
+
+### Do not bother now, and why
+
+**Draper Richards Kaplan** wants organisations 3–5 years old with proven
+impact (revisit in year two — the terms are excellent). **Peery** and
+**Siegel** do not accept unsolicited proposals. **Schmidt Sciences**
+explicitly does not. **Skoll** needs demonstrated impact at scale.
+**MacArthur** and **Ford** are 100× too large for a ₹35,000 ask.
+**Elrha's Humanitarian Innovation Fund** defines humanitarian settings as
+crises, disasters and displacement — Delhi street homelessness does not
+qualify. **Firelight** is sub-Saharan Africa only. **Wipro, Bajaj,
+Godrej, Piramal, Mahindra, Rohini Nilekani, Sehgal** — checked, and none
+have urban homelessness in scope.
+
+**A gap worth knowing:** the research found **no dedicated street-aid or
+homelessness funder anywhere in the world that funds internationally at
+this scale.** Less than half a percent of global philanthropy addresses
+homelessness at all, and what exists is US-domestic and housing-focused.
+That is a hard fact about your fundraising, and also — if you ever write
+about this work — a genuinely interesting one to say out loud.
+
+---
+
+## 14. F-1 status — what this plan means for your visa
+
+> **This is not legal advice, and I am not a lawyer.** It is a briefing
+> assembled from the regulations, one court decision, and the published
+> guidance of university international offices, so that you know which
+> questions to put to your DSO. Where the sources genuinely conflict, it
+> says so rather than picking the comfortable answer. **Talk to your DSO
+> before you send the pilot emails.** Note also that `uscis.gov`,
+> `ice.gov` and `studyinthestates.dhs.gov` all block automated retrieval,
+> so several claims below rest on consistent secondary quotation rather
+> than a fetch of the primary page.
+
+### The one-paragraph version
+
+Building Wayside, demoing it, researching it and asking people for their
+criticism is **fine** — that is academic and preparatory activity, and it
+is explicitly the category university guidance says needs no
+authorisation. Taking money into your own account, or personally running
+a live operational service, is where the risk lives. And the riskiest
+single thing in this entire plan is not the money — it is **you, sitting
+in the US, personally operating a live dispatch pipeline for a foreign
+NGO.** That is genuinely unsettled law, and "but it's unpaid" does not
+settle it.
+
+### What is clearly fine
+
+- Writing the code, running the demo, publishing the repository.
+- Research and customer discovery — **including every Track D email in
+  `outreach-emails.md`.** Asking practitioners what they think of an idea
+  is exactly the "academic in nature" activity that guidance carves out.
+- Owning a company on paper without working for it. The line across every
+  source is consistent: **own it, don't work it.** You may incorporate,
+  hold a bank account, sign a lease, even hire people — provided you
+  personally perform no services and take no compensation.
+- A genuine scholarship or fellowship where nothing is expected in return.
+
+### What is clearly not fine
+
+- Being paid — cash, equity, deferred compensation, "sweat equity", or
+  anything of value — for work performed in the US without CPT/OPT.
+- Personally operating a business or service without authorisation. The
+  governing precedent is *Wettasinghe v. INS*, 702 F.2d 641 (6th Cir.
+  1983): a student who bought ice-cream trucks, restocked them daily and
+  took a cut was found to have engaged in unauthorised employment. The
+  pattern the court cared about — **regular personal operational
+  involvement plus a share of proceeds** — is still the shape the
+  guidance warns about forty years on.
+
+**The consequences are not a slap on the wrist:** SEVIS termination
+ending lawful status, ineligibility for reinstatement (having engaged in
+unauthorised employment is a bar), unlawful-presence accrual that can
+trigger 3- or 10-year re-entry bars, and elevated scrutiny on every
+future application.
+
+### The three grey areas that actually govern this plan
+
+**1 · Does an unpaid project become "self-employment" once it has real
+users?** The regulation defines employment around compensation
+(8 CFR 274a.1(h): "service or labor... for wages or other remuneration").
+But DHS's own plain-English guidance says flatly that *"starting your own
+business constitutes work"*, with no compensation qualifier, and several
+university offices repeat that framing. **These two are not reconciled
+anywhere.** No source draws a numeric line. The qualitative signal the
+sources converge on is the shift from *preparing* to *operating* — and a
+live pilot dispatching real workers to real people is operating.
+
+**2 · Does work performed from inside the US for a foreign NGO count?**
+This is the crux, and it is contested among immigration lawyers
+themselves — one practitioner piece is literally titled around the
+argument. The regulation keys on where the *labour* happens, not where
+the employer is, and the majority practitioner reading is that **any work
+performed on US soil needs US authorisation even for a foreign
+employer.** Applied here: you in the US, managing the WhatsApp intake,
+corresponding daily with outreach workers, directing dispatch — that is
+the reading that bites. **Get this one in writing from your DSO before
+anything operational starts.**
+
+**3 · Must volunteering be unrelated to your field of study?** Schools
+disagree. Some state the Department of Labor test only (charitable
+purpose, no compensation of any kind, no displacement of a paid worker).
+Others add that the activity must be *unrelated* to your field —
+reasoning that field-related unpaid work is really uncompensated
+training. **Wayside is squarely in your field.** Under the stricter
+reading, "volunteering" your software labour to an NGO partner is exactly
+what needs authorisation.
+
+### What this changes about the plan
+
+**The Track-D-first ordering is now doubly correct.** It was already the
+right move for NGO-relationship reasons (§12a). It is also the
+visa-safest: asking for criticism is research, and research is the
+protected category. The pilot proposal is the part that edges toward
+"operating".
+
+**Route every rupee to the NGO, never to you.** §13 already recommends
+this because 95% of foundations cannot pay an individual. The visa
+position points the same way, and the two reasons reinforce each other in
+a way you can state plainly to a funder without ever mentioning your
+visa: *"the partner organisation is the grantee; I take nothing."*
+
+**Consider making the NGO the operator, not you.** The cleanest
+structure — and the one an attorney should evaluate — is that Wayside is
+**their tool, which they run**, rather than your service which they
+participate in. You built it, you support it, they operate it. This is
+inference rather than sourced guidance, but it addresses the crux
+directly by moving the operational labour to people who are not subject
+to F-1 restrictions. It is also, independently, what the NGO director in
+§12a was asking for when they demanded to know what happens when you
+leave.
+
+**Keep it documented as academic work.** Independent study, thesis
+component, or research project — this category is explicitly named in
+university guidance as not requiring authorisation. If your programme
+allows it, this is close to free risk reduction.
+
+### Red flags for the next three months
+
+1. **No money into your personal account** — not a grant, not CSR funds,
+   not a prize — until you have an answer. Even a small one.
+2. **Do not put "Founder" or "CEO" of Wayside on LinkedIn, a pitch deck,
+   or incorporation papers** in a way implying active operational work.
+   Guidance explicitly flags that reviewers look at social media later.
+3. **Do not personally run the live dispatch pipeline** for a pilot before
+   you have the §14 crux answered in writing. Highest-risk item in the plan.
+4. **Do not publicly fundraise or crowdfund.** Advertising and fundraising
+   are called out separately from compensation as triggering
+   authorisation questions.
+5. **Do not accept anything of value from an NGO partner** — not a
+   stipend, not travel, not equipment.
+6. **Do not apply for any grant whose framing is "money to you, to run
+   the project."** Restructure it as money to the partner first.
+7. **"It's unpaid" is not a defence by itself.** Necessary, not sufficient.
+
+### The email to send your DSO this week
+
+> **Subject:** F-1 status question — unpaid personal software project with international NGO partners
+>
+> I am an F-1 student. I have built, alone and unpaid, a software project
+> — no company, no revenue, no employees — and I would like your guidance
+> before I take any next step.
+>
+> 1. If I keep building and privately demoing it, with no users and no
+>    money involved, is that unambiguously fine as a personal project?
+> 2. If NGOs in India and Nepal begin using it operationally — with me
+>    taking no payment and having no company — does that change my
+>    obligations? Is there a point at which you would consider this
+>    "operating a business" rather than "a personal project", even with
+>    no income?
+> 3. If I correspond regularly with those NGOs to support a pilot while I
+>    am physically in the US, does that constitute employment under F-1
+>    rules, given the NGOs are foreign and I am not paid? Does it differ
+>    between *volunteering* to a foreign nonprofit and *operating* a
+>    system they use?
+> 4. Would the answer change if a grant or CSR donation funded the
+>    physical kits — and does it matter whether that money goes to me, to
+>    the NGO directly, or to a fiscal sponsor?
+> 5. Are there activities on your "do not do without authorisation" list I
+>    should know about — building the intake further, advertising the
+>    pilot, fundraising, or accepting a student prize tied to this project?
+> 6. Would you review my email drafts and project description before I
+>    send anything, so we can flag status risks in advance?
+> 7. Should I be pursuing CPT or OPT for this, and what would the timeline
+>    look like at my stage?
+>
+> I would rather ask now than find out afterwards that something crossed a
+> line. Happy to meet rather than handle this by email.
+
+### What changes on OPT
+
+Post-completion OPT would let you actively work on this as
+self-employment **if** you can show a properly licensed and registered
+business, active engagement, and that the work is directly related to
+your degree — the three conditions that appear consistently in
+descriptions of SEVP Policy Guidance 1004-03. That is a materially more
+permissive regime than where you are now. The **STEM extension is
+stricter** and sole-founder self-employment is probably foreclosed under
+it, because of the I-983 training plan, independent supervision and
+E-Verify requirements. And note that OPT does **not** automatically
+resolve grey area 2 — that question is about where the labour happens,
+not what authorisation you hold.
