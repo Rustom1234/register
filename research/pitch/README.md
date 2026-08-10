@@ -7,7 +7,7 @@ see the root project's open thread on that.
 
 | File | What it is |
 |---|---|
-| [wayside-demo.mp4](./wayside-demo.mp4) | **The demo film** — 1:48, the whole loop on the real map. Shot live from the running system by `pukaar/scripts/record_pitch_video.py`; re-record it any time with `make demo`-style server + that script |
+| the demo film | **1:45, the whole loop on the real map.** Shot live by `pukaar/scripts/record_pitch_video.py`. It now lives at `pukaar/pukaar/static/wayside-demo.mp4` — not here — because that is what the Docker image copies, so the app can serve it at **`/film`**. Anywhere else and the link 404s in production |
 | [wayside-kxic-pitch.pptx](./wayside-kxic-pitch.pptx) | The deck — 13 slides, dark throughout, expanded to match the long-form pitch |
 | [wayside-kxic-pitch.md](./wayside-kxic-pitch.md) | The same pitch as plain text, in slide order — read this if you can't open the pptx |
 | [build_deck.js](./build_deck.js) | Generates the pptx via [pptxgenjs](https://gitbrent.github.io/PptxGenJS/) |

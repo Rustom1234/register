@@ -226,3 +226,48 @@ def test_stock_adjust_endpoint(svc, clock):
         "depot_id": "depot_basti", "sku": "MED-1", "delta": 2, "reason": " "}).status_code == 422
     assert client.post("/api/stock/adjust", json={
         "depot_id": "nope", "sku": "MED-1", "delta": 1, "reason": "x"}).status_code == 404
+
+
+# ------------------------------------------------- outreach pages --------
+def test_film_and_pitch_are_public_and_shipped():
+    """The two links that go in a cold email. Two things must hold: they
+    are reachable WITHOUT a staff login (an NGO director will never have
+    one), and they live under static/ — which is what the Docker image
+    copies and what pip installs. Put them anywhere else and they work
+    locally and 404 in production, which is the worst possible failure for
+    a link you have already emailed to someone."""
+    from pathlib import Path
+
+    from fastapi.testclient import TestClient
+
+    from pukaar.api import build_app
+    from pukaar.config import Config
+
+    import pukaar
+    static = Path(pukaar.__file__).resolve().parent / "static"
+    assert (static / "film.html").exists()
+    assert (static / "pitch.html").exists()
+    assert (static / "wayside-demo.mp4").exists(), "the film itself must ship"
+
+    cfg = Config()
+    cfg.backend = "mock"
+    cfg.admin_token = "staff-only-secret"      # gate ON
+    client = TestClient(build_app(cfg))
+
+    for path in ("/film", "/pitch"):
+        r = client.get(path)
+        assert r.status_code == 200, (path, r.status_code)
+        assert "text/html" in r.headers["content-type"]
+
+    # the control room must STILL be gated — this test must never be the
+    # reason the staff surface went public
+    assert client.get("/").status_code in (302, 303, 401, 403)
+
+
+def test_film_page_points_at_a_video_that_exists():
+    from pathlib import Path
+    import pukaar
+    static = Path(pukaar.__file__).resolve().parent / "static"
+    html = (static / "film.html").read_text(encoding="utf-8")
+    assert "/static/wayside-demo.mp4" in html
+    assert (static / "wayside-demo.mp4").stat().st_size > 1_000_000

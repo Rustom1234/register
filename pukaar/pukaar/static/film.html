@@ -1,0 +1,130 @@
+<title>Wayside — the film</title>
+<style>
+  /* Palette lifted from the app's own daytime cartography: the parchment
+     it draws land on, the amber of a major road, the green of a park. */
+  :root{
+    --paper:#f2f0eb; --card:#e9e6de; --ink:#16160f; --ink-soft:#57564d;
+    --rule:#d9d5c9; --amber:#a86a1f; --green:#2c6b4a; --flag:#8c3b2a;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --paper:#14161c; --card:#1b1e26; --ink:#e9e7df; --ink-soft:#9a988e;
+      --rule:#2a2e39; --amber:#dda65a; --green:#6fbf8f; --flag:#d78468;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14161c; --card:#1b1e26; --ink:#e9e7df; --ink-soft:#9a988e;
+    --rule:#2a2e39; --amber:#dda65a; --green:#6fbf8f; --flag:#d78468;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font:400 17px/1.68 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:60px 24px 100px}
+  .serif{font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif}
+  .eyebrow{
+    font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+    letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft);
+  }
+  h1{
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    font-weight:600; font-size:clamp(36px,6vw,58px); line-height:1.06;
+    letter-spacing:-.018em; margin:16px 0 14px; text-wrap:balance;
+  }
+  .lede{font-size:20px; line-height:1.55; color:var(--ink); max-width:58ch; margin:0 0 10px}
+  .byline{color:var(--ink-soft); font-size:15px; margin:26px 0 0}
+  h2{
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    font-weight:600; font-size:27px; line-height:1.2; letter-spacing:-.01em;
+    margin:0 0 4px; text-wrap:balance;
+  }
+  section{margin-top:56px; padding-top:28px; border-top:1px solid var(--rule)}
+  section > .eyebrow{display:block; margin-bottom:12px}
+  p{max-width:64ch}
+  .steps{list-style:none; padding:0; margin:22px 0 0; counter-reset:s}
+  .steps li{
+    counter-increment:s; display:grid; grid-template-columns:30px 1fr; gap:16px;
+    padding:11px 0; border-bottom:1px solid var(--rule); align-items:baseline;
+  }
+  .steps li::before{
+    content:counter(s); font:600 13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;
+    color:var(--amber); font-variant-numeric:tabular-nums;
+  }
+  .card{background:var(--card); border-radius:9px; padding:22px 24px; margin-top:22px}
+  .card h3{margin:0 0 8px; font-size:17px; font-weight:650}
+  .card p{margin:0; color:var(--ink-soft); font-size:15.5px}
+  .cols{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:22px}
+  .cols .card{margin-top:0}
+  .yes h3{color:var(--green)} .no h3{color:var(--flag)}
+  ul.plain{padding-left:18px; margin:10px 0 0} ul.plain li{margin:6px 0; max-width:62ch}
+  table{border-collapse:collapse; width:100%; margin-top:20px; font-size:15.5px}
+  th,td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--rule); vertical-align:top}
+  th{
+    font:600 11.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft);
+  }
+  td.n{font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--amber); font-weight:600}
+  .scroll{overflow-x:auto}
+  .ask{display:grid; gap:12px; margin-top:22px}
+  .ask div{
+    display:grid; grid-template-columns:22px 1fr; gap:14px;
+    padding:14px 0; border-bottom:1px solid var(--rule); align-items:baseline;
+  }
+  .ask b{
+    font:700 13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--amber);
+  }
+  .cta{
+    display:inline-block; margin-top:8px; padding:13px 22px; border-radius:7px;
+    background:var(--ink); color:var(--paper); text-decoration:none; font-weight:600; font-size:16px;
+  }
+  a{color:var(--amber)}
+  a:focus-visible,.cta:focus-visible{outline:2px solid var(--amber); outline-offset:3px}
+  footer{margin-top:60px; padding-top:22px; border-top:1px solid var(--rule); color:var(--ink-soft); font-size:14px}
+  @media (max-width:620px){ .cols{grid-template-columns:1fr} }
+</style>
+<style>
+  .wrap{max-width:1000px}
+  video{width:100%; display:block; border-radius:10px; background:#000;
+        box-shadow:0 24px 70px rgba(24,22,12,.16)}
+  .beats{margin:34px 0 0; padding:0; list-style:none; border-top:1px solid var(--rule)}
+  .beats li{display:grid; grid-template-columns:78px 1fr; gap:18px; align-items:baseline;
+            padding:13px 2px; border-bottom:1px solid var(--rule)}
+  .t{font:600 13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+     color:var(--amber); font-variant-numeric:tabular-nums}
+  @media (max-width:560px){ .beats li{grid-template-columns:62px 1fr; gap:12px} }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Nizamuddin, Delhi &middot; recorded from the running system</div>
+  <h1>Someone sees a person who needs help.<br>That should be enough.</h1>
+  <p class="lede">One minute forty-five, shot live &mdash; not a mockup, and not a stitch of stills.
+  The streets under the rider are the real ones: OpenStreetMap&rsquo;s survey of Nizamuddin.</p>
+
+  <video controls preload="metadata" playsinline src="/static/wayside-demo.mp4"></video>
+
+  <ul class="beats">
+    <li><span class="t">0:04</span><span>The real streets &mdash; Humayun&rsquo;s Tomb, Sunder Nursery, the Dargah, the railway.</span></li>
+    <li><span class="t">0:16</span><span>Ten kilometres of real Delhi around the pilot zone.</span></li>
+    <li><span class="t">0:25</span><span>A witness reports in their own words, drops a pin, sends a photo of the scene.</span></li>
+    <li><span class="t">0:44</span><span>The offer reaches a responder&rsquo;s phone &mdash; distance measured <em>by road</em>, not as the crow flies.</span></li>
+    <li><span class="t">0:57</span><span>Accepted. First to accept wins, the way emergency dispatch works at scale.</span></li>
+    <li><span class="t">1:00</span><span>The kit run: to the depot for the kit, then out to the pin, on real roads.</span></li>
+    <li><span class="t">1:18</span><span>At the pin &mdash; kit handed over, outcome recorded, the witness told how it ended.</span></li>
+    <li><span class="t">1:31</span><span>What survives ninety days: coarse cells and counts. No pins, no photos, no people.</span></li>
+  </ul>
+
+  <div class="card" style="margin-top:36px">
+    <h3>What is real here, and what is not</h3>
+    <p>The routing, the dispatch waves, the kit ledger, the emergency gate and the privacy purge are
+    production code, and the map is a real survey. The responders are simulated, and the clock runs
+    at twelve times normal speed &mdash; which is why the rider crosses the zone in half a minute.
+    No NGO is running this yet. Nobody has been served by it.</p>
+  </div>
+
+  <footer>
+    <a href="/pitch">More about the project</a> &nbsp;&middot;&nbsp;
+    Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ODbL.
+  </footer>
+</div>

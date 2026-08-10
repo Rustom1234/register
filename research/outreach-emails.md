@@ -4,17 +4,31 @@
 
 ---
 
-## ⚠ Do this first, or every link below is broken
+## ⚠ Pick your link before you send
 
-The two pages are **private until you share them.** Open each and use the
-page's **share menu** to make it viewable by anyone with the link. Until
-you do, everyone you email hits a login wall.
+**Preferred — your own domain, no login, nothing to share first:**
 
-- **The film (1:45):** https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
-- **The project page:** https://claude.ai/code/artifact/29b6c094-448a-4cd7-9383-eb2e02448f56
+- **The film:** `https://wayside.onrender.com/film`
+- **The project page:** `https://wayside.onrender.com/pitch`
 
-Send the film, not both. It is the one that earns a reply; the project
-page is for people who write back.
+These are served by your own app and need no sharing step. **Two things
+must be true before they work:** the deploy has to be pointing at this
+branch, and you want the `/health` pinger running so the first visitor
+does not wait 22 seconds for a cold start. Open `/film` yourself once and
+confirm it plays before you send it to anyone.
+
+**Fallback — Claude artifacts** (work today, but each is *private until
+you share it* from the page's share menu):
+
+- Film: https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+- Project page: https://claude.ai/code/artifact/29b6c094-448a-4cd7-9383-eb2e02448f56
+
+Send the film, not both — it is the one that earns a reply.
+
+**The emails below use the artifact link.** If you go with your own
+domain, find-and-replace
+`https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b`
+with `https://wayside.onrender.com/film` — nine occurrences.
 
 **The only thing to edit in any email below is the phone line in the
 signature** — delete it if you would rather not hand out a number.

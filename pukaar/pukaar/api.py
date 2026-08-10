@@ -117,8 +117,13 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     # staff-only. Client assets under /static, /data and /sw.js are public
     # too (they are client code with no secrets; the DATA behind them is
     # what the gate protects).
+    # /film and /pitch are outreach pages — a shareable link to send an NGO
+    # director who will not (and should not) have a staff login. They render
+    # committed HTML and read no case data at all, so opening them exposes
+    # nothing the gate exists to protect.
     OPEN_PATHS = {"/health", "/api/wa/inbound", "/api/wa/photo", "/webhook",
-                  "/login", "/favicon.ico", "/witness", "/api/witness/state"}
+                  "/login", "/favicon.ico", "/witness", "/api/witness/state",
+                  "/film", "/pitch"}
 
     def _is_public(path: str) -> bool:
         return (path in OPEN_PATHS
@@ -691,6 +696,20 @@ def build_app(cfg: Config | None = None) -> FastAPI:
         # Served at the root so its scope covers /responder — a worker
         # registered from /static/ could only ever control /static/.
         return FileResponse(STATIC / "sw.js", media_type="text/javascript")
+
+    # ---- outreach pages -------------------------------------------------
+    # The links that go in a cold email, on the project's own domain rather
+    # than a third-party host. They live under static/ (not research/)
+    # because that is what the Docker image copies and what pip installs —
+    # anywhere else and they 404 in production while working locally. They
+    # read no case data, so the gate lets them through.
+    @app.get("/film")
+    def film_page():
+        return FileResponse(STATIC / "film.html", media_type="text/html")
+
+    @app.get("/pitch")
+    def pitch_page():
+        return FileResponse(STATIC / "pitch.html", media_type="text/html")
 
     @app.get("/data/demo_zone.geojson")
     def zone_geojson():
