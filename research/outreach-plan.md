@@ -1069,3 +1069,62 @@ it, because of the I-983 training plan, independent supervision and
 E-Verify requirements. And note that OPT does **not** automatically
 resolve grey area 2 — that question is about where the labour happens,
 not what authorisation you hold.
+
+### 14a · You are physically in India — which changes most of this
+
+*Still not legal advice, and your DSO is still the right person to ask.
+But the risk picture while you are outside the United States is much
+better than §14 describes, and it is worth being precise about why.*
+
+**Emailing people and discussing your project is fine.** It is fine
+anywhere, on any status. Writing to NGOs, asking for criticism, taking a
+meeting, showing someone a film of software you wrote — none of that is
+employment under any reading. Nothing in the "send now" section of
+`outreach-emails.md` is a status question. Send them.
+
+**And while you are in India, the central worry in §14 does not reach
+you.** The regulation defines employment as service or labour performed
+**"within the United States"** (8 CFR 274a.1(h)). The whole grey area —
+you, sitting in the US, operating a pipeline for a foreign NGO — is a
+question about *where the labour happens*. In Delhi, working with a Delhi
+NGO on a Delhi pilot, that question does not arise. F-1 work restrictions
+govern work in the United States; they are not a general prohibition on
+you doing things in your own country.
+
+**So the constraint is not "can I do this" but "where am I when I do
+it".** Which reframes the plan usefully: the work that is genuinely
+awkward from a US dorm room — running the intake, being on call for
+dispatch, managing the day-to-day of a live pilot — is exactly the work
+that is straightforward while you are in India.
+
+**The three things that actually bite while you are abroad:**
+
+1. **The five-month rule.** An F-1 student outside the United States for
+   more than five months, outside an authorised study-abroad arrangement,
+   generally loses the SEVIS record and needs a new I-20 and a new record
+   to return. Count your dates. This is the single most likely way this
+   trip damages your status, and it has nothing to do with Wayside.
+2. **A valid travel signature on your I-20** for re-entry, plus an
+   unexpired visa. Check both now, not in the airport queue.
+3. **What happens when you fly back.** The moment you are in the US
+   again, §14 applies in full. So decide in advance which side of the
+   line the ongoing work sits on — which is the strongest argument yet
+   for the structure §14 already recommends: **the NGO operates it, you
+   built it and support it.** That structure is not a workaround; it is
+   what an NGO director asked for anyway when they wanted to know what
+   happens when you leave.
+
+**On money, be more careful than the above.** "Not US employment" is not
+the same as "no consequences". If any funding appears while you are in
+India, keep it out of your US accounts, keep it going to the partner
+organisation rather than to you, and ask both your DSO and someone who
+knows Indian tax rules before accepting anything. The §13 structure —
+partner NGO as grantee — remains right for this reason as much as any
+other.
+
+**Adjust the DSO email** at the end of §14 by opening with: *"I am
+currently in India and expect to return on [date]. Some of what follows
+concerns what I can do while I am here, and some concerns what changes
+when I am back."* That single sentence gets you a far more useful answer,
+because it separates two questions your DSO would otherwise answer as
+one.

@@ -1,470 +1,442 @@
-# Wayside — send-ready emails
+# Wayside — the emails, ready to send
 
-*Compiled 2026-08-10. Companion to `outreach-plan.md`. Every email below
-is written to be sent as-is once you fill the **[SQUARE BRACKETS]**.*
-
----
-
-## Before you send a single one — read this
-
-**Three rules, and they are not style preferences.**
-
-**1 · You are an independent individual. Claim nothing else.** No
-organisation, no team, no institutional backing, no "we". Every email
-below says "I". Where you would normally write "we run Wayside", it says
-"I built Wayside". This is both true and, given your visa position (see
-`outreach-plan.md` §12), the safer framing. If you are genuinely an alum
-of a programme, that is a fact you may state — but state it as a fact
-about you, never as backing for the project.
-
-**2 · The first email to an NGO does not ask for a pilot.** This is the
-single biggest change from the earlier draft, and it comes out of a
-review written from the chair of a Delhi NGO director who has been burned
-by a dozen student technologists. Their verdict on the original pilot-ask
-email was "delete, not a pilot partnership". The reasons were fair:
-
-- The pilot ask is not small. Two to five outreach workers for eight
-  weeks is roughly **80–120 staff hours plus supervision, space, legal
-  review and reputational risk — on the order of ₹1 lakh of their money**,
-  even though no cash changes hands.
-- "I am not asking you for money" is therefore **false**, and an NGO
-  director reads it as naivety at best.
-- A demo does not answer the only question they care about: *will you
-  still be answering email in month four?*
-
-You cannot fix that with better writing. You fix it by **asking for
-something you can actually be given on a first approach: their criticism.**
-It is free, it is flattering, it costs them twenty minutes rather than a
-hundred hours, and it is the truthful ask — you genuinely do not yet know
-whether this idea survives contact with people who do this work.
-
-The pilot ask comes *second*, after they have engaged, and by then you
-will know far more about what to offer.
-
-**3 · Never claim a pilot, a partner, a grant or a legal opinion you do
-not have.** One reviewer's suggested rewrite invented a completed
-Bengaluru pilot with 400 reports and ₹1.5 lakh in secured funding. Do not
-be tempted. In this sector everyone knows everyone; a single unverifiable
-claim ends you permanently.
-
-**4 · Send the Track D emails now; hold the Track A emails until you
-have spoken to your DSO.** This is a visa point, not a strategy point.
-Asking practitioners for their criticism is research, which university
-guidance explicitly treats as needing no work authorisation. *Proposing
-to operate a live pilot* is the activity that edges into a genuinely
-unsettled area of F-1 law — see `outreach-plan.md` §14, and send your DSO
-the email drafted at the end of it. The happy accident is that the
-NGO-relationship reason and the visa reason point the same way: Track D
-first, Track A after.
-
-Two things to keep out of all of them, permanently: do not describe
-yourself as Founder or CEO of anything, and do not propose that money be
-paid to you. Where funding comes up, it goes to the partner organisation.
-
-**Fill these in before sending anything:**
-- `[DEMO LINK]` — **use https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b**
-  (the 1:45 film, hosted, no cold start). The fuller project page is
-  https://claude.ai/code/artifact/29b6c094-448a-4cd7-9383-eb2e02448f56 —
-  **both are private until you share them from the page's share menu.**
-- `[YOUR NAME]`, `[YOUR PHONE]`, `[YOUR EMAIL]`
-- `[DATE]` — a real date you can be in Delhi, if you can be.
+*Compiled 2026-08-10. Companion to `outreach-plan.md`.*
 
 ---
 
-## Track D — the first emails to send (advice, not commitment)
+## ⚠ Do this first, or every link below is broken
 
-Send these first, and send them this week. They are low-risk, they cost
-the recipient little, and a reply from any one of them makes every later
-conversation easier.
+The two pages are **private until you share them.** Open each and use the
+page's **share menu** to make it viewable by anyone with the link. Until
+you do, everyone you email hits a login wall.
 
-### D1 · Aashray Adhikar Abhiyan — the most important email in this document
+- **The film (1:45):** https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+- **The project page:** https://claude.ai/code/artifact/29b6c094-448a-4cd7-9383-eb2e02448f56
 
-*Why them first: their founder, Sanjay Kumar, was himself homeless for
-twelve years. He is the one person on this list who can answer the
-question that decides whether Wayside should exist at all. If the answer
-is no, you want it now, from him, and not in month six.*
+Send the film, not both. It is the one that earns a reply; the project
+page is for people who write back.
+
+**The only thing to edit in any email below is the phone line in the
+signature** — delete it if you would rather not hand out a number.
+Everything else is complete. Your name and address are already in.
+
+**You are in India.** If you can get to Delhi, email is your *second* best
+move. Indian NGOs answer a person at the door far more reliably than an
+inbox — Hope Project is inside the pilot zone, CHD is in Shahpur Jat.
+Email to make the appointment, then turn up.
+
+---
+
+# Send now — these ask for criticism, not commitment
+
+## 1 · Aashray Adhikar Abhiyan
+
+**The most important email in this file.** Their founder, Sanjay Kumar,
+lived on the street for twelve years. He can answer the question that
+decides whether this deserves to exist.
 
 **To:** `aashrayadhikarabhiyan4u@gmail.com`
-*(verified live on homelesspeople.in/contact, 2026-08-10; the older
-`righttoshelter@hotmail.com` also appears in directories — send to the
-gmail, it is the one currently published)*
-**Cc:** `sanjaykrishna.sk@gmail.com` *(also published on the same page)*
+**Cc:** `sanjaykrishna.sk@gmail.com`
+*(both verified live on homelesspeople.in/contact, 2026-08-10)*
+**Subject:** A question I need answered before I go any further
 
-> **Subject:** A question I need answered before I go any further
->
 > Dear Aashray Adhikar Abhiyan team,
 >
-> I am an independent student developer. Over the past months I have built
-> a system called Wayside, on my own and unpaid: a passer-by who sees
-> someone in need on the street sends one WhatsApp message with a pin,
-> and that becomes a dispatch to a trained outreach worker carrying a
-> food or medical kit.
+> I am an independent student developer, and I am writing before I take
+> this any further, because there is a question at the centre of it that I
+> cannot answer myself and should not guess at.
 >
-> I am writing to you before I approach anyone about running it, because
-> there is a question at the centre of this that I cannot answer myself
-> and should not guess at.
+> Over the past months I have built a system, alone and unpaid, called
+> Wayside. A passer-by who sees someone in need on the street sends one
+> WhatsApp message with a pin. That becomes a case, and a trained outreach
+> worker is dispatched with a food or medical kit from a nearby depot. The
+> person who reported is told how it ended.
 >
-> **The person on the street never asked to be reported.** Someone walking
-> past decides they need help, and a worker is sent. I have designed
-> around the data — no names, no photo required, the case is deleted after
-> 72 hours, nothing survives that could become a map of where people
-> sleep. But that is a technical answer to what I think is a human
-> question.
+> Here is the question. The person on the street never asked to be
+> reported. Someone walking past decides they need help, and a worker is
+> sent to them. I have designed hard around the data — no names, no
+> photograph of a face required, the case deleted after 72 hours, the pin
+> deleted, and after ninety days only coarse cell counts surviving, so
+> that nothing can become a map of where people sleep. But that is a
+> technical answer to what I think is a human question.
 >
 > I understand Sanjay Kumar lived on the street for twelve years. I would
-> like to ask him directly: **would you have wanted a stranger to report
-> you?** And if not — is there a version of this that you would have
-> accepted?
+> like to ask him directly: would you have wanted a stranger to report
+> you? And if not, is there a version of this you would have accepted —
+> one where the worker asks first, or where the report is about a place
+> rather than a person?
 >
-> I am not asking for a partnership, funding, or staff time. Twenty
-> minutes on the phone, or a reply to this email, would be worth more to
-> me than either. If the answer is that this should not be built, I would
-> rather hear it from you now.
+> I am not asking for a partnership, for funding, or for any of your
+> staff's time. Twenty minutes on the phone, or a reply to this email,
+> would be worth more to me than any of those. If your answer is that this
+> should not be built, I would rather hear it from you now than discover
+> it in six months.
 >
-> There is a two-minute film of the working system here if it is useful:
-> [DEMO LINK] — but the question above matters more than the software.
+> A short film of the working system is here, if it is useful — one minute
+> forty-five:
+> https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+> The question above matters more than the software does.
+>
+> I am in India at the moment, so if it is easier to meet than to write, I
+> can come to you.
 >
 > With respect,
-> [YOUR NAME]
-> [YOUR PHONE] · [YOUR EMAIL]
+> Rustom Dubash
+> rustommdubash@gmail.com · [PHONE — or delete this line]
 
 ---
 
-### D2 · Centre for Holistic Development — the people already doing it
+## 2 · Centre for Holistic Development
 
-*Why them: they run night outreach for homeless people twice a week in
-South Delhi. They are the closest existing practice to what Wayside
-dispatches, which means they know exactly where it breaks.*
+They run night outreach for homeless people twice a week in South Delhi —
+already doing by hand what this automates.
 
-**To:** `info@chdindia.org.in` *(verified live on chdindia.org.in, 2026-08-10)*
+**To:** `info@chdindia.org.in` *(verified live, 2026-08-10)*
+**Subject:** Night outreach — three questions from someone building a dispatch tool
 
-> **Subject:** Night outreach — a question from someone building a dispatch tool
->
 > Dear Centre for Holistic Development,
 >
 > I am an independent student developer. I have built, alone and unpaid, a
 > system that turns a member of the public's WhatsApp report of someone in
-> need on the street into a dispatch to a trained outreach worker with a
-> kit.
+> need on the street into a dispatch: a trained outreach worker collects a
+> food or medical kit from a nearby depot and takes it to the pin.
 >
-> I understand you run night outreach in South Delhi. You are already
-> doing by hand what I have automated, which means you know the failures I
-> have not thought of yet.
+> I am writing to you because you run night outreach in South Delhi. You
+> are already doing by hand what I have automated, which means you know
+> the ways it fails and I do not.
 >
 > Three questions I would genuinely like your answer to:
 >
 > 1. When a member of the public tells you about someone on the street,
 >    how often is that report accurate enough to act on?
-> 2. What proportion of the people you reach actually want what you are
->    carrying, and what happens when they do not?
+> 2. Of the people you reach, what proportion actually want what you are
+>    carrying — and what do your workers do when they do not?
 > 3. If a tool sent your workers to a stranger's location on an anonymous
->    person's word, what would you need in place before you would allow it?
+>    person's word, what would you need in place before you would let it?
 >
-> I am not asking for staff, space or a partnership. I am trying to find
+> I am not asking for staff, space, or a partnership. I am trying to find
 > out whether this idea survives contact with people who do the work. A
 > reply, or twenty minutes on the phone, would be more useful to me than
-> anything else I could ask for.
+> anything else I could ask you for.
 >
-> The working system is here if useful: [DEMO LINK] (under two minutes).
+> A short film of the working system, if useful — one minute forty-five:
+> https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+>
+> I am in India at the moment and can come to Shahpur Jat if that is
+> easier than writing.
 >
 > Thank you for your time,
-> [YOUR NAME]
-> [YOUR PHONE] · [YOUR EMAIL]
+> Rustom Dubash
+> rustommdubash@gmail.com · [PHONE — or delete this line]
 
 ---
 
-### D3 · Hope Project, Nizamuddin — your neighbours
+## 3 · Hope Project, Nizamuddin
 
-*Why them: fifty years inside Basti Hazrat Nizamuddin — the exact pilot
-zone. Nobody else has that. Note their site blocks automated requests, so
-**phone first** and confirm the address before emailing.*
+Fifty years inside Basti Hazrat Nizamuddin — the exact pilot zone. Nobody
+else on this list has that.
 
-**To:** `info@hopeprojectindia.in` — **UNVERIFIED.** Their site returned
-HTTP 406 to my checks. **Call +91 7303501350 first**, confirm the right
-address and the right person, then send.
-**Ask for:** Samiur Rahman, Executive Director (publicly listed — confirm
-he is still in post).
+**Call +91 7303501350 first.** Their site blocks automated checks so I
+could not confirm the address. Ask for Samiur Rahman, Executive Director,
+and confirm where to write — or better, since you are in India, ask to
+come by. They are at 127 Basti Hazrat Nizamuddin.
 
-> **Subject:** A student project about the streets of Nizamuddin — asking your view
->
+**To:** `info@hopeprojectindia.in` *(unverified — confirm on the call)*
+**Subject:** A student project about the streets of Nizamuddin — asking your view first
+
 > Dear Mr Rahman,
 >
 > I am an independent student developer. I have built a system called
 > Wayside which routes over the real streets of Nizamuddin — the actual
-> surveyed map, the lanes around the Dargah, Mathura Road, the station.
-> When someone sees a person in need on the street, they send one WhatsApp
-> message with a pin, and a trained outreach worker is dispatched with a
-> food or medical kit.
+> surveyed map, the lanes around the Dargah, Mathura Road, the station
+> approach. When someone sees a person in need on the street, they send
+> one WhatsApp message with a pin, and a trained outreach worker is
+> dispatched with a food or medical kit.
 >
 > I built it about your neighbourhood without having asked anyone in your
-> neighbourhood. That is the wrong order, and it is why I am writing before
-> doing anything else with it.
+> neighbourhood. That is the wrong order, and it is why I am writing
+> before doing anything else with it.
 >
 > Hope Project has been in the Basti for fifty years. I would like to ask
-> you plainly: **is this something the Basti would want, or is it something
-> that would be done to it?** I would rather find out from you now than
-> discover it later.
+> you plainly: is this something the Basti would want, or is it something
+> that would be done to it? I would far rather find that out from you now
+> than after it exists.
 >
-> I am not asking for staff, space, money or a commitment of any kind at
-> this stage. I am asking whether you would give me twenty minutes — on
-> the phone, or in person if I can get to Delhi — to tell me what I have
-> got wrong.
+> I am not asking for staff, space, money, or a commitment of any kind. I
+> am asking whether you would give me twenty minutes to tell me what I
+> have got wrong. I am in India at the moment, so I can come to you.
 >
-> The working system is here: [DEMO LINK] (under two minutes). The map you
-> will see is your neighbourhood as OpenStreetMap has it.
+> A short film of the working system, one minute forty-five:
+> https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+> The map you will see is your neighbourhood as OpenStreetMap has it.
 >
 > With respect,
-> [YOUR NAME]
-> [YOUR PHONE] · [YOUR EMAIL]
+> Rustom Dubash
+> rustommdubash@gmail.com · [PHONE — or delete this line]
 
 ---
 
-### D4 · Housing and Land Rights Network — the hostile read
+## 4 · Housing and Land Rights Network
 
-*Why them: they document how homelessness is criminalised in India. They
-will give you the strongest version of the case against you. That is
-exactly what you need before a funder or a journalist does it for you.*
+They document how homelessness is criminalised in India. They will give
+you the strongest version of the case against you — which is what you
+want before a funder or a journalist makes it for you.
 
-**To:** **not found** — hlrn.org.in returned 403 to automated checks. Get
-the address from the contact page in a normal browser, or via their
-published reports.
+**To:** get the address from **hlrn.org.in** in a browser — it returned
+403 to my automated checks, so I will not guess at it.
+**Subject:** Asking for the case against a street-aid reporting tool
 
-> **Subject:** Asking for the case against a street-aid reporting tool
->
 > Dear Housing and Land Rights Network,
 >
 > I am an independent student developer. I have built a system in which a
-> member of the public reports a person in need on the street and a trained
-> NGO outreach worker is dispatched with a food or medical kit.
+> member of the public reports a person in need on the street, and a
+> trained NGO outreach worker is dispatched with a food or medical kit.
 >
 > I have read enough of your work to know that you have documented how
 > data about homeless people becomes an instrument against them — for
-> eviction, for "move-along" enforcement, for hostile design. I would like
-> your criticism of this specifically, and I would like it at its
-> strongest.
+> eviction, for move-along enforcement, for hostile design. I would like
+> your criticism of this, and I would like it at its strongest.
 >
-> What I have built into it: no individual is named or indexed; a photo of
-> a face is never required; a case is deleted after 72 hours; the pin is
-> not retained; after 90 days only coarse cell counts remain; dispatch is
-> to NGO workers and never to police.
+> What is built into it: no individual is named or indexed; a photograph
+> of a face is never required; the case is deleted after 72 hours; the pin
+> is not retained; after ninety days only coarse cell counts remain; and
+> dispatch goes to NGO workers, never to police.
 >
-> What I know is still unresolved: the person reported never consented,
-> and if a partner NGO were compelled to hand over data, my architecture
-> would not save them. I do not yet have a contract that addresses that.
+> What I know is still unresolved, and will not pretend otherwise: the
+> person reported never consented, and if a partner organisation were
+> compelled to hand over data, my architecture would not save them. I have
+> no contract that addresses that yet, and I do not think data
+> minimisation amounts to consent.
 >
-> **My question: what would you require to exist before you would consider
-> such a system acceptable — and are there conditions under which you would
-> say it should simply not be built?**
+> My question is this. What would have to exist before you would consider
+> such a system acceptable — and are there conditions under which you
+> would say it simply should not be built?
 >
 > I am not asking for endorsement, partnership or funding. I am asking to
-> be told what is wrong with it while it is still cheap to change.
+> be told what is wrong with it while it is still cheap to change. I am in
+> India at the moment and can meet if that is easier.
 >
-> [YOUR NAME]
-> [YOUR PHONE] · [YOUR EMAIL]
+> A short film of the system, if useful:
+> https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+>
+> Rustom Dubash
+> rustommdubash@gmail.com · [PHONE — or delete this line]
 
 ---
 
-### D5 · Robin Hood Army — the ones who chose not to build this
+## 5 · Robin Hood Army
 
-*Why them: 50,000+ volunteers coordinated over WhatsApp, and a
-deliberate decision not to build an app for the last mile. Their reason
-is the strongest existing argument against Wayside, and you should hear
-it from them before an investor says it to you.*
+Fifty thousand volunteers coordinated over WhatsApp, and a deliberate
+decision *not* to build an app for the last mile. Their reasoning is the
+strongest existing argument against Wayside. Hear it from them before an
+investor says it to you.
 
-**To:** **no email published.** Their public channel is WhatsApp —
-`+91 89719 66164` `[THIRD-PARTY]`. Verify on robinhoodarmy.com before
-using; a short WhatsApp message is more likely to land than email.
+**Send as a WhatsApp message** to `+91 89719 66164` — verify the number on
+robinhoodarmy.com first. They publish no email; WhatsApp *is* their
+channel, which is itself the point.
 
-> **Subject / opening message:**
+> Hello — my name is Rustom Dubash. I am an independent student developer,
+> and I have built a system where a member of the public reports someone
+> in need on the street and a trained outreach worker is dispatched with a
+> food or medical kit.
 >
-> Hello — I am an independent student developer. I have built a system
-> where a member of the public reports someone in need on the street and a
-> trained outreach worker is dispatched with a kit.
+> I am writing because I know Robin Hood Army coordinates tens of
+> thousands of volunteers without building an app for the last mile, and
+> that this was a choice rather than an accident. I would genuinely like
+> to know why. If you decided that an app gets in the way of the actual
+> work, that is the single most important thing anyone could tell me right
+> now, and I would much rather learn it from you than the hard way.
 >
-> I know Robin Hood Army coordinates tens of thousands of volunteers
-> without building an app for the last mile, and that this was a choice
-> rather than an accident. I would genuinely like to know why. If you
-> decided that an app gets in the way, that is the most important thing
-> anyone could tell me right now, and I would rather learn it from you
-> than the hard way.
+> Could someone spare fifteen minutes? I am in India at the moment.
 >
-> Could someone spare fifteen minutes?
+> The system, if it helps to see it — one minute forty-five:
+> https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
 >
-> [YOUR NAME] · [YOUR EMAIL]
+> Thank you — Rustom (rustommdubash@gmail.com)
 
 ---
 
-### D6 · Kathmandu Living Labs — the technical peer
+## 6 · Kathmandu Living Labs
 
-*Why them: they are the OpenStreetMap community in Nepal and did the
-post-earthquake mapping that became a global reference. Wayside runs
-entirely on OSM. Approach as a peer, not a supplicant. This one is not
-about Nepal expansion — it is about someone competent looking at your
-data layer.*
+The OpenStreetMap community in Nepal — they did the post-earthquake
+mapping that became a global reference. Wayside runs entirely on OSM.
+Approach as a peer. This is not about expanding to Nepal; it is about
+competent people looking at your data layer.
 
-**To:** `contact@kathmandulivinglabs.org` `[OFFICIAL SITE]` · +977-1-4720136
+**To:** `contact@kathmandulivinglabs.org` *(official site)* · +977-1-4720136
+**Subject:** OSM-based street-aid routing — would you look at what I have built?
 
-> **Subject:** OSM-based street-aid routing — would you look at what I have built?
->
 > Dear Kathmandu Living Labs,
 >
-> I am an independent student developer. I have built a street-aid dispatch
-> system that runs entirely on OpenStreetMap data — I import the surveyed
-> streets of a pilot zone, weld near-coincident junction nodes, prune to a
-> single connected component, and route riders over the real network by
-> travel mode. Right now the zone is Nizamuddin in Delhi: 1,432 road
-> segments, the real building footprints, the railway.
+> I am an independent student developer. I have built a street-aid
+> dispatch system that runs entirely on OpenStreetMap data. It imports the
+> surveyed streets of a pilot zone, welds near-coincident junction nodes,
+> prunes the network to a single connected component, and routes riders
+> over the real graph by travel mode. The zone at the moment is Nizamuddin
+> in Delhi: 1,432 road segments, the building footprints, the railway.
 >
-> I am writing because you are the people who would immediately see what is
-> wrong with it. Two questions:
+> I am writing because you are the people who would immediately see what
+> is wrong with it. Two questions:
 >
 > 1. Are there failure modes in using raw OSM as a routing graph for
->    dispatch in South Asian cities that I am likely to have missed? I
->    already handle disconnected components and sub-metre survey noise, but
->    I currently ignore `oneway` tags entirely, which I know is wrong.
+>    dispatch in South Asian cities that I have probably missed? I handle
+>    disconnected components and sub-metre survey noise, but I currently
+>    ignore oneway tags entirely, which I know is wrong.
 > 2. Is a street-aid dispatch layer something the OSM community in Nepal
 >    would find interesting, or is it a solution looking for a problem?
 >
-> No funding ask, no partnership ask. I would just like the opinion of
-> people who know this data better than I do.
+> No funding ask and no partnership ask. I would simply like the opinion
+> of people who know this data better than I do.
 >
-> The system: [DEMO LINK]. Everything is © OpenStreetMap contributors,
-> ODbL, and the attribution travels in the data files.
+> The system, one minute forty-five:
+> https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
 >
-> [YOUR NAME]
-> [YOUR EMAIL]
+> Everything is © OpenStreetMap contributors, ODbL, and the attribution
+> travels inside the data files themselves.
+>
+> Rustom Dubash
+> rustommdubash@gmail.com
 
 ---
 
-## Track A — the pilot ask (send only AFTER a Track D reply)
+# Send after someone above has replied
 
-Do not send these cold. Send them to someone who has already replied to
-a Track D email, or who you have met. The difference in response rate is
-the difference between this working and not.
+Do not send these cold. Send them to an organisation that has already
+engaged, or one you have met. The difference in reply rate is the
+difference between this working and not.
 
-### A1 · SPYM — the scale partner
+## 7 · SPYM — the scale partner
 
-*Their details are the only ones I verified end-to-end: `info@spym.org`
-and `011-41003872` are both live on spym.org as of 2026-08-10. They run
-Delhi's largest shelter network under DUSIB contract, including Lodhi
-Road and Sarai Kale Khan — minutes from the zone.*
+The only contact I verified end to end: `info@spym.org` and `011-41003872`
+are both live on spym.org. Delhi's largest shelter operator, DUSIB
+contract-holder, with shelters at Lodhi Road and Sarai Kale Khan — minutes
+from the zone.
 
-**To:** `info@spym.org` `[VERIFIED 2026-08-10]` · Phone: 011-41003872
+**To:** `info@spym.org` *(verified 2026-08-10)* · Phone: 011-41003872
+**Subject:** An eight-week trial of a street-report dispatch tool — and what it would really cost you
 
-> **Subject:** An 8-week trial of a street-report dispatch tool — and what it would actually cost you
->
 > Dear SPYM team,
 >
 > I am an independent student developer. I have built a system called
-> Wayside: a member of the public who sees someone in need on the street
-> sends one WhatsApp message with a pin; the report is structured
+> Wayside. A member of the public who sees someone in need on the street
+> sends one WhatsApp message with a pin. The report is structured
 > automatically in whatever language they wrote it in; genuine emergencies
-> are caught by a fixed 112 rule before any AI runs; everything else
-> becomes a kit order dispatched to a trained outreach worker, who collects
-> the kit from a shelf at your premises and delivers it. The person who
-> reported is told how it ended.
+> are caught by a fixed rule that returns the 112 number before any AI
+> runs at all; everything else becomes a kit order dispatched to a trained
+> outreach worker, who collects the kit from a shelf at your premises and
+> delivers it. The person who reported is told how it ended.
 >
-> [IF YOU HAVE HAD A TRACK-D CONVERSATION, PUT IT HERE — e.g. "I spoke with
-> [NAME] at [ORG] about this and they raised [X], which changed [Y]."]
+> I want to be straight with you about the size of what I would be asking,
+> because I have had this reviewed by people who have run outreach
+> programmes and they were blunt about it. Two to five workers for eight
+> weeks means training, supervision, shelf space and somebody accountable
+> — on the order of a hundred staff hours. That is real money in your time
+> even though no cash changes hands, and I would rather say so than
+> pretend this is free.
 >
-> **What I would be asking of you, stated honestly.** I have had this
-> reviewed by people who have run outreach programmes, and they were
-> blunt: what I am asking for is not small. Two to five workers for eight
-> weeks means training, supervision, shelf space, and somebody
-> accountable — on the order of a hundred staff hours. That is real money
-> in your time even though no cash changes hands. I would rather say that
-> up front than pretend this is free.
+> What I would bring: the system, running, at no cost to you; the hosting,
+> which I pay for; my own time, unpaid; training; and a public record of
+> everything that goes wrong.
 >
-> **What I would bring:** the system, running, at no cost to you; the
-> hosting, which I pay for; my own time, unpaid; training; and a written
-> record of everything that goes wrong, published.
+> What I do not have and will not pretend to: funding for the kits, a
+> signed data agreement, or a legal opinion on the DPDP Act. I am working
+> on all three and would not ask you to begin without them. On the first —
+> most funders I have found can only pay a registered organisation rather
+> than a person, so if this goes anywhere the grant would be yours, not
+> mine. You would hold the money and buy the kits. I take nothing from it.
 >
-> **What I do not yet have, and will not pretend to:** funding for the
-> kits, a signed data agreement, or a legal opinion on the DPDP Act. I am
-> working on all three and I would not ask you to start without them. On
-> the first: where I have found funders, most of them can only pay a
-> registered organisation, not a person. So if this goes anywhere, **the
-> grant would be yours, not mine** — you would hold the money and buy the
-> kits. I take nothing from this.
->
-> **What I would want to agree before anything begins:** that your workers
-> are asked and can decline without consequence; that you can stop at any
+> What I would want agreed before anything began: that your workers are
+> asked and can decline without consequence; that you can stop at any
 > point with no penalty; that the data is yours and is exported to you at
 > the end; and that if a request for that data ever comes from the police,
 > the decision is yours and not mine.
 >
 > Could I have twenty minutes to hear whether any version of this is
-> workable — and what you would need to see before it was?
+> workable, and what you would need to see before it was? I am in India at
+> the moment and can come to Vasant Kunj.
 >
-> [YOUR NAME]
-> [YOUR PHONE] · [YOUR EMAIL]
-> [DEMO LINK] — the working system, under two minutes
+> A short film of the working system, one minute forty-five:
+> https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+>
+> Rustom Dubash
+> rustommdubash@gmail.com · [PHONE — or delete this line]
 
----
+## 8 · The same email, to these addresses
 
-### A2 · Other Delhi NGOs — same email, these addresses
+Send email 7 with the organisation's name swapped into the greeting.
 
-Send A1's text, adjusted for the organisation, to any of these. **All
-verified live 2026-08-10 unless marked.**
-
-| Organisation | Address | Note |
+| Organisation | Address | Why them |
 |---|---|---|
-| Prayas JAC Society | `prayas@prayaschildren.org` ✓ | Safeguarding and training expertise; founded by a former Delhi DCP |
-| CHETNA | `info@chetnango.org` ✓ | Street children; trained outreach workers |
+| Prayas JAC Society | `prayas@prayaschildren.org` ✓ | Safeguarding and training; founded by a former Delhi DCP |
+| CHETNA | `info@chetnango.org` ✓ | Street children, trained outreach workers |
 | Prerna | `info@prerna.org` ✓ | DUSIB shelter operator, Adhchini, South Delhi |
 | Sadik Masih MSSS | `info@sadikmasihindia.org.in` ✓ | ~15 Delhi shelters, 24/7 — matters for night cases |
-| Salaam Baalak Trust | `contact@salaambaalaktrust.org` | Unverified by me; child cases, Paharganj |
-| Aga Khan Trust / NURI | **no email** — phone +91-11-43717792 | In the zone; site email is an anti-scraping placeholder |
-| Uday Foundation | **no email** — phone 011-41098444 | Already runs kit distribution; talk to them about sourcing |
-| Chetanalaya | **not found** | Needs a phone call |
-| Don Bosco Ashalayam | **not found** | Needs a phone call |
+| Salaam Baalak Trust | `contact@salaambaalaktrust.org` | Unverified by me. Child cases, Paharganj |
+
+✓ = confirmed on the organisation's own live site, 2026-08-10.
+
+**Phone only, no published email** — and you are in the country, so these
+are visits rather than emails: Aga Khan Trust / Nizamuddin Urban Renewal
+(+91-11-43717792, and they are *in* the zone), Uday Foundation
+(011-41098444, already runs kit distribution — ask about sourcing),
+Chetanalaya, Don Bosco Ashalayam.
 
 ---
 
-## Track C — corporates (do NOT send before a pilot has data)
+# Later — money and corporates
 
-Holding these here because you asked for them, with a warning attached: a
-CSR desk funds evidence, not intentions, and you get one approach. Sending
-now spends it. The one arguable exception is Feeding India, who might
-help you *start* rather than scale.
+Only once a pilot exists and has produced data. The one exception is
+Feeding India, who could plausibly help you *start*.
 
-### C1 · Feeding India (Eternal/Zomato CSR) — the only one worth an early email
+## 9 · Feeding India
 
-**To:** `contact@feedingindia.org` `[OFFICIAL SITE — verify before sending]`
+**To:** `contact@feedingindia.org` *(verify on their site before sending)*
+**Subject:** Kit supply for a street-aid pilot in Nizamuddin
 
-> **Subject:** Kit supply for a street-aid pilot in Nizamuddin
->
 > Dear Feeding India team,
 >
-> I am an independent student developer. I have built a street-aid dispatch
-> system: a member of the public reports someone in need on the street via
-> WhatsApp, and a trained NGO outreach worker is dispatched with a food or
-> medical kit.
+> I am an independent student developer. I have built a street-aid
+> dispatch system: a member of the public reports someone in need on the
+> street over WhatsApp, and a trained NGO outreach worker is dispatched
+> with a food or medical kit.
 >
-> You already do the hard part of this at scale — getting food to people on
-> the street across 82 cities. I am not proposing to duplicate that. My
-> question is narrower: **for a small pilot in one square kilometre of
-> Nizamuddin, would you supply or co-fund the food component of about 100
-> kits?** At wholesale the food kit costs roughly ₹50, so the whole ask is
-> under ₹6,000.
+> You already do the hard part of this at scale — getting food to people
+> on the street across eighty-odd cities. I am not proposing to duplicate
+> it. My question is much narrower: for a small pilot in one square
+> kilometre of Nizamuddin, would you supply or co-fund the food component
+> of about a hundred kits? At wholesale the food kit costs roughly fifty
+> rupees, so the entire ask is under six thousand.
 >
-> I have no organisation and no funding. I am a student who built this and
-> is trying to find out whether it works in the real world. If a small
-> in-kind contribution is not something you do, an introduction to whoever
-> runs your Delhi operations would be just as valuable.
+> I should be clear that I have no organisation and no funding. I am a
+> student who built this and is trying to find out whether it works with
+> real people or not. If an in-kind contribution is not something you do,
+> an introduction to whoever runs your Delhi operations would be just as
+> valuable.
 >
-> [DEMO LINK] — the working system, under two minutes.
+> A short film of the system, one minute forty-five:
+> https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
 >
-> [YOUR NAME] · [YOUR EMAIL] · [YOUR PHONE]
+> Rustom Dubash
+> rustommdubash@gmail.com · [PHONE — or delete this line]
 
-### C2 · The rest — after pilot data exists
+## 10 · The rest, when there is data
 
-| Company | Address | The ask, when the time comes |
+| Who | Address | The ask |
 |---|---|---|
 | Swiggy | `sustainability@swiggy.in` | Shelf space for 30 kits in one Instamart dark store, South-East Delhi |
 | Shadowfax | `hello@shadowfax.in` | A rider between orders takes a kit run in one pincode |
 | Flipkart Foundation | `flipkartfoundation@flipkart.com` · 080-67980000 | Kit funding — most formal process of the four |
-| IFAT (riders' union) | ifat.in contact form | Whether riders would *want* this. Ask before you ask a platform |
+| IFAT (riders' union) | ifat.in contact form | Whether riders would *want* this. Ask them before you ask a platform |
+| Azim Premji Foundation | azimpremjifoundation.org/apply-for-a-grant | Rolling applications, homelessness explicitly in scope — **but the grantee must be your NGO partner, not you** |
 
-**Every one of these addresses is unverified by me.** Check each on the
-company's own site before sending.
+All unverified by me — check each on the organisation's own site first.
+
+---
+
+## Order of play
+
+1. **Today** — share both pages so the links work.
+2. **This week** — send 1, 2, 6. Call Hope Project, then send 3.
+3. **This week too** — open hlrn.org.in in a browser, take the address, send 4. Send 5 on WhatsApp.
+4. **When one replies** — send 7, then 8 to the rest.
+5. **Only with pilot data** — 9, then 10.
