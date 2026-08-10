@@ -62,8 +62,10 @@ yourself as Founder or CEO of anything, and do not propose that money be
 paid to you. Where funding comes up, it goes to the partner organisation.
 
 **Fill these in before sending anything:**
-- `[DEMO LINK]` — a stable URL for the 1:45 film. Not a Render link that
-  sleeps for 22 seconds.
+- `[DEMO LINK]` — **use https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b**
+  (the 1:45 film, hosted, no cold start). The fuller project page is
+  https://claude.ai/code/artifact/29b6c094-448a-4cd7-9383-eb2e02448f56 —
+  **both are private until you share them from the page's share menu.**
 - `[YOUR NAME]`, `[YOUR PHONE]`, `[YOUR EMAIL]`
 - `[DATE]` — a real date you can be in Delhi, if you can be.
 

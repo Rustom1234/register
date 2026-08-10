@@ -1,0 +1,227 @@
+<title>Wayside — see it, send word</title>
+<style>
+  /* Palette lifted from the app's own daytime cartography: the parchment
+     it draws land on, the amber of a major road, the green of a park. */
+  :root{
+    --paper:#f2f0eb; --card:#e9e6de; --ink:#16160f; --ink-soft:#57564d;
+    --rule:#d9d5c9; --amber:#a86a1f; --green:#2c6b4a; --flag:#8c3b2a;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --paper:#14161c; --card:#1b1e26; --ink:#e9e7df; --ink-soft:#9a988e;
+      --rule:#2a2e39; --amber:#dda65a; --green:#6fbf8f; --flag:#d78468;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14161c; --card:#1b1e26; --ink:#e9e7df; --ink-soft:#9a988e;
+    --rule:#2a2e39; --amber:#dda65a; --green:#6fbf8f; --flag:#d78468;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font:400 17px/1.68 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:60px 24px 100px}
+  .serif{font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif}
+  .eyebrow{
+    font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+    letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft);
+  }
+  h1{
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    font-weight:600; font-size:clamp(36px,6vw,58px); line-height:1.06;
+    letter-spacing:-.018em; margin:16px 0 14px; text-wrap:balance;
+  }
+  .lede{font-size:20px; line-height:1.55; color:var(--ink); max-width:58ch; margin:0 0 10px}
+  .byline{color:var(--ink-soft); font-size:15px; margin:26px 0 0}
+  h2{
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    font-weight:600; font-size:27px; line-height:1.2; letter-spacing:-.01em;
+    margin:0 0 4px; text-wrap:balance;
+  }
+  section{margin-top:56px; padding-top:28px; border-top:1px solid var(--rule)}
+  section > .eyebrow{display:block; margin-bottom:12px}
+  p{max-width:64ch}
+  .steps{list-style:none; padding:0; margin:22px 0 0; counter-reset:s}
+  .steps li{
+    counter-increment:s; display:grid; grid-template-columns:30px 1fr; gap:16px;
+    padding:11px 0; border-bottom:1px solid var(--rule); align-items:baseline;
+  }
+  .steps li::before{
+    content:counter(s); font:600 13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;
+    color:var(--amber); font-variant-numeric:tabular-nums;
+  }
+  .card{background:var(--card); border-radius:9px; padding:22px 24px; margin-top:22px}
+  .card h3{margin:0 0 8px; font-size:17px; font-weight:650}
+  .card p{margin:0; color:var(--ink-soft); font-size:15.5px}
+  .cols{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:22px}
+  .cols .card{margin-top:0}
+  .yes h3{color:var(--green)} .no h3{color:var(--flag)}
+  ul.plain{padding-left:18px; margin:10px 0 0} ul.plain li{margin:6px 0; max-width:62ch}
+  table{border-collapse:collapse; width:100%; margin-top:20px; font-size:15.5px}
+  th,td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--rule); vertical-align:top}
+  th{
+    font:600 11.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft);
+  }
+  td.n{font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--amber); font-weight:600}
+  .scroll{overflow-x:auto}
+  .ask{display:grid; gap:12px; margin-top:22px}
+  .ask div{
+    display:grid; grid-template-columns:22px 1fr; gap:14px;
+    padding:14px 0; border-bottom:1px solid var(--rule); align-items:baseline;
+  }
+  .ask b{
+    font:700 13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--amber);
+  }
+  .cta{
+    display:inline-block; margin-top:8px; padding:13px 22px; border-radius:7px;
+    background:var(--ink); color:var(--paper); text-decoration:none; font-weight:600; font-size:16px;
+  }
+  a{color:var(--amber)}
+  a:focus-visible,.cta:focus-visible{outline:2px solid var(--amber); outline-offset:3px}
+  footer{margin-top:60px; padding-top:22px; border-top:1px solid var(--rule); color:var(--ink-soft); font-size:14px}
+  @media (max-width:620px){ .cols{grid-template-columns:1fr} }
+</style>
+
+<div class="wrap">
+
+  <div class="eyebrow">An independent project &middot; Nizamuddin, Delhi</div>
+  <h1>See it, send word.</h1>
+  <p class="lede">You walk past a man under a flyover. His foot is wrapped in a dirty bandage.
+  You want to do something, and there is nothing to do &mdash; so you keep walking.</p>
+  <p class="lede">Wayside is one WhatsApp number that turns that moment into a delivery: a trained
+  outreach worker, carrying the right kit, at that spot, today.</p>
+  <p class="byline">Built solo and unpaid. No organisation, no funding, no partner yet &mdash;
+  this is a working system looking for the people who should decide whether it deserves to exist.</p>
+
+  <p style="margin-top:26px">
+    <a class="cta" href="https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b">Watch it run &mdash; 1:45</a>
+  </p>
+
+  <section>
+    <span class="eyebrow">How it works</span>
+    <h2>One message, answered &mdash; start to finish</h2>
+    <ol class="steps">
+      <li>A passer-by messages the aid line in whatever language they speak, and drops a pin.</li>
+      <li>A fixed rule catches real emergencies <em>before any AI runs</em> and returns the 112 number. No model ever speaks in that path.</li>
+      <li>Everything else is read into a structured case &mdash; what is wrong, where, how urgent.</li>
+      <li>A kit is chosen by code, not by a model: food, medical, or monsoon, with conservative floors.</li>
+      <li>Offers go out in parallel to the nearest trained responders. First to accept wins, the way emergency dispatch works at scale.</li>
+      <li>The responder collects the kit from a depot, delivers it, records what happened &mdash; and the person who reported is told how it ended.</li>
+    </ol>
+  </section>
+
+  <section>
+    <span class="eyebrow">Honesty first</span>
+    <h2>What is real, and what is not</h2>
+    <p>Every conversation about this should start here, because the gap between a working demo and a
+    working service is where projects like this usually die quietly.</p>
+    <div class="cols">
+      <div class="card yes">
+        <h3>Real, running code</h3>
+        <p>The emergency gate, intake, kit rules, dispatch waves and timeouts, the stock ledger,
+        outcome recording, the retention purge, and routing over a real street graph. 245 automated
+        tests, all passing offline with no paid API calls.</p>
+      </div>
+      <div class="card no">
+        <h3>Not real yet</h3>
+        <p>No NGO partner. No funding. No legal opinion. Nobody has been served. The responders in
+        the demo are simulated agents, the clock runs fast, and the WhatsApp transport is built but
+        not switched on. Zero real cases have ever passed through this.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">The map</span>
+    <h2>The streets are the real streets</h2>
+    <p>Earlier versions of this ran on invented geometry that merely resembled Delhi. They no longer
+    do. The pilot zone is OpenStreetMap&rsquo;s survey of Nizamuddin &mdash; 1,432 road segments,
+    the building footprints, the railway, Humayun&rsquo;s Tomb, Sunder Nursery, the Dargah &mdash;
+    with the real arterials of Delhi for ten kilometres around it.</p>
+    <p>That is not a cosmetic change. Riders route over the network that is actually there, so
+    turn-by-turn reads <em>Mathura Road &rarr; Jathedar Harbans Singh Bhogal Marg</em>, and a walking
+    route can come out shorter than a scooter route over the same two points because pedestrians can
+    cross on a footbridge that scooters cannot use. Invented geometry cannot produce that.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">Privacy</span>
+    <h2>No database of the poor</h2>
+    <p>A map of where vulnerable people sleep must not exist, so this is built so that it cannot
+    accumulate one:</p>
+    <ul class="plain">
+      <li>No individual is named or indexed. A photograph of a face is never required.</li>
+      <li>Cases expire after 72 hours. The pin is deleted.</li>
+      <li>After 90 days only coarse cell counts remain &mdash; enough to plan, useless for finding a person.</li>
+      <li>Dispatch is to NGO outreach workers. Never to police.</li>
+    </ul>
+    <p style="margin-top:14px"><strong>What this does not solve:</strong> the person on the street
+    never consented to being reported. Data minimisation is harm reduction, not consent, and it
+    should not be sold as consent. If a partner organisation were compelled to hand over data, the
+    architecture would not save them &mdash; that needs a contract, and the contract is not written
+    yet.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">The numbers</span>
+    <h2>What it costs, stated carefully</h2>
+    <p>Kit costs are sourced from Indian wholesale listings. The pilot figures are estimates, and
+    the honest range is wider than a first pass suggested once responder stipends, supervision and a
+    legal opinion are counted rather than quietly absorbed by unpaid time.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Item</th><th>Figure</th><th>Basis</th></tr></thead>
+        <tbody>
+          <tr><td>Food kit</td><td class="n">&#8377;50</td><td>Itemised at wholesale</td></tr>
+          <tr><td>Medical kit</td><td class="n">&#8377;172</td><td>Itemised at wholesale</td></tr>
+          <tr><td>Monsoon kit</td><td class="n">&#8377;173</td><td>Itemised at wholesale</td></tr>
+          <tr><td>Tech to run a zone</td><td class="n">&#8377;3&ndash;4k / mo</td><td>Hosting, messaging, model calls</td></tr>
+          <tr><td>8-week pilot, all in</td><td class="n">&#8377;2.2&ndash;2.8 lakh</td><td>Including stipends, supervision, legal &mdash; not the &#8377;1.5 lakh a tech-only budget suggests</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card" style="margin-top:20px">
+      <h3>A correction worth making in public</h3>
+      <p>An earlier version of this pitch quoted <strong>&#8377;430 per person served</strong>. That
+      number was cost per <em>report processed</em>, not per person actually helped &mdash; and if
+      only some fraction of reports end in a delivered kit, the true figure is several times higher.
+      The metrics that matter are contact rate, acceptance rate, and cost per kit actually handed
+      over. Those will be measured in a pilot and published, including if they are bad.</p>
+    </div>
+    <p style="margin-top:18px"><strong>The kill line.</strong> A failure condition is pre-registered
+    before any pilot begins: if the real cost per person served cannot be brought under a stated
+    ceiling, the dashboard says so, it is published, and the project stops. Naming that number in
+    advance is the point.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">What I am looking for</span>
+    <h2>Four asks, in order of what actually matters</h2>
+    <div class="ask">
+      <div><b>A</b><span><strong>A pilot partner.</strong> One Delhi organisation already doing street outreach: a few workers, a shelf for kits, eight weeks, and someone who owns outcomes. This is the bottleneck; everything else is worth less without it.</span></div>
+      <div><b>B</b><span><strong>Kit funding &mdash; paid to that partner, not to me.</strong> Most funders can only pay a registered organisation anyway, and the money should sit with the people doing the work.</span></div>
+      <div><b>C</b><span><strong>Shelf space or riders</strong> from a delivery company, in a neighbourhood where they already operate. Worth asking only once a pilot has data.</span></div>
+      <div><b>D</b><span><strong>Criticism.</strong> From people who run outreach, from people who have been on the street, and from the ones who think tools like this do harm. This is the ask that is open right now, and it is the most valuable one.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">The open question</span>
+    <h2>The thing I most need told</h2>
+    <p>The person on the street never asked to be reported. Someone walking past decides they need
+    help, and a worker is sent. I have designed hard around the data &mdash; but that is a technical
+    answer to a human question, and I do not think a technical answer settles it.</p>
+    <p>If you have run street outreach, or have lived on the street, and you think this should not be
+    built, I would rather hear it now than in month six.</p>
+  </section>
+
+  <footer>
+    Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ODbL.
+    Kit prices from published Indian wholesale listings; pilot costs are estimates and are labelled as such.
+    No partnership, funding or endorsement is claimed or implied by anything on this page.
+  </footer>
+
+</div>
