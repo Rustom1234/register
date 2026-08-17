@@ -1,0 +1,48 @@
+name: Wayside keep-alive
+
+# wayside.onrender.com runs on Render's free tier, which sleeps the service
+# after ~15 idle minutes; the next visitor then waits ~20-60s on a blank page.
+# The /film link is going out in cold outreach email, so that first click has
+# to be instant. This pings /health often enough that the service never
+# sleeps. Public repo, so the Actions minutes are free.
+#
+# Two things to know if this ever looks broken:
+#   * GitHub disables scheduled workflows in a repo with no commits for 60
+#     days. Push anything, or re-enable it from the Actions tab.
+#   * GitHub's cron is best-effort and gets delayed under load, which is why
+#     this runs every 10 minutes rather than every 14 — the slack absorbs a
+#     late run without letting the service fall asleep.
+
+on:
+    schedule:
+        - cron: "*/10 * * * *"
+
+    workflow_dispatch:
+
+# Never let a flaky ping queue up behind itself.
+concurrency:
+    group: wayside-keepalive
+    cancel-in-progress: true
+
+jobs:
+    ping:
+        name: Ping /health
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - name: Wake the service
+              # --max-time 90 because a ping that arrives just after the
+              # service went to sleep pays the full cold start itself, and
+              # that request is exactly the one worth waiting out.
+              #
+              # This step must not fail. A red scheduled workflow mails the
+              # repo owner, and a ping losing to a transient 502 is not
+              # something anyone needs to be told about at 3am — the next
+              # run ten minutes later fixes it.
+              continue-on-error: true
+              run: |
+                  code=$(curl -sS -o /dev/null -w '%{http_code}' \
+                           --max-time 90 --retry 2 --retry-delay 5 \
+                           https://wayside.onrender.com/health) || code=000
+                  echo "GET /health -> $code"
+                  echo "### Wayside: \`/health\` -> \`$code\`" >> "$GITHUB_STEP_SUMMARY"
