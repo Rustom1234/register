@@ -22,7 +22,7 @@ from pydantic import BaseModel
 from .report import render_report, render_shift
 from .whatsapp import CloudApi, parse_webhook, verify_signature
 
-from . import gate, geo, strings
+from . import gate, geo, keepwarm, strings
 from .config import Config
 from .db import Store
 from .service import PukaarService
@@ -77,8 +77,13 @@ def build_app(cfg: Config | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         task = asyncio.create_task(_loop())
+        # No-op unless a host told us our own public URL; see keepwarm.py
+        # for why a free-tier deploy pings itself.
+        warm = keepwarm.start()
         yield
         task.cancel()
+        if warm:
+            warm.cancel()
 
     async def _loop() -> None:
         last = time.monotonic()

@@ -2,8 +2,9 @@
 # render.com → New → Blueprint → pick this repository.
 #
 # The free plan runs the whole app at ₹0/month with two honest limits:
-# it sleeps after ~15 idle minutes (first visitor waits ~1 min; a free
-# cron-job.org pinger on /health keeps it awake) and the SQLite file is
+# it sleeps after ~15 idle minutes (the app pings its own /health through
+# the day to stay awake — see pukaar/keepwarm.py — so in practice only the
+# first visitor after the overnight gap waits) and the SQLite file is
 # wiped on every deploy/restart (fine for demos; move to a paid disk or
 # a small VM for a real pilot — see DEPLOY.md).
 

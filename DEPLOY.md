@@ -13,7 +13,7 @@ also ₹0/month.
 
 | Tier | Cost | What you get | Honest limits |
 |---|---|---|---|
-| **Render free** (this repo has one-click `render.yaml`) | **₹0/mo** | Full app at `https://wayside-xxxx.onrender.com` | Sleeps after ~15 idle min (first visitor waits ~1 min — the repo's own GitHub Actions pinger on `/health` keeps it awake, see step 5); database resets on each deploy/restart |
+| **Render free** (this repo has one-click `render.yaml`) | **₹0/mo** | Full app at `https://wayside-xxxx.onrender.com` | Sleeps after ~15 idle min — the app keeps itself awake through the day, so in practice only the first visitor after the overnight gap waits (step 5); database resets on each deploy/restart |
 | **Small VM** (Hetzner CX22, or Oracle's always-free ARM VM at ₹0 with a fiddlier signup) | ~₹350–400/mo (Hetzner) | A real 24/7 server, persistent database, no sleeping | You run `docker run` once and update it yourself |
 | **Railway / Fly.io** | ~₹420/mo ($5) | Managed like Render, no sleeping, persistent volume | Card required |
 
@@ -31,16 +31,19 @@ pilot starts, move to the ₹350 VM (same Docker image, zero code changes).
    and only here — never into a file, never into git.**
 4. Deploy. Open `https://<your-app>.onrender.com` — the control room.
    `/responder` on a phone is the rider app; `/witness` is the chat.
-5. Keep it awake — **already done for this fork.**
-   `.github/workflows/wayside-keepalive.yml` pings `/health` every ten
-   minutes from GitHub Actions, which is free on a public repo, so nobody
-   who opens a link ever waits out a cold start. If you deploy to a
-   different hostname, change the URL in that file. (GitHub switches off
-   scheduled workflows in a repo that has had no commits for 60 days —
-   push anything, or re-enable it from the Actions tab.) The manual
-   alternative, if you would rather not use Actions:
-   [cron-job.org](https://cron-job.org) → new job → GET
-   `https://<your-app>.onrender.com/health` every 10 minutes.
+5. Keep it awake — **nothing to do; the app does this itself.** Render
+   injects `RENDER_EXTERNAL_URL`, and on seeing it the app pings its own
+   `/health` every 10 minutes so the free tier never sleeps under a link
+   you have sent someone (`pukaar/keepwarm.py`). It runs 00:00–20:00 UTC —
+   05:30–01:30 in Delhi — which covers every hour a visitor plausibly
+   clicks while leaving ~150 of Render's 750 monthly instance-hours spare.
+   The one cost: the first visitor after the overnight gap still waits out
+   a cold start.
+   - `PUKAAR_KEEPWARM_HOURS_UTC=0-24` — take that last cold start too.
+     Only do this if this is the only free service in the workspace; a
+     31-day month awake throughout is 744 of the 750 hours.
+   - `PUKAAR_KEEPWARM=0` — switch it off (e.g. once you are on a paid
+     plan that never sleeps, where the pings are pointless).
 
 ## Environment variables (what the code actually reads)
 
