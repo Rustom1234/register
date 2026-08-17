@@ -51,7 +51,7 @@ Director. They are at 127 Basti Hazrat Nizamuddin — go in person if you can.
 > It already runs on the real streets of the Basti — the actual surveyed
 > map, the lanes around the Dargah, Mathura Road, the station approach.
 > Here it is working, one minute forty-five:
-> https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+> https://wayside.onrender.com/film
 >
 > Why I am writing to you rather than anyone else: I built this about your
 > neighbourhood, and you have been in it for fifty years. Whether this is
@@ -121,7 +121,7 @@ contact I verified end to end.*
 >
 > It is working now, on the real surveyed streets of Nizamuddin — one
 > minute forty-five:
-> https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+> https://wayside.onrender.com/film
 >
 > The question I actually want answered is whether this is worth driving
 > forward, and you are better placed than anyone to tell me. If it is, I
@@ -181,7 +181,7 @@ South Delhi — the closest existing practice to what this dispatches.*
 > The person who reported is told how it ended.
 >
 > Working, on the real streets of Nizamuddin — one minute forty-five:
-> https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+> https://wayside.onrender.com/film
 >
 > What it would give you: a channel through which the public routes work to
 > you rather than walking past, with an audit trail you can show your own
@@ -233,7 +233,7 @@ hard question in, alongside the partnership ask.*
 > to the pin. The person who reported is told the outcome.
 >
 > Working, on the real surveyed streets of Nizamuddin — one minute
-> forty-five: https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+> forty-five: https://wayside.onrender.com/film
 >
 > There is one question I would want to settle with you before anything
 > else, and I would rather raise it myself than have you raise it. The
@@ -279,7 +279,7 @@ former Delhi DCP. The partner who would make this safe.*
 > street sends one WhatsApp message with a pin, and a trained outreach
 > worker is dispatched with a food or medical kit from a nearby depot. The
 > person who reported is told how it ended. It runs on the real surveyed
-> streets of Nizamuddin. One minute forty-five: https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+> streets of Nizamuddin. One minute forty-five: https://wayside.onrender.com/film
 >
 > I am writing to you specifically because of your safeguarding and
 > training record. The part of this that I am least equipped to get right
@@ -344,7 +344,7 @@ automated check and I will not guess at an address.
 > I am an independent developer and student. I have built a working system
 > in which a member of the public reports a person in need on the street
 > and a trained NGO outreach worker is dispatched with a food or medical
-> kit. It is running: https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+> kit. It is running: https://wayside.onrender.com/film
 >
 > I have read enough of your work to know you have documented how data
 > about homeless people becomes an instrument against them — for eviction,
@@ -389,7 +389,7 @@ partnership is the food component of the kits.*
 > one WhatsApp message with a pin, and a trained NGO outreach worker is
 > dispatched with a food or medical kit from a nearby depot. The person
 > who reported is told how it ended. It runs on the real surveyed streets
-> of Nizamuddin — one minute forty-five: https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+> of Nizamuddin — one minute forty-five: https://wayside.onrender.com/film
 >
 > You already do the hardest part of this at scale, in more than eighty
 > cities. I am not proposing to duplicate it. I am asking whether the
@@ -428,7 +428,7 @@ technical partnership, and a second country if this works.*
 > the network to a single connected component, and routes responders over
 > the real graph by travel mode. The current zone is Nizamuddin in Delhi —
 > 1,432 road segments, building footprints, the railway. One minute
-> forty-five: https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+> forty-five: https://wayside.onrender.com/film
 >
 > Two things I would like to ask you.
 >
@@ -462,7 +462,7 @@ technical partnership, and a second country if this works.*
 > pin, and a trained volunteer or outreach worker is dispatched with a
 > food kit from a nearby depot. The person who reported is told how it
 > ended. It runs on the real streets of Nizamuddin — one minute
-> forty-five: https://claude.ai/code/artifact/729d9bbb-1e07-4eab-9b39-80698716db8b
+> forty-five: https://wayside.onrender.com/film
 >
 > I know Robin Hood Army coordinates tens of thousands of volunteers over
 > WhatsApp, deliberately, without an app for the last mile. That makes you
